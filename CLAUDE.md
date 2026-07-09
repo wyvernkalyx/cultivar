@@ -18,6 +18,16 @@ and the relevant `documentation/` files before doing anything else.**
 no staging, no commit) followed, after the manual gate passes, by a separate **commit
 prompt**. A commit is not "done" until it is confirmed present in `git log`.
 
+### Operator-only actions
+
+- **Credentialed / interactive commands are operator-run only.** Claude Code must
+  never run `supabase login`, `supabase link`, `supabase db push`, any `eas` command,
+  anything touching the Apple Developer account, or any command that opens a browser
+  or prompts for a password. Claude Code *writes* migrations and config; the operator
+  applies them.
+- **Push authority.** Claude Code never pushes. Claude (chat) owns the push decision
+  and authorizes at a clean, gated checkpoint; Gregg executes the single `git push`.
+
 ---
 
 ## Core principles
@@ -72,6 +82,17 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
 
 ---
 
+## Gates are typed by slice
+
+- **Pure-logic slice** (e.g. the parser) — gate is **tests passing**, pasted raw.
+- **UI-visible slice** — gate is **Gregg exercising the app on the physical iPhone**
+  via the EAS dev build (`npx expo start --dev-client`). Unit tests are not evidence,
+  and Expo Go is unusable on this project.
+- **Schema/infra slice** — gate is **observed state** (e.g. tables + RLS visible in
+  the Supabase dashboard).
+
+---
+
 ## [ADAPT] checklist (filled)
 
 1. **Stack / test / build.** Expo (React Native) + TypeScript + Expo Router.
@@ -95,15 +116,20 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
    - `npx expo lint` → **1 error, 0 warnings** (template
      `src/hooks/use-color-scheme.web.ts`, `react-hooks/set-state-in-effect`).
    - **New work must not add warnings or errors above this baseline.**
-7. **Manual-gate procedure.** `npx expo start` → scan the QR code with **Expo Go** on
-   the iPhone → confirm the app loads and interacts before any UI-visible commit.
+7. **Manual-gate procedure.** Gregg exercises the app on the physical iPhone via the
+   **EAS development build**: `npx expo start --dev-client` → open the Cultivar app on
+   the iPhone and connect to the dev server → confirm the app loads and interacts
+   before any UI-visible commit. **Expo Go is unusable on this project** — the App
+   Store build of Expo Go predates SDK 56, and the app needs native modules Expo Go
+   cannot bundle.
 
 ---
 
 ## Pointers
 
-- Product spec / roadmap: `documentation/Cultivar_MVP_and_Roadmap.md`
-- Methodology: `documentation/Working_Methodology.md`
-- Session handoff: `documentation/SESSION_HANDOFF.md`
+- Product spec: `documentation/Cultivar_MVP_and_Roadmap.md`
+- Methodology: `documentation/working-methodology-handoff.md`
+- Handoff specs (how prompts and session handoffs are written): `documentation/process/handoff-specs.md`
+- Current session handoff: `documentation/SESSION_HANDOFF.md`
 - Deferred items: `documentation/follow-ups.md`
 - Design/logic reference (not production code): `reference/`
