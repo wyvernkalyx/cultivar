@@ -1,5 +1,5 @@
-import type { Analyte, CoaResult, SafetyRow } from './types';
-import { displayTerpene, isKnownTerpene, parsePct } from './normalize';
+import type { Analyte, CoaResult, SafetyRow } from './types.ts';
+import { displayTerpene, isKnownTerpene, parsePct } from './normalize.ts';
 
 // Kaycha Labs COAs appear in two layouts across the fixtures:
 //

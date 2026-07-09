@@ -1,7 +1,7 @@
-import type { CoaResult } from './types';
-import { identifyLab } from './identifyLab';
-import { parseKaycha } from './parseKaycha';
-import { parseDrsConfident } from './parseDrsConfident';
+import type { CoaResult } from './types.ts';
+import { identifyLab } from './identifyLab.ts';
+import { parseKaycha } from './parseKaycha.ts';
+import { parseDrsConfident } from './parseDrsConfident.ts';
 
 /**
  * Parse the extracted text of a COA into a normalized {@link CoaResult}.

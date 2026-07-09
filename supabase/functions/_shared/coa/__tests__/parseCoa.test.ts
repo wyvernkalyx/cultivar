@@ -1,10 +1,10 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-import { extractText } from '../extractText';
-import { parseCoa } from '../parseCoa';
-import { dominantTerpene } from '../normalize';
-import type { CoaResult } from '../types';
+import { extractText } from '../extractText.ts';
+import { parseCoa } from '../parseCoa.ts';
+import { dominantTerpene } from '../normalize.ts';
+import type { CoaResult } from '../types.ts';
 
 const FIXTURES = join(__dirname, '..', '__fixtures__');
 

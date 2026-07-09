@@ -3,7 +3,7 @@
 // These are deliberately dependency-free and side-effect-free so they can be
 // unit-tested in isolation before any UI wiring.
 
-import type { Analyte } from './types';
+import type { Analyte } from './types.ts';
 
 /**
  * Parse a single cell from a COA table into a percentage number, or `null`.

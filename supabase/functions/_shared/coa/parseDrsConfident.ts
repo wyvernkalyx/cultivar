@@ -1,5 +1,5 @@
-import type { Analyte, CoaResult, SafetyRow } from './types';
-import { displayTerpene, isKnownTerpene, parsePct } from './normalize';
+import type { Analyte, CoaResult, SafetyRow } from './types.ts';
+import { displayTerpene, isKnownTerpene, parsePct } from './normalize.ts';
 
 // DRS Testing / Confident LIMS COAs lay analyte tables out as clean rows:
 //   <name> <LOQ> <result-%> <result-mg/g>

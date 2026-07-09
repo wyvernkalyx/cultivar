@@ -1,4 +1,4 @@
-import type { SourceLab } from './types';
+import type { SourceLab } from './types.ts';
 
 /**
  * Identify which lab produced a COA from its extracted text.
