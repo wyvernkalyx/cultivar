@@ -36,15 +36,38 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   wins. Verify against the working tree before acting on any remembered fact.
 - **Lived-demand.** Build what a concrete, present need requires. No speculative
   abstraction, no "we might want this later" scaffolding.
+- **Personal-empirical, never pharmacological.** Cultivar never claims a terpene causes
+  an effect. It reports what correlates with **this user's** own logged outcomes. No
+  medical claims, no population-level effect assertions, no borrowed pharmacology in
+  user-facing copy or in code comments that could migrate into copy. The
+  population-level science is genuinely unproven; this is a correctness requirement,
+  a regulatory posture, and the product's differentiator at once.
 - **No fabricated data.** Display only what exists. For COAs, show `ND` or
   "not reported by lab" for absent analytes — **never invent terpene or cannabinoid
   values**, and never interpolate/estimate them into user-facing output.
 - **Surgical commits.** One concern per commit. Docs land with the code they describe.
   No broken intermediate states — every commit builds and runs.
-- **Pure helpers unit-tested before UI wiring.** Extract logic into pure functions,
-  cover them with Jest, then wire them into components.
+- **Pure logic is tested before it is wired to anything.** Extract logic into pure
+  functions and cover it first — **Jest** for app and parser code, **`deno test`** for
+  Edge Functions. Not every helper terminates in a component: the parser is server code
+  (see **Ingestion**) and is wired to a handler, never to a UI.
 - **Document-before-implement.** Capture the intended behavior in `documentation/`
   before writing the implementation.
+
+---
+
+## Ingestion
+
+- **Parsing runs server-side.** The app never parses a PDF. Extraction and parsing
+  happen in a Supabase Edge Function.
+- **The parser lives at `supabase/functions/_shared/coa/`.** It is server code, and it
+  lives where it runs. Import it by **relative path with an explicit `.ts` extension** —
+  extensionless imports pass `deno check` locally and fail `supabase functions deploy`
+  with a module-resolution error.
+- **No `unstable` Deno flags, anywhere.** `sloppy-imports` in particular makes
+  extensionless imports appear to work under a local check while production, which has
+  no such flag, rejects them. A green check under different config than production is
+  weaker evidence than it looks.
 
 ---
 
@@ -65,9 +88,13 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   ```
 - **Exactly two co-author trailers:** `Claude <noreply@anthropic.com>` and the current
   Claude model (currently `Claude Opus 4.8 (1M context) <noreply@anthropic.com>`).
-- **`data:`-prefixed commits** for COA/session data directories (fixtures, seeded or
-  user data). Keep data changes separate from code changes.
-- **Never push without explicit authorization** from the operator.
+- **Subject prefixes.** One of five, chosen by what the commit contains:
+  - `feat:` — new behavior
+  - `refactor:` — behavior-preserving restructuring (e.g. `9ba23d6`)
+  - `chore:` — tooling, config, scaffolding
+  - `docs:` — documentation only
+  - `data:` — COA fixtures, seeded or user data. Keep data changes separate from code
+    changes; never blanket-stage or revert these.
 
 ---
 
@@ -98,16 +125,22 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
 1. **Stack / test / build.** Expo (React Native) + TypeScript + Expo Router.
    **Expo SDK pinned to 56** (`expo@56.x`) — the current App Store Expo Go predates
    SDK 56, so on-device testing uses an **EAS development build**, not Expo Go.
-   Tests = Jest + React Native Testing Library. Builds = EAS. Package manager = npm.
+   Tests = **Jest + React Native Testing Library** for app and parser code, and
+   **`deno test`** for Edge Functions (e.g.
+   `supabase/functions/ingest-coa/__tests__/ingestCoa.test.ts`). Builds = EAS.
+   Package manager = npm.
    **Always install Expo-managed deps with `npx expo install`** (not bare `npm install`).
 2. **Repo / handbook / docs.** Repo root: `D:\Projects\Cultivar\cultivar`.
    Handbook: `CLAUDE.md`. Docs: `documentation/`. App source lives under `src/`
    (Expo Router routes in `src/app/`). Shared client code in `lib/`.
 3. **Source-of-truth.** Supabase Postgres is canonical; a local cache serves offline
-   reads. COA PDFs live in Supabase Storage. No auto-transform on save. Never fabricate
+   reads. COA PDFs **will** live in Supabase Storage — the bucket is not yet created
+   and nothing writes to it. No auto-transform on save. Never fabricate
    terpene / cannabinoid values.
-4. **Protected data dirs.** COA fixtures and any seeded/user data use **`data:`-prefixed
-   commits**. Never blanket-stage or revert these.
+4. **Protected data dirs.** COA fixtures
+   (`supabase/functions/_shared/coa/__fixtures__/`) and any seeded or user data. The
+   staging and prefix rules that govern them live in **Commit conventions**; this slot
+   names the directories, not the rule.
 5. **Untracked dev files never staged.** `.env`, local Expo config (`.expo/`), and
    editor/local config (`.vscode/` local settings).
 6. **Warning baseline** (starter template on Expo SDK 56, pre-any-of-our-code):
