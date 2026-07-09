@@ -39,12 +39,15 @@ The last line is the highest-leverage sentence in the document.
 
 ### Anatomy
 1. **Context** — three sentences. Enough that the implementer can tell when the prompt is wrong. Link the spec; don't restate it.
-2. **Current state** — named files, named symbols. "Believed to be around X — verify" is legitimate. "The parser" is not; write `src/ingestion/parseKaycha.ts`.
+2. **Current state** — named files, named symbols. "Believed to be around X — verify" is legitimate. "The parser" is not; write `supabase/functions/_shared/coa/parseKaycha.ts`.
+   - **Say whether you are describing HEAD or the working tree.** A Current-state block listing uncommitted modifications is describing the tree, not the commit, and a clean checkout of HEAD will fail its preconditions — correctly, and confusingly. When a prompt stacks on uncommitted work, state that in the block. "The repo is authoritative" and "the working tree carries two uncommitted passes" are different claims and must not be written in the same voice.
 3. **The change** — imperative, file by file, and *why that file and not a neighbour*. If two plausible locations exist, name both and say which is live.
 4. **Non-goals** — explicit list of files, behaviours, and adjacent temptations that are out of scope.
 5. **Acceptance criteria** — checkable, not aspirational.
    - *Automated:* build clean, warnings <= baseline, named tests that must pass.
    - *Manual gate:* the exact sequence a human performs and what they must see. **If a change is UI-visible, unit tests are not evidence.**
+   - **Counts are sound for absence, unsound for presence.** A criterion asserting that something is *gone* may count it: `grep -c` -> 0, because absence has no location. A criterion asserting that something *exists* must pin **where** — the section, the bullet, the exact whole line — because a count answers "how many," never "which one." `grep -c "Co-Authored-By" -> 2` passes with two wrong trailers. `grep -Fx "<the exact trailer>"` does not. A presence-count that survives only because a neighbouring criterion pins the same fact is redundant, not sufficient.
+   - *Corollary:* a location assertion must bound **every** hit, not one of them. "At least one hit inside §X" passes on a stray hit anywhere else. Write "two hits: one in §X, one in §Y."
 6. **Report back** — say exactly what to paste:
    1. Files changed (paths only)  2. Full diff  3. Build output: errors + warning count  4. Test results  5. **Anything in this prompt that turned out to be wrong.**
 
@@ -56,6 +59,7 @@ Item 5 is not optional. It is the feedback channel that keeps the next handoff h
 | Implementer asks questions mid-run | No "no interactive prompts" header | Add it; blockers as plain text |
 | Diff is 400 lines for a 20-line fix | No non-goals | Enumerate what not to touch |
 | Gate passes, bug persists | Unfalsifiable criteria | Rewrite as observable states |
+| Green gate, wrong artifact | Criterion counted a presence instead of locating it | Pin the section, bullet, or exact line |
 | Commit contains two unrelated changes | Prompt had an "and also" | One concern per prompt |
 | Implementer "fixes" the spec to match code | No authority statement | "Repo is authoritative; report contradictions" |
 | Model reports success, tests never ran | No report-back format | Demand raw output, not a summary |

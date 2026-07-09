@@ -75,6 +75,10 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
 
 - **Explicit-path-only staging.** Stage named paths only. **Never `git add -A`,
   `git add .`, or `git commit -a`.**
+- **`git mv` stages the rename with the original blob.** Any edit made *after* the move
+  lives only in the working tree — `git status` shows `RM`. Committing without a second
+  `git add` at the **new** path ships the move without the edit. Before committing a
+  move-plus-edit, verify the **staged blob**: `git show :<new/path>`. Never the worktree.
 - **ASCII commit messages** via stdin heredoc:
   ```bash
   git commit -F - <<'EOF'
