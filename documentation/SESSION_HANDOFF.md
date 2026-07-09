@@ -1,103 +1,100 @@
 # Cultivar — Session Handoff
 
-_Handoff written 2026-07-09. **The repo is authoritative over this document.**
-Treat every state claim below as a starting hypothesis to verify, not fact — this principle earned its keep this session:
-I asserted at high confidence that New York had no queryable canonical COA source (OpenCOA falsified it);
-I asserted at high confidence that CannMenus exposes no terpene data, having never read its API docs (it does, for ~13–20% of products);
-I labeled "rent the aggregate data, own the prediction" as a **decided** item in the roadmap when it was only my recommendation, which Gregg then rejected;
-and I told Gregg the Expo SDK downgrade "didn't take" when the app footer already showed v56.0.15 and it plainly had.
-Begin the new session with a read-only Phase A git audit before acting on anything here._
+_Written 2026-07-09. **The repo is authoritative over this document.** Every state claim below is a prediction to falsify, not a fact to trust._
+
+_This principle earned its keep repeatedly this session. The sharpest example: my own commit prompt instructed Claude Code that "the renames are already staged by `git mv`; add the remaining four config files." That was wrong in a way that would have shipped a broken commit — `git mv` stages the rename with the **original** contents, so the `.ts` extension fixes made afterwards were unstaged (the six `RM` entries). Obeying me literally would have committed the parser at its new path with extensionless imports: the precise state that breaks `supabase functions deploy`, and the thing the change existed to prevent. It would also have failed its own tests. Claude Code refused, staged the six, verified the **staged blob** (`git show :…/parseCoa.ts`) rather than the worktree, and committed only then._
+
+_Also refuted this session: I claimed Supabase's "no bare specifiers" guidance forced a source rewrite (it didn't — the import map resolved it); and I told the operator a Deno PATH failure meant Deno wasn't installed (it was; the shell was stale). Begin the new session with a read-only Phase A audit before acting on anything here._
 
 ## Start here (Phase A, read-only)
 
-Confirm against the repo:
-
-- Branch `main`. HEAD should be `4200d2f` (`feat: core Supabase schema with row-level security`).
-- Origin **SYNCED** — `git rev-list --count origin/main..HEAD` should print **0**.
-- `git status --short` should be **empty**. `supabase/.temp/` is ignored by `supabase/.gitignore` — never stage it. `node_modules/` likewise.
-- `npm test` -> expect **36 passed / 0 failed**, 1 suite. (Requires `--experimental-vm-modules`; already baked into the `test` script.)
-- Warning baseline: `npx tsc --noEmit` -> **0 errors**. `npx expo lint` -> **1 error, 0 warnings** (template `src/hooks/use-color-scheme.web.ts`, `react-hooks/set-state-in-effect` — not our code). This is a **ceiling**, not a target.
-- `npm ls expo` -> expect **expo@56.x**. The pin is deliberate.
+- Branch `main`. HEAD should be `9ba23d6` (`refactor: relocate COA parser to supabase/functions/_shared/coa`), parent `7d60ac7`.
+- **Sync:** `git rev-list --count origin/main..HEAD` should print **0**. *(Push was authorized but I did not observe its output — if this prints 1, the push never ran. The repo wins.)*
+- `git status --short` should be **empty** — with one known exception: **`supabase/functions/deno.lock` reappears as untracked whenever anything runs `deno`.** It is regenerable and was deliberately not committed. This is expected noise, not drift. See Ratified D10.
+- `npm test` -> **36 passed / 0 failed**, 1 suite. Suite now lives at `supabase/functions/_shared/coa/__tests__/parseCoa.test.ts`.
+- `npx tsc --noEmit` -> **0 errors**. `npx expo lint` -> **1 error, 0 warnings** (template `src/hooks/use-color-scheme.web.ts`; not our code). This is a **ceiling**.
+- `deno check supabase/functions/_shared/coa/parseCoa.ts` -> passes, **with no `unstable` flag anywhere in the repo**.
+- `npm ls expo` -> **expo@56.x**. `deno --version` -> **2.9.2**. Both pins are deliberate.
+- `src/ingestion/` must **not** exist.
 
 If any of these don't match, the repo wins — re-baseline before proceeding.
 
-## What shipped this session (5 commits, newest first)
+## What shipped (newest first)
 
-- `4200d2f` — feat: core Supabase schema with RLS. *Gate: 5 tables + RLS observed in Supabase dashboard.*
-- `3400599` — feat: COA parser for Kaycha and DRS/Confident labs (pure, tested). *Gate: 36/36 tests.*
+- `9ba23d6` — refactor: relocate COA parser to `supabase/functions/_shared/coa`.
+- `7d60ac7` — docs: formalize handoff process and reconcile the handbook.
+- `4200d2f` — feat: core Supabase schema with row-level security (5 tables, RLS on every one).
+- `3400599` — feat: COA parser for Kaycha and DRS/Confident (pure, 36 tests).
 - `5fae761` — data: four real NY COA fixtures.
-- `7d9335b` — chore: EAS development build config for iOS. *Gate: dev build runs on the physical iPhone.*
-- `18b7f7f` — chore: scaffold Expo + Supabase project (Step 0). *Gate: app rendered.*
+- `7d9335b` — chore: EAS development build config for iOS.
+- `18b7f7f` — chore: scaffold Expo + Supabase (Step 0).
 
 ## The arcs
 
-**The gambit was tested, not assumed.** The whole product rests on getting a real COA into structured form. Rather than architect around a guess, we ran extraction against four of Gregg's actual COAs. All four are born-digital text PDFs — no OCR needed — and `pdftotext`, then `unpdf`, extracted full terpene panels from *both* lab formats cleanly. Cannlytics' purpose-built CoADoc, by contrast, needed two dependency pins just to import and then fully parsed **0 of 4**, extracting terpenes from none and failing to even identify the DRS/Confident format. The simple approach beat the specialized library on real data. This is why the parser is owned rather than borrowed, and why any future "just use library X" suggestion should be tested before it is believed.
+**The parser moved because it was server code living in the client tree.** D7 established that extraction and parsing run server-side; the app never parses a PDF. Leaving it in `src/ingestion/` and importing it from an Edge Function via `../../../` would have cemented that inversion behind a path a future refactor silently breaks. Supabase's own guidance puts shared code in `functions/_shared`, imported by relative path, and files there are not deployed as standalone functions. Twelve files moved with `git mv`; history follows. Do not move it back.
 
-**Extraction is easy; normalization is the work.** The parser's value is not `unpdf` — it is the per-lab layout handling (Kaycha ships two mirror-image sub-layouts; transposed cannabinoid columns must be zipped back to their names) and the discipline that `ND` / `<LOQ` / `NR` map to **`null`, never `0`**. Fabricating a zero would silently corrupt the one signal the entire product predicts on. This is a product invariant, not a coding preference.
+**Two things would have broken deploy, and only empiricism found them.** First, extensionless relative imports (`from './types'`) fail `supabase functions deploy` with a module-resolution error — the Phase A2 verification only passed because its scratch config enabled the **unstable** `sloppy-imports` flag. That crutch is now banned repo-wide and explicit `.ts` extensions replace it. Second, `unpdf` was imported as a bare specifier, which Supabase advises against. Rather than rewrite the source to `npm:unpdf@1.6.2` (which would have broken Jest and ts-jest resolution), `supabase/functions/deno.json` maps it. Both were *proved*, not assumed: `deno check` passes without the flag, and the bare specifier resolved through `--config supabase/functions/deno.json` — the same mechanism deploy uses.
 
-**External data sources were evaluated and rejected, on the founder's grounds not mine.** OpenCOA is NY-only, which is a non-starter for a product that must work in every market. CannMenus is a paid B2B *menu* feed whose terpene data is menu-reported rather than COA-batch-traceable. Cannlytics/CoADoc failed the live test. The consequence is a real, accepted cost: owning ingestion means a per-lab parser burden that grows with each market. It is survivable because the technique is market-agnostic and manual COA entry works everywhere from day one; automated parsing then expands lab-by-lab. Do not re-propose these sources as a shortcut without new evidence.
+**The parser now provably behaves identically under Node and Deno.** Phase A2 only ever *executed* the DRS fixture. Kaycha's two mirror-image sub-layouts and its transposed-column zipping — the most intricate code in the module — had never run under the production runtime. B1 closed that: all four fixtures execute under Deno 2 with values identical to Jest, and critically `Limonene === null` strictly for `animal-face` (`isNull: true`) while the three real values stay numeric. That is D2 holding at runtime, not just in a test.
 
-**A backend became correct only when the premise changed.** Early in the project, "local-first, no server" was the right call under the lived-demand principle: the app was single-user and a server bought nothing. I re-applied that rule and recommended local-first again. Then Gregg said iteration one enrolls ~10 friends. That breaks the single-user premise on three counts — their data must reach him to read the test, accounts and fix-distribution become real, and a participant's history must survive a reinstall. Supabase from the start, with **row-level security on every table**, is the lived-demand answer to the *new* premise. RLS is not ceremony here; it is the specific mechanism isolating ten people's consumption logs from each other.
-
-**Expo Go is a dead end for this project, permanently.** The App Store build of Expo Go predates SDK 56, so no project on 56 will run in it, and iOS will not let you sideload an older Expo Go. Separately, Cultivar needs native camera/QR modules Expo Go cannot bundle. The device path is therefore an **EAS development build** — already built, installed, and running on Gregg's iPhone. Do not attempt to "fix" the SDK version to satisfy Expo Go.
+**The working method was formalized, and immediately caught a defect.** `documentation/process/handoff-specs.md` now defines the two artifacts (chat->Claude Code prompts; chat->chat handoffs) with the Cultivar deltas. Within two prompts of adopting it, report-back item 5 ("anything in this prompt that turned out to be wrong") surfaced the `git mv` staging bug above. The item is not decoration.
 
 ## Refuted hypotheses / memory corrections
 
-- **"NY has no canonical public COA source."** Asserted at medium-high confidence. OpenCOA (opencoa.org, ~45k COAs, ~97.6% NY producer coverage, $29/mo API) substantially falsifies it. It is still *rejected* — for being NY-only, not for not existing.
-- **"CannMenus has no terpene/COA data."** Asserted at high, then medium confidence, without reading the docs. Its API exposes a per-product `terpene_profile` (coverage ~13% default, ~20% with fallback) and per-dispensary menus. Its role is narrowed to an *optional, undecided* availability source — not eliminated for the stated reason.
-- **"Rent the lookup/aggregate; own the prediction" was a decided item.** It was my recommendation, written into the roadmap as though Gregg had chosen it. He hadn't, and he rejected it. Corrected in the decision log. Watch for this class of error: a recommendation promoted to a decision by phrasing.
-- **"The SDK downgrade didn't take."** It had. The web footer read v56.0.15. The true cause of the Expo Go failure was that App Store Expo Go is itself older than SDK 56.
-- **"Enable Developer Mode before building."** Wrong order. iOS hides Developer Mode until a dev build is installed; on Windows there is no Xcode to trigger it earlier.
-- **"PA being medical-only threatens the test cohort."** Over-flagged. Cultivar sells nothing, so cannabis *sales* law does not govern it. PA testers hold medical cards; their use is legal. Only home-grown-in-PA raised a data-sensitivity nuance, and home-grown is now out of MVP scope entirely.
-- **"Defer COA ingestion for the POC."** I proposed this and it contradicted my own analysis naming ingestion the single biggest risk. Gregg pushed back and was right.
-- **`AGENTS.md` was actively misleading, not neutral boilerplate.** It instructed any agent to read the **SDK 57** docs before writing code, contradicting this project's deliberate SDK 56 pin. Discovered only because a prompt required reading it before overwriting. Now a stub pointing at `CLAUDE.md`.
-- **I asserted three follow-ups lived in `documentation/follow-ups.md`.** Only one did (the `AGENTS.md` item); the other two were banked in this handoff. Prompts that name a file's contents from memory should say "believed — verify."
-- **The previous `documentation/SESSION_HANDOFF.md` (pre-repo) is itself a worked example of handoff rot.** It asserts "no repo yet", plans the device path around **Expo Go**, and carries the `[ADAPT]` checklist as unconfirmed candidates. All three are now false. It is superseded by this document, not merged into it. Its still-live content was harvested first (see Banked 3 and 5).
+- **"`git mv` stages everything you need."** No. It stages the rename with the *original* blob. Subsequent edits require a second `git add`. Verify the **staged blob** (`git show :<path>`), never the worktree, before committing a move-plus-edit. **This belongs in `CLAUDE.md`.**
+- **"Supabase's no-bare-specifier rule forces a source rewrite."** It doesn't. A `deno.json` import map at the `functions/` root resolves bare specifiers for `_shared` code (Deno walks up the directory tree), and keeps Jest/ts-jest working. Confirmed by execution.
+- **"Phase A2's CONFIRMED verdict proved the repo would deploy."** It didn't. It proved the parser's *logic* runs under Deno — while leaning on `sloppy-imports`, which production does not have. A green check under different config than production is weaker evidence than it looks.
+- **"Deno isn't installed" (on a `command not found`).** It was. Windows PATH doesn't reach shells opened before the install, and VS Code caches the environment at launch. Restart VS Code, don't reinstall.
+- **`AGENTS.md` was actively misleading**, not neutral boilerplate: it told agents to read **SDK 57** docs, contradicting the deliberate SDK 56 pin. Now a stub pointing at `CLAUDE.md`.
+- **Earlier, and still worth carrying:** I claimed NY had no queryable canonical COA source (OpenCOA falsified it); claimed CannMenus exposes no terpene data without reading its API docs (it does, for ~13-20% of products); and wrote my own recommendation into the roadmap as though it were Gregg's decision. Watch for that last class of error — a recommendation promoted to a decision by phrasing.
+- **Workflow, not code:** file attachments in the previous chat silently arrived **empty** four times, including after a browser restart. Paste Claude Code output as **plain text**, not as an attachment.
 
 ## Ratified decisions
 
-- **D1 — Personal-empirical truth-claim.** The app never asserts terpenes cause effects (the population-level science is genuinely unproven; Weedmaps' own consumer education says there are no human studies on terpenes' role in feeling high). It reports what correlates for *this user*. Grounds: scientific honesty, regulatory exposure, and it is the differentiator.
-- **D2 — Never fabricate analyte values.** ND / `<LOQ` / not-reported render as `null` and display as "not reported by lab". Grounds: fabricating zeros corrupts the only signal the product predicts on.
-- **D3 — Own ingestion; no third-party COA feed as backbone.** Grounds: all-markets requirement; OpenCOA is NY-only; CoADoc failed the live test.
+- **D1 — Personal-empirical truth-claim.** Never assert terpenes cause effects; report what correlates for *this user*. Grounds: the population-level science is genuinely unproven (Weedmaps' own consumer education says there are no human studies on terpenes' role in feeling high), it reduces regulatory exposure, and it is the differentiator.
+- **D2 — Never fabricate analyte values.** ND / `<LOQ` / not-reported are `null`, displayed as "not reported by lab". Grounds: a fabricated zero corrupts the only signal the product predicts on. Enforced at runtime under both Node and Deno.
+- **D3 — Own ingestion.** No third-party COA feed as backbone. Grounds: all-markets requirement; OpenCOA is NY-only; CoADoc failed the live test on all four fixtures.
 - **D4 — Supabase from the start, RLS on every table.** Grounds: the ~10-user cohort breaks the single-user premise that made local-first correct.
-- **D5 — App-store-first, not MCP distribution.** Grounds: the overlap between low-effort cannabis consumers and people who configure MCP servers is small today. MCP is a later channel, not v1.
-- **D6 — MVP is lab-tested product only.** Home-grown and the aroma-as-terpene-proxy engine are deferred. Grounds: scope, and it moots the PA home-grown data question.
-- **D7 — Extraction runs server-side (unpdf, Edge-compatible); no separate Python service.** Grounds: empirically verified on all four fixtures; keeps one backend.
+- **D5 — App-store-first, not MCP distribution.**
+- **D6 — MVP is lab-tested product only.** Home-grown and aroma-as-terpene-proxy deferred.
+- **D7 — Extraction/parsing run server-side.** The app never parses a PDF.
 - **D8 — Claude (chat) owns the push decision.** Claude Code never pushes; Gregg executes one `git push` on authorization.
+- **D9 — Parser lives in `supabase/functions/_shared/coa/`**, imported by relative path with explicit `.ts` extensions. No `unstable` flags. Grounds: code lives where it runs; deploy-safety.
+- **D10 — `supabase/functions/deno.lock` will be committed in B2, alongside the Edge Function.** Not gitignored. Grounds: it pins `unpdf`'s integrity, which is a dependency contract of the deployed function; an ignored lockfile silently permits a different `unpdf` at deploy than the one verified against four fixtures. Until B2 lands it, it is expected untracked noise.
 
 ## Open items
 
 **Runnable now**
-- *(none drafted yet — the entry point below produces the first one.)*
+- *(none drafted — the entry point produces the first.)*
 
 **Blocked**
-- Slice 3 build prompt — blocked on the Phase A investigation below. Two questions must be answered from ground truth, not assumed: (a) does `unpdf` and the `src/ingestion/` parser import cleanly under **Deno**, which is what Supabase Edge Functions run? (b) how is the parser shared between `src/ingestion/` (app-side) and `supabase/functions/` without copy-paste duplication?
+- **Slice 3 B2 — the Edge Function itself.** Blocked on one question that must be answered from Supabase's *current* documentation, not from examples in the wild: **what is the correct handler contract?** Supabase's own AI-prompt guidance says do **not** use `Deno.serve`, and instead `export default { fetch: async (req: Request) => ... }`, wrapped with `withSupabase` from `npm:@supabase/server@^1`. Most third-party examples still show `Deno.serve`. These contradict. Verify before writing. B2 also lands `deno.lock` (D10).
 
-**Banked** (`documentation/follow-ups.md`)
-1. Terpene parser **silently drops** rows whose names aren't in the known-terpene whitelist. Correct for headers; would silently drop a real terpene not in the list. Confirm the whitelist covers the full NY panel; log unknown analyte names rather than dropping. *(Highest priority — data fidelity in a terpene-first product.)*
-2. Ligature null-bytes (fi/fl) are stripped, not reconstructed. Harmless in current fixtures; could mangle a strain or brand **name**.
-3. `reference/` contains only `README.md` — **confirmed**. `cultivar-poc.jsx` (the working POC) and `Cultivar_Resources.xlsx` were never copied in. Both are design/logic reference, never production code. Copy them in as a separate `data:`/`docs:` commit.
-4. `CLAUDE.md` now carries **two push bullets**: the older "never push without explicit authorization from the operator" and the newer three-way invariant. Consistent, but redundant. Consolidate.
-5. **Branch / branch.io** (mobile deep-linking + attribution; Weedmaps is a customer; Gregg's brother David works there) is the relevant technology for the *sharing* feature's one-tap "open shared COA in the app" flow. Not needed before sharing is built; Expo's built-in linking covers the basics. Recorded because it exists nowhere else. *(Note: `ourbranch.com` is a different company — an insurer. The right one is `branch.io`.)*
-6. npm audit: ~11 moderate template-inherited vulns. Do **not** `audit fix --force` — it breaks Expo version alignment.
+**Banked** (`documentation/follow-ups.md` unless noted)
+1. **Promote to `CLAUDE.md`:** the `git mv` + second `git add` rule (project-wide, permanent, and it nearly caused a broken commit).
+2. **Terpene parser silently drops** rows whose names aren't in the known-terpene whitelist. Correct for headers; would silently drop a real terpene not in the list. Confirm the whitelist covers the full NY panel; log unknown analyte names rather than dropping. *(Highest-priority code item — data fidelity in a terpene-first product.)*
+3. Ligature null-bytes (fi/fl) are stripped, not reconstructed. Harmless in current fixtures; could mangle a strain or brand **name**.
+4. `CLAUDE.md` commit-prefix list needs `docs:` and `refactor:` added — both were used this session without being recorded.
+5. `CLAUDE.md` carries **two push bullets** (the older "never push without explicit authorization" and the newer three-way invariant). Consistent but redundant. Consolidate.
+6. `reference/` contains only `README.md` — **confirmed**. `cultivar-poc.jsx` and `Cultivar_Resources.xlsx` were never copied in. Reference-only material; land in a separate commit.
+7. **Branch / branch.io** (mobile deep-linking; Weedmaps is a customer; Gregg's brother David works there) is the technology for the *sharing* feature's one-tap "open shared COA in the app" flow. Not needed until sharing is built; Expo's built-in linking covers the basics. Recorded because it exists nowhere else. *(`ourbranch.com` is a different company — an insurer.)*
+8. npm audit: ~11 moderate template-inherited vulns. Do **not** `audit fix --force` — it breaks Expo version alignment.
 
-*(Resolved by the doc-hygiene commit: `AGENTS.md` reconciliation; methodology-doc filename/pointer mismatch; landing the handoff + specs in the repo with a `CLAUDE.md` pointer.)*
+## Pointers — read the source, don't restate it
 
-## Pointers — do not restate, read the source
-
-- **Product spec, MVP scope, decision log, risks, §8A lexicon:** `documentation/Cultivar_MVP_and_Roadmap.md`. It is authoritative for the ~10-user cohort (CT/PA/NY/BC), the per-jurisdiction age-gate (21+ US, 19+ BC), PIPEDA/cross-border data, the active privacy items (consent flow, deletion path, encryption/pseudonymization, counsel before the cohort logs real data), the at-dispensary shortlist, and the terpene-shift tracker.
-- **Method:** `documentation/process/handoff-specs.md` and `CLAUDE.md`.
-- **Build order:** in the roadmap. Next after Slice 3: app-side upload + confirm/edit screen (first UI; iPhone gate) -> COA detail + shelf -> device capture flow -> session logging -> prediction -> compliance.
+- **Product spec, MVP scope, decision log, risks, §8A session lexicon:** `documentation/Cultivar_MVP_and_Roadmap.md`. Authoritative for the ~10-user cohort (CT/PA/NY/BC), the per-jurisdiction age-gate (21+ US, 19+ BC), PIPEDA/cross-border data, the active privacy items (consent flow, deletion path, encryption, counsel before the cohort logs real data), the at-dispensary shortlist, and the terpene-shift tracker.
+- **Method:** `documentation/process/handoff-specs.md`; invariants in `CLAUDE.md`.
+- **Build order after Slice 3:** app-side upload + confirm/edit screen (first UI; iPhone gate) -> COA detail + shelf -> device capture flow (QR -> browser -> download -> ingest; the untested friction) -> session logging -> prediction -> compliance.
 
 ## Working rhythm (only what's in flux)
 
-Stable method lives in `CLAUDE.md` and `documentation/process/handoff-specs.md`. Two things changed this session and are not yet in the handbook:
+Stable method lives in `CLAUDE.md` and `documentation/process/handoff-specs.md`. What changed this session:
 
-- **Push authority moved to Claude (chat).** Claude Code still never pushes. Gregg runs the single command on authorization.
-- **Claude Code must never run credentialed/interactive commands** — `supabase login|link|db push`, all `eas` commands, anything Apple. It writes migrations and config; the operator applies them. This was learned the hard way and is now an invariant.
-
-Also newly explicit: **Phase A and Phase B belong in separate prompt artifacts** whenever the prompt contains a real question. Earlier prompts merged them, which is tolerable for greenfield creation but not for investigation — an implementer allowed to edit while diagnosing will always confirm its first hypothesis.
+- **Phase A and Phase B belong in separate prompt artifacts** whenever a prompt contains a real *question*. Greenfield creation with nothing to diagnose may carry a read-only precondition check inline. An implementer allowed to edit while diagnosing will always confirm its first hypothesis.
+- **`git mv` necessarily stages.** A prompt that says "use `git mv`" and "do not stage" is self-contradictory. Say instead: do not commit; stage nothing beyond what `git mv` requires — then verify the staged blob.
+- **Paste Claude Code output as plain text.** Attachments silently arrived empty four times.
+- Commit prefixes now in use: `chore:`, `feat:`, `data:`, `docs:`, `refactor:` (last two unrecorded — Banked 4).
 
 ## Entry point
 
-Draft and run a **Phase A (read-only) investigation prompt for Slice 3**: have Claude Code determine, from the repo and from Supabase's Edge Function runtime, whether `src/ingestion/`'s parser and its `unpdf` dependency import and run under Deno, and enumerate the concrete options for sharing that code between `src/ingestion/` and `supabase/functions/` — reporting findings and changing nothing. Everything else in Slice 3 (the function itself, Storage upload, the insert path) depends on those two answers, and guessing them is how the wrong architecture gets committed and then defended. Only after that report should the Phase B build prompt be written.
+Write the **Slice 3 B2** prompt: the `ingest-coa` Edge Function, which accepts a COA PDF, calls the relocated parser, and inserts `coas` plus `coa_terpenes` / `coa_cannabinoids` / `coa_safety` rows for the authenticated user under RLS. Before drafting it, settle the handler-contract contradiction named under Blocked — check Supabase's current docs for whether the function exports a default `fetch` handler wrapped in `withSupabase` or calls `Deno.serve`, because the two produce different files and guessing means writing the function twice. Storage upload and the app-side confirm/edit screen are **not** part of B2; they are the following slice, and the confirm screen is a hard product requirement — parsed data is never silently trusted.
