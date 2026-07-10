@@ -125,6 +125,13 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
 - **UI-visible slice** — gate is **Gregg exercising the app on the physical iPhone**
   via the EAS dev build (`npx expo start --dev-client`). Unit tests are not evidence,
   and Expo Go is unusable on this project.
+  - **A UI slice that adds a native module gates on a NEW EAS dev build, not the
+    existing one.** A Metro reload carries JS only. A native module is autolinked
+    during `expo prebuild` and must be compiled into the dev-client binary, so
+    installing the dep with `npx expo install` and reloading Metro throws
+    `NativeModule: <name> is null` on the old binary. Split such a slice: the
+    dependency manifest lands first as its own `chore:` commit so the EAS build can
+    autolink it, then the code that uses it lands after the on-device gate.
 - **Schema/infra slice** — gate is **observed state** (e.g. tables + RLS visible in
   the Supabase dashboard).
 
