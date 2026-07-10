@@ -1,4 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
+import { useEffect, useState } from 'react';
 import { Platform, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -8,6 +10,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WebBadge } from '@/components/web-badge';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { supabaseUrlHost } from '@/lib/supabase';
 
 function getDevMenuHint() {
   if (Platform.OS === 'web') {
@@ -29,6 +32,22 @@ function getDevMenuHint() {
 }
 
 export default function HomeScreen() {
+  // Startup sentinel — temporary scaffolding, deleted by the first slice that
+  // renders real content here. Proves the @/lib/supabase module evaluated and
+  // that AsyncStorage round-trips a value on this device.
+  const [sentinel, setSentinel] = useState('…');
+  useEffect(() => {
+    (async () => {
+      try {
+        await AsyncStorage.setItem('cultivar:sentinel', 'ok');
+        const v = await AsyncStorage.getItem('cultivar:sentinel');
+        setSentinel(v === 'ok' ? 'ok' : 'read-mismatch');
+      } catch (e) {
+        setSentinel('error: ' + String(e));
+      }
+    })();
+  }, []);
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
@@ -36,6 +55,12 @@ export default function HomeScreen() {
           <AnimatedIcon />
           <ThemedText type="title" style={styles.title}>
             Welcome to&nbsp;Expo
+          </ThemedText>
+        </ThemedView>
+
+        <ThemedView type="backgroundElement" style={styles.sentinelContainer}>
+          <ThemedText type="code">
+            {sentinel} · {supabaseUrlHost}
           </ThemedText>
         </ThemedView>
 
@@ -87,6 +112,13 @@ const styles = StyleSheet.create({
   },
   code: {
     textTransform: 'uppercase',
+  },
+  sentinelContainer: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Spacing.four,
   },
   stepContainer: {
     gap: Spacing.three,
