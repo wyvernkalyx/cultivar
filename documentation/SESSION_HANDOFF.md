@@ -1,100 +1,164 @@
 # Cultivar — Session Handoff
 
-_Written 2026-07-09. **The repo is authoritative over this document.** Every state claim below is a prediction to falsify, not a fact to trust._
+_Written 2026-07-10, against HEAD `b4c9028`, pushed and verified._
+_**The repo is authoritative over this document.** Every state claim below is a prediction to falsify, not a fact to trust._
 
-_This principle earned its keep repeatedly this session. The sharpest example: my own commit prompt instructed Claude Code that "the renames are already staged by `git mv`; add the remaining four config files." That was wrong in a way that would have shipped a broken commit — `git mv` stages the rename with the **original** contents, so the `.ts` extension fixes made afterwards were unstaged (the six `RM` entries). Obeying me literally would have committed the parser at its new path with extensionless imports: the precise state that breaks `supabase functions deploy`, and the thing the change existed to prevent. It would also have failed its own tests. Claude Code refused, staged the six, verified the **staged blob** (`git show :…/parseCoa.ts`) rather than the worktree, and committed only then._
+_The previous version of this file was audited by a fresh session that found four defects in it before running a single command. It said "blocked on three operator-only steps" and listed two. It reused a slice number that was already taken. It proposed a manual gate phrased as an absence — "no startup crash" — which passes identically whether the code ran or never executed. And it told the implementer to "write the first component that imports the client" without naming the file, which would have silently merged navigation surgery into a config slice. All four are mine. The document worked exactly as intended: it was written to be broken, and it broke._
 
-_Also refuted this session: I claimed Supabase's "no bare specifiers" guidance forced a source rewrite (it didn't — the import map resolved it); and I told the operator a Deno PATH failure meant Deno wasn't installed (it was; the shell was stale). Begin the new session with a read-only Phase A audit before acting on anything here._
+_A separate one, earlier and worse: I told the operator to run `bash scripts/session-audit.sh > audit.txt` before the script existed. Bash created the redirect target, failed to find the script, and left a zero-byte file in the repo root that stopped the next prompt. **A script I recommended is not a script that exists.** The same error as a push authorized in prose._
+
+_Begin with the Phase A audit below. Try to break it._
+
+---
 
 ## Start here (Phase A, read-only)
 
-- Branch `main`. HEAD should be `9ba23d6` (`refactor: relocate COA parser to supabase/functions/_shared/coa`), parent `7d60ac7`.
-- **Sync:** `git rev-list --count origin/main..HEAD` should print **0**. *(Push was authorized but I did not observe its output — if this prints 1, the push never ran. The repo wins.)*
-- `git status --short` should be **empty** — with one known exception: **`supabase/functions/deno.lock` reappears as untracked whenever anything runs `deno`.** It is regenerable and was deliberately not committed. This is expected noise, not drift. See Ratified D10.
-- `npm test` -> **36 passed / 0 failed**, 1 suite. Suite now lives at `supabase/functions/_shared/coa/__tests__/parseCoa.test.ts`.
-- `npx tsc --noEmit` -> **0 errors**. `npx expo lint` -> **1 error, 0 warnings** (template `src/hooks/use-color-scheme.web.ts`; not our code). This is a **ceiling**.
-- `deno check supabase/functions/_shared/coa/parseCoa.ts` -> passes, **with no `unstable` flag anywhere in the repo**.
-- `npm ls expo` -> **expo@56.x**. `deno --version` -> **2.9.2**. Both pins are deliberate.
-- `src/ingestion/` must **not** exist.
+**One command.** Run it from the repo root, redirecting **outside** the repo:
 
-If any of these don't match, the repo wins — re-baseline before proceeding.
+```
+bash scripts/session-audit.sh > ../audit.txt
+```
+
+It prints fifteen checks under labelled headers. It renders **no verdicts** — no PASS, no OK, no comparison against an expected value. Those live below, and they are the part that changes. Paste `audit.txt` whole.
+
+Expected values, each a prediction that can be wrong:
+
+| Check | Expected |
+|---|---|
+| [1] branch | `main` |
+| [2] HEAD | a `docs:` commit whose **parent is `b4c9028`** and whose subject begins `docs: correlation rule`. Its own sha was unknowable when this was written — a handoff cannot name the commit that contains it. Check `[2]` prints `%h %p %s`; the parent is directly falsifiable from it. |
+| [3] ahead of origin | **0**, *after* the operator's push lands. This is a prediction: the push could not have been observed when this was written, because the commit to push did not exist. If it prints 1, the push has not run — that is the finding, not an error in this table. |
+| [4] working tree | `(clean)` — this file is committed, so it must not appear. **If `.env` appears, stop everything.** |
+| [5] `.env` ever committed | `(never committed)` |
+| [6] client path | `src/lib/supabase.ts` tracked; `lib/` count **0** |
+| [7a/b] `.gitignore` blob | line 34 `.env*`, line 35 `!.env.example`. **Read the ordering.** The negation must be the last matching pattern for that path. Line 40's bare `example` is template detritus and matches nothing — gitignore matches whole path components. |
+| [8] unstable flags | `(none)` |
+| [9] `npm test` | **36 passed / 0 failed**, 1 suite |
+| [10] `deno test` ingest-coa | **5 passed / 0 failed** |
+| [11] `deno check` | silent |
+| [12] `tsc --noEmit` | `(no output)`, exit **0** |
+| [13] `expo lint` | **1 error, 0 warnings**, and the filename in the window is `use-color-scheme.web.ts` — template code, not ours. This is a **ceiling**. |
+| [14] `expo install --check` | `jest@30.4.2` and `@types/jest@30.0.0` misaligned. **Expected. Do not fix.** Neither touches the SDK-56 pin; downgrading risks the 36 tests. |
+| [15] trailers | exactly two, parsed |
+
+The script also prints two SQL queries it cannot run. **Run them in the Supabase SQL editor.** `select count(*)` cannot distinguish a table with RLS on from one with it silently off, because the editor runs privileged. `pg_policies` is the observation the schema gate actually requires. Expect five tables in `public` — `profiles`, `coas`, `coa_terpenes`, `coa_cannabinoids`, `coa_safety` — each with `rowsecurity = t` and at least one policy.
+
+**If any of these don't match, the repo wins — re-baseline before proceeding.**
+
+---
 
 ## What shipped (newest first)
 
-- `9ba23d6` — refactor: relocate COA parser to `supabase/functions/_shared/coa`.
-- `7d60ac7` — docs: formalize handoff process and reconcile the handbook.
-- `4200d2f` — feat: core Supabase schema with row-level security (5 tables, RLS on every one).
-- `3400599` — feat: COA parser for Kaycha and DRS/Confident (pure, 36 tests).
-- `5fae761` — data: four real NY COA fixtures.
-- `7d9335b` — chore: EAS development build config for iOS.
-- `18b7f7f` — chore: scaffold Expo + Supabase (Step 0).
+- `b4c9028` — chore: session audit script, and `.gitattributes` so it survives a clone
+- `afaf0e0` — docs: reconcile the handbook with the repo, nine corrections
+- `a589884` — chore: ignore all `.env` variants, exempting only `.env.example`
+- `c791e1c` — refactor: relocate `lib` to `src/lib` so the `@/` alias resolves
+- `90bad0a` — docs: promote three corrected rules into the process docs
+- `5c66f0a` — docs: reconcile `CLAUDE.md` with ratified decisions D1, D7, D9
+- `6bfb855` — feat: `ingest-coa` Edge Function parses a COA PDF and returns JSON
+
+---
 
 ## The arcs
 
-**The parser moved because it was server code living in the client tree.** D7 established that extraction and parsing run server-side; the app never parses a PDF. Leaving it in `src/ingestion/` and importing it from an Edge Function via `../../../` would have cemented that inversion behind a path a future refactor silently breaks. Supabase's own guidance puts shared code in `functions/_shared`, imported by relative path, and files there are not deployed as standalone functions. Twelve files moved with `git mv`; history follows. Do not move it back.
+**The ingestion spine is complete, server-side, and does not persist.** `ingest-coa` accepts raw `application/pdf` bytes over POST, runs `extractText` then `parseCoa`, and returns `Response.json({ data })`. It writes nothing — no rows, no Storage. An earlier plan had it insert `coas` plus child rows; that was superseded, because the confirm/edit screen is a hard product requirement and a function that persists on receipt turns "confirm before save" into "amend after save." The insert path belongs to the slice that owns that screen. The handler is `export default { fetch: withSupabase({ auth: 'user' }, ...) }` from `npm:@supabase/server@^1`, which hands the handler a `ctx.supabase` already scoped to the caller's RLS. `ingestCoa` is exported separately from the wrapped default so it can be tested without minting a JWT. **The function is written and tested. It is not deployed.**
 
-**Two things would have broken deploy, and only empiricism found them.** First, extensionless relative imports (`from './types'`) fail `supabase functions deploy` with a module-resolution error — the Phase A2 verification only passed because its scratch config enabled the **unstable** `sloppy-imports` flag. That crutch is now banned repo-wide and explicit `.ts` extensions replace it. Second, `unpdf` was imported as a bare specifier, which Supabase advises against. Rather than rewrite the source to `npm:unpdf@1.6.2` (which would have broken Jest and ts-jest resolution), `supabase/functions/deno.json` maps it. Both were *proved*, not assumed: `deno check` passes without the flag, and the bare specifier resolved through `--config supabase/functions/deno.json` — the same mechanism deploy uses.
+**The app side has never been wired, and the one piece believed ready is wrong.** `src/app/` is unmodified Expo Router template: three files, a native tab bar declared *imperatively* in `src/components/app-tabs.tsx`, no stack navigator, no `(tabs)/` group. **Adding a route requires editing `app-tabs.tsx` too; a route file alone surfaces no tab.** `src/lib/supabase.ts` has never been imported by anything, which is why nobody noticed it calls `createClient(url, key)` with no options object. supabase-js v2 defaults to `persistSession: true` backed by `window.localStorage` and `detectSessionInUrl: true` — neither exists on a native client, and no storage adapter is installed to fall back on. A sign-in slice written against that file would appear to work, and the session would evaporate on the next cold start, silently, presenting days later as "the app randomly logs me out."
 
-**The parser now provably behaves identically under Node and Deno.** Phase A2 only ever *executed* the DRS fixture. Kaycha's two mirror-image sub-layouts and its transposed-column zipping — the most intricate code in the module — had never run under the production runtime. B1 closed that: all four fixtures execute under Deno 2 with values identical to Jest, and critically `Limonene === null` strictly for `animal-face` (`isNull: true`) while the three real values stay numeric. That is D2 holding at runtime, not just in a test.
+**Seven acceptance criteria passed or failed for reasons unrelated to what they named.** Not the code — the criteria that gated it. Counting trailers is *uncorrelated* with trailer correctness. `git check-ignore` short-circuits on tracked files and reads the working directory regardless of its flags. `--name-only` prints one path for a rename. `grep -Fxc '!.env.example'` proves existence where D12 claims *ordering*. A criterion pinned a forward-slash path that `expo lint` prints with backslashes. And the `.gitattributes` clone test verified the protected file came out LF without verifying an unprotected file came out CRLF — a pass compatible with "the rule is decorative." That last one was caught by a control experiment nobody asked for. **A control turns a passing test into evidence.** The general rule is now in `handoff-specs.md`.
 
-**The working method was formalized, and immediately caught a defect.** `documentation/process/handoff-specs.md` now defines the two artifacts (chat->Claude Code prompts; chat->chat handoffs) with the Cultivar deltas. Within two prompts of adopting it, report-back item 5 ("anything in this prompt that turned out to be wrong") surfaced the `git mv` staging bug above. The item is not decoration.
+**Nine sentences in `CLAUDE.md` were false.** Jest was claimed to cover app code; it cannot, and a test file under `src/` is discovered by nothing while `npm test` prints `36 passed` and exits 0. Shared client code was said to live in `lib/`. A local cache was said to serve offline reads. `.vscode/` was listed as never-staged while both its files are tracked. Six were found by being told where to look. **The last three were found by reading the file end to end. `grep` found none of them.**
+
+**Every read-only check now lives in a script.** `scripts/session-audit.sh` prints evidence and never verdicts, because a script that grades itself is a criterion that cannot fail for the right reason. `.gitattributes` shipped with it: `core.autocrlf` is `true`, and without `*.sh text eol=lf` the first checkout after that commit would have rewritten the script with CRLF and Git Bash would answer `$'\r': command not found` — on a script whose check `[7b]` exists to make CRLF visible.
+
+---
 
 ## Refuted hypotheses / memory corrections
 
-- **"`git mv` stages everything you need."** No. It stages the rename with the *original* blob. Subsequent edits require a second `git add`. Verify the **staged blob** (`git show :<path>`), never the worktree, before committing a move-plus-edit. **This belongs in `CLAUDE.md`.**
-- **"Supabase's no-bare-specifier rule forces a source rewrite."** It doesn't. A `deno.json` import map at the `functions/` root resolves bare specifiers for `_shared` code (Deno walks up the directory tree), and keeps Jest/ts-jest working. Confirmed by execution.
-- **"Phase A2's CONFIRMED verdict proved the repo would deploy."** It didn't. It proved the parser's *logic* runs under Deno — while leaning on `sloppy-imports`, which production does not have. A green check under different config than production is weaker evidence than it looks.
-- **"Deno isn't installed" (on a `command not found`).** It was. Windows PATH doesn't reach shells opened before the install, and VS Code caches the environment at launch. Restart VS Code, don't reinstall.
-- **`AGENTS.md` was actively misleading**, not neutral boilerplate: it told agents to read **SDK 57** docs, contradicting the deliberate SDK 56 pin. Now a stub pointing at `CLAUDE.md`.
-- **Earlier, and still worth carrying:** I claimed NY had no queryable canonical COA source (OpenCOA falsified it); claimed CannMenus exposes no terpene data without reading its API docs (it does, for ~13-20% of products); and wrote my own recommendation into the roadmap as though it were Gregg's decision. Watch for that last class of error — a recommendation promoted to a decision by phrasing.
-- **Workflow, not code:** file attachments in the previous chat silently arrived **empty** four times, including after a browser restart. Paste Claude Code output as **plain text**, not as an attachment.
+- **"A script I recommended is a script that exists."** No. Same class as a push authorized in prose. Both cost a stopped prompt.
+- **"`grep -c "Co-Authored-By"` verifies trailers."** It is *uncorrelated*. Returned 3 on a correct commit whose body mentioned the string; would return 2 on two wrong trailers. Use `git log -1 --format=%B | git interpret-trailers --parse`.
+- **"`git check-ignore` verifies `.gitignore`."** It reads the **working directory**, never a commit, and short-circuits on tracked paths without evaluating any pattern (`-v -n` prints a bare `::`). `--no-index` means "ignore tracking status," not "read from HEAD." Read the blob: `git show HEAD:.gitignore | cat -n`.
+- **"`grep -Fxc '!.env.example'` verifies D12."** It proves the line exists. D12 claims it is the **last matching pattern**. Existence is not ordering.
+- **"`git diff --cached --name-only` shows both paths of a rename."** Destination only. `--name-status` shows both, with the similarity score.
+- **"A criterion can pin a source path in tool output."** Not on Windows. `expo lint` prints `D:\...\src\hooks\use-color-scheme.web.ts`. A forward-slash literal never matches. Pin the basename.
+- **"The Supabase client is ready to import."** Syntactically fine, semantically wrong for React Native, never executed on any device.
+- **"`origin/main` behind HEAD means the push never ran."** The remote-tracking ref goes stale. `git fetch` first, then conclude.
+- **Workflow, not code:** `CLAUDE.md` contains a ```` ```bash ```` fence. Pasting its diff inside a fenced block terminates the fence early and markdown eats every `+` and `-` after hunk two. **Paste diffs indented:** `git diff -- <path> | sed 's/^/    /'`.
+- **Still true:** file attachments in chat have silently arrived empty, including a fixture PDF in project knowledge. Paste Claude Code output as plain text.
+
+---
 
 ## Ratified decisions
 
-- **D1 — Personal-empirical truth-claim.** Never assert terpenes cause effects; report what correlates for *this user*. Grounds: the population-level science is genuinely unproven (Weedmaps' own consumer education says there are no human studies on terpenes' role in feeling high), it reduces regulatory exposure, and it is the differentiator.
-- **D2 — Never fabricate analyte values.** ND / `<LOQ` / not-reported are `null`, displayed as "not reported by lab". Grounds: a fabricated zero corrupts the only signal the product predicts on. Enforced at runtime under both Node and Deno.
-- **D3 — Own ingestion.** No third-party COA feed as backbone. Grounds: all-markets requirement; OpenCOA is NY-only; CoADoc failed the live test on all four fixtures.
-- **D4 — Supabase from the start, RLS on every table.** Grounds: the ~10-user cohort breaks the single-user premise that made local-first correct.
-- **D5 — App-store-first, not MCP distribution.**
-- **D6 — MVP is lab-tested product only.** Home-grown and aroma-as-terpene-proxy deferred.
-- **D7 — Extraction/parsing run server-side.** The app never parses a PDF.
-- **D8 — Claude (chat) owns the push decision.** Claude Code never pushes; Gregg executes one `git push` on authorization.
-- **D9 — Parser lives in `supabase/functions/_shared/coa/`**, imported by relative path with explicit `.ts` extensions. No `unstable` flags. Grounds: code lives where it runs; deploy-safety.
-- **D10 — `supabase/functions/deno.lock` will be committed in B2, alongside the Edge Function.** Not gitignored. Grounds: it pins `unpdf`'s integrity, which is a dependency contract of the deployed function; an ignored lockfile silently permits a different `unpdf` at deploy than the one verified against four fixtures. Until B2 lands it, it is expected untracked noise.
+D1–D10 stand as previously recorded and are reflected in `CLAUDE.md`.
+
+- **D11 — Shared client code lives at `src/lib/`, importable as `@/lib/...`.** Grounds: `tsconfig.json` maps `@/*` to `./src/*`; `lib/` at the root could never be reached. Moved while zero importers existed.
+- **D12 — `.gitignore` ignores `.env*` and rescues `.env.example` by negation**, which must remain the last matching pattern for that path. **`.env.example` must never contain a real value.** Grounds: `.env.development`, `.env.production`, `.env.test` are all read by Expo's loader and were all unignored. Preventative; nothing was ever exposed, and `.env` has never been committed on any ref.
+- **D13 — Auth is email + 6-digit OTP** (`signInWithOtp` -> `verifyOtp`). Grounds: no deep-link handling, no password reset, no email-confirmation redirect that must survive a native URL scheme. *Provenance: my recommendation, ratified by Gregg. Magic-link was considered and rejected — more copy-paste exists, less of it works on a dev build.*
+- **D14 — App-code test infrastructure is not built until a slice needs it.** RNTL, `jest-expo`, `react-test-renderer` stay uninstalled; Jest's `roots` stays pinned to the parser tree. Grounds: lived-demand, and UI slices gate on the physical iPhone where unit tests are explicitly not evidence. **The hazard is in `[ADAPT]` item 1**: a test under `src/` is discovered by nothing and `npm test` still exits 0.
+- **D15 — `.gitattributes` sets `*.sh text eol=lf`, narrowly.** No `* text=auto`. Grounds: `core.autocrlf` is `true`; a fresh clone materializes every unattributed text file as CRLF, proven by control. Future CR-sensitive artifacts (a `Makefile`, a `.sql` fed to a strict parser) need their own line.
+- **D16 — Slices are named by content, never numbered.** The old numbering collided: parser was 1, schema 2, `ingest-coa` 3, and a fresh plan reused "slice 2" for the client config. A number that means two things is worse than no number.
+
+---
 
 ## Open items
 
-**Runnable now**
-- *(none drafted — the entry point produces the first.)*
+### Runnable now
+- *(none drafted — the entry point produces the first prompt.)*
 
-**Blocked**
-- **Slice 3 B2 — the Edge Function itself.** Blocked on one question that must be answered from Supabase's *current* documentation, not from examples in the wild: **what is the correct handler contract?** Supabase's own AI-prompt guidance says do **not** use `Deno.serve`, and instead `export default { fetch: async (req: Request) => ... }`, wrapped with `withSupabase` from `npm:@supabase/server@^1`. Most third-party examples still show `Deno.serve`. These contradict. Verify before writing. B2 also lands `deno.lock` (D10).
+### Blocked
+- **Deploying `ingest-coa`.** Two operator-only steps, in order: `supabase functions deploy ingest-coa`, and an authenticated user existing at all — the function is wrapped in `withSupabase({ auth: 'user' })` and rejects unauthenticated callers before the handler runs. Nothing app-side can call it until sign-in ships. Not needed for the client-config slice.
+- **The confirm/edit screen.** Blocked on auth, and on the unknown-lab decision below.
 
-**Banked** (`documentation/follow-ups.md` unless noted)
-1. **Promote to `CLAUDE.md`:** the `git mv` + second `git add` rule (project-wide, permanent, and it nearly caused a broken commit).
-2. **Terpene parser silently drops** rows whose names aren't in the known-terpene whitelist. Correct for headers; would silently drop a real terpene not in the list. Confirm the whitelist covers the full NY panel; log unknown analyte names rather than dropping. *(Highest-priority code item — data fidelity in a terpene-first product.)*
-3. Ligature null-bytes (fi/fl) are stripped, not reconstructed. Harmless in current fixtures; could mangle a strain or brand **name**.
-4. `CLAUDE.md` commit-prefix list needs `docs:` and `refactor:` added — both were used this session without being recorded.
-5. `CLAUDE.md` carries **two push bullets** (the older "never push without explicit authorization" and the newer three-way invariant). Consistent but redundant. Consolidate.
-6. `reference/` contains only `README.md` — **confirmed**. `cultivar-poc.jsx` and `Cultivar_Resources.xlsx` were never copied in. Reference-only material; land in a separate commit.
-7. **Branch / branch.io** (mobile deep-linking; Weedmaps is a customer; Gregg's brother David works there) is the technology for the *sharing* feature's one-tap "open shared COA in the app" flow. Not needed until sharing is built; Expo's built-in linking covers the basics. Recorded because it exists nowhere else. *(`ourbranch.com` is a different company — an insurer.)*
-8. npm audit: ~11 moderate template-inherited vulns. Do **not** `audit fix --force` — it breaks Expo version alignment.
+### Banked
+1. **`ingest-coa` returns HTTP 200 with an empty shell when `sourceLab` is `unknown`.** `parseCoa` does not throw on an unrecognized lab. The caller cannot distinguish "lab we don't parse" from "supported lab whose layout silently changed." A 200 routing to manual entry may be right; nobody decided, and no test covers the path. **Must be answered before the confirm/edit slice ships**, because that screen renders the empty shell. In `documentation/follow-ups.md`.
+2. **The terpene parser silently drops rows** whose names are not in the known-terpene whitelist. Correct for headers; would silently drop a real terpene. Confirm the whitelist covers the full NY panel; log unknown analyte names rather than dropping. *(Highest-priority code item — data fidelity in a terpene-first product.)*
+3. **`CLAUDE.md` should point at `scripts/session-audit.sh`.** Its Phase A guidance predates the script. A `docs:` commit.
+4. **`.gitignore:40` is a bare `example` pattern.** Template detritus, matching nothing, sitting *below* the `!.env.example` negation. Harmless — gitignore matches whole path components — but anyone who broadens it to `*example` silently drops the file that documents the env vars. Its own `chore:`.
+5. **Migrate to Supabase publishable keys before end of 2026.** Legacy `anon` keys are deprecated then. `withSupabase` supports the new key system; the client config is the blocker, not the Edge Function.
+6. **Every unattributed text file clones as CRLF on Windows.** Harmless for `.js`/`.ts`/`.md`. The day the repo gains a `Makefile` or a strict-parsed `.sql`, it needs a `.gitattributes` line. Check `[7b]` is the template for proving it.
+7. Ligature null-bytes (fi/fl) are stripped, not reconstructed. Could mangle a strain or brand **name**.
+8. `reference/` contains only `README.md`. `cultivar-poc.jsx` and `Cultivar_Resources.xlsx` were never copied in.
+9. `npm audit`: ~11 moderate template-inherited vulns. Do **not** `audit fix --force`; it breaks Expo version alignment.
+10. **Branch / branch.io** for the sharing feature's one-tap deep link. Not needed until sharing is built. (`ourbranch.com` is a different company, an insurer.)
+11. **No Supabase Storage bucket exists.** `[ADAPT]` item 3 says so. Needed before any COA PDF is persisted.
 
-## Pointers — read the source, don't restate it
+---
 
-- **Product spec, MVP scope, decision log, risks, §8A session lexicon:** `documentation/Cultivar_MVP_and_Roadmap.md`. Authoritative for the ~10-user cohort (CT/PA/NY/BC), the per-jurisdiction age-gate (21+ US, 19+ BC), PIPEDA/cross-border data, the active privacy items (consent flow, deletion path, encryption, counsel before the cohort logs real data), the at-dispensary shortlist, and the terpene-shift tracker.
-- **Method:** `documentation/process/handoff-specs.md`; invariants in `CLAUDE.md`.
-- **Build order after Slice 3:** app-side upload + confirm/edit screen (first UI; iPhone gate) -> COA detail + shelf -> device capture flow (QR -> browser -> download -> ingest; the untested friction) -> session logging -> prediction -> compliance.
+## Working rhythm (only what is in flux)
 
-## Working rhythm (only what's in flux)
+Stable method lives in `CLAUDE.md` and `documentation/process/handoff-specs.md`, both of which are now true.
 
-Stable method lives in `CLAUDE.md` and `documentation/process/handoff-specs.md`. What changed this session:
+- **Read the file, don't grep it.** The last three handbook defects were invisible to `grep`, and one sat inside an item a prior prompt had just edited. Enumerating tokens finds the instances you already know about.
+- **Pair every criterion with a control.** A test that only observes the protected case cannot distinguish "the protection worked" from "the protection was never needed."
+- **Paste diffs indented, never fenced.**
+- **Report-back item 5 caught a defect in ten consecutive prompts**, including in the prompts written to fix the previous defects. A tenth field — *"the one thing you found that I did not ask about"* — found six things that each reordered the plan. **"Nothing" is a legitimate answer to it**, and has been given twice, correctly.
+- Prompts should **not** instruct Claude Code to read `SESSION_HANDOFF.md` unless it is fresh.
+- Redirect the audit **outside** the repo. `audit.txt` inside it stopped a prompt.
 
-- **Phase A and Phase B belong in separate prompt artifacts** whenever a prompt contains a real *question*. Greenfield creation with nothing to diagnose may carry a read-only precondition check inline. An implementer allowed to edit while diagnosing will always confirm its first hypothesis.
-- **`git mv` necessarily stages.** A prompt that says "use `git mv`" and "do not stage" is self-contradictory. Say instead: do not commit; stage nothing beyond what `git mv` requires — then verify the staged blob.
-- **Paste Claude Code output as plain text.** Attachments silently arrived empty four times.
-- Commit prefixes now in use: `chore:`, `feat:`, `data:`, `docs:`, `refactor:` (last two unrecorded — Banked 4).
+---
+
+## Pointers
+
+- Product spec, MVP scope, cohort, privacy items: `documentation/Cultivar_MVP_and_Roadmap.md`
+- Method: `documentation/process/handoff-specs.md`; invariants in `CLAUDE.md`
+- Deferred: `documentation/follow-ups.md`
+- **Build order:** client config -> sign-in -> confirm/edit screen -> COA detail + shelf -> device capture (QR -> browser -> download -> ingest; the untested friction) -> session logging -> prediction -> compliance.
+
+---
 
 ## Entry point
 
-Write the **Slice 3 B2** prompt: the `ingest-coa` Edge Function, which accepts a COA PDF, calls the relocated parser, and inserts `coas` plus `coa_terpenes` / `coa_cannabinoids` / `coa_safety` rows for the authenticated user under RLS. Before drafting it, settle the handler-contract contradiction named under Blocked — check Supabase's current docs for whether the function exports a default `fetch` handler wrapped in `withSupabase` or calls `Deno.serve`, because the two produce different files and guessing means writing the function twice. Storage upload and the app-side confirm/edit screen are **not** part of B2; they are the following slice, and the confirm screen is a hard product requirement — parsed data is never silently trusted.
+**Write the build prompt for the client-config slice: configure `src/lib/supabase.ts` for React Native, and give it its first importer.**
+
+Add `@react-native-async-storage/async-storage` via `npx expo install`. Pass an options object to `createClient`: `auth: { storage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false }`. Two things to verify against current Supabase docs **before drafting**, not after: whether their Expo guidance still pairs `autoRefreshToken` with `startAutoRefresh`/`stopAutoRefresh` on `AppState` transitions (skipping it lets the refresh timer run while backgrounded and throw — presenting as, exactly, "the app randomly logs me out"), and whether `react-native-url-polyfill/auto` is still required under SDK 56 with Hermes.
+
+**The importer is `src/app/index.tsx`, an existing template screen.** Not a new route. `src/components/app-tabs.tsx` declares the tab bar imperatively, so a new route file surfaces no tab and would drag navigation surgery into a config slice — an "and also." Put `app-tabs.tsx` in Non-goals.
+
+**The gate must be positively observable.** "App loads, no startup crash" passes identically whether the module evaluated or was elided. Instead: at startup, write a sentinel through the same AsyncStorage instance passed to `createClient`, read it back, and render it on screen beside the Supabase URL's host. The gate is *"I saw `ok · <ref>.supabase.co` on the phone,"* not *"I saw no crash."* Cold-start twice; the sentinel must survive. That text is scaffolding — say in the prompt which slice deletes it.
+
+This import is the whole point. It is simultaneously the fix for the misconfiguration, the first evidence that D11's alias resolves, and the first time `.env` is read on the device. Note what it **cannot** test: session survival across cold start is unobservable until sign-in ships a session. Say so in the prompt rather than letting a green gate imply the storage adapter works.
+
+The dev-client path was exercised and works — Metro bundled 1645 modules to the iPhone. So when this gate fails, it is the code, not the tooling.
+
+Sign-in (D13) is the slice after. **Do not merge them:** a session that evaporates on cold start and an alias that does not resolve look identical from the phone.

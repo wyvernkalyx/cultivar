@@ -47,9 +47,11 @@ The last line is the highest-leverage sentence in the document.
 5. **Acceptance criteria** — checkable, not aspirational.
    - *Automated:* build clean, warnings <= baseline, named tests that must pass.
    - *Manual gate:* the exact sequence a human performs and what they must see. **If a change is UI-visible, unit tests are not evidence.**
+   - **A criterion must be correlated with the property it gates.** Ask, before writing it: could this criterion pass while the property is false, or fail while it is true? A count of trailers is not merely imprecise — it is *uncorrelated*, returning 3 on a correct commit whose body mentions the string and 2 on a commit with two wrong trailers. Existence is not ordering. A tool's flag name is not its behaviour. And a criterion that only observes the protected case cannot distinguish "the protection worked" from "the protection was never needed" — **pair it with a control.**
    - **Counts are sound for absence, unsound for presence.** A criterion asserting that something is *gone* may count it: `grep -c` -> 0, because absence has no location. A criterion asserting that something *exists* must pin **where** — the section, the bullet, the exact whole line — because a count answers "how many," never "which one." `grep -c "Co-Authored-By" -> 2` passes with two wrong trailers. `grep -Fx "<the exact trailer>"` does not. A presence-count that survives only because a neighbouring criterion pins the same fact is redundant, not sufficient.
    - *Corollary:* a location assertion must bound **every** hit, not one of them. "At least one hit inside §X" passes on a stray hit anywhere else. Write "two hits: one in §X, one in §Y."
    - **A criterion about committed state must read the blob.** `git show HEAD:<path>` and `git show :<path>` read the commit and the index. Tools that read the working directory verify the working directory, whatever their flags are named — `git check-ignore --no-index` does not mean "read from the commit," it means "ignore tracking status." A criterion that passes because the worktree and HEAD happen to agree has verified nothing.
+   - **A marker criterion can prove a token absent; it cannot prove a claim absent.** `grep` locates strings, and a false sentence need not contain the string you searched for. Three false claims in `CLAUDE.md` survived six grep-based passes and were found only by reading the file end to end. The claim check is the diff, read by a human, before the commit is authorized. Write that step into the prompt rather than pretending a criterion covers it.
 6. **Report back** — say exactly what to paste:
    1. Files changed (paths only)  2. Full diff  3. Build output: errors + warning count  4. Test results  5. **Anything in this prompt that turned out to be wrong.**
 
@@ -62,6 +64,7 @@ Item 5 is not optional. It is the feedback channel that keeps the next handoff h
 | Diff is 400 lines for a 20-line fix | No non-goals | Enumerate what not to touch |
 | Gate passes, bug persists | Unfalsifiable criteria | Rewrite as observable states |
 | Green gate, wrong artifact | Criterion counted a presence instead of locating it | Pin the section, bullet, or exact line |
+| Criterion passes, property untested | No control case | Observe the negative case in the same run |
 | Commit contains two unrelated changes | Prompt had an "and also" | One concern per prompt |
 | Implementer "fixes" the spec to match code | No authority statement | "Repo is authoritative; report contradictions" |
 | Model reports success, tests never ran | No report-back format | Demand raw output, not a summary |
