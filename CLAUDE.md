@@ -48,8 +48,9 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
 - **Surgical commits.** One concern per commit. Docs land with the code they describe.
   No broken intermediate states — every commit builds and runs.
 - **Pure logic is tested before it is wired to anything.** Extract logic into pure
-  functions and cover it first — **Jest** for app and parser code, **`deno test`** for
-  Edge Functions. Not every helper terminates in a component: the parser is server code
+  functions and cover it first — **Jest** for parser code, **`deno test`** for
+  Edge Functions. App-code tests are not currently possible (see **[ADAPT]** item 1).
+  Not every helper terminates in a component: the parser is server code
   (see **Ingestion**) and is wired to a handler, never to a UI.
 - **Document-before-implement.** Capture the intended behavior in `documentation/`
   before writing the implementation.
@@ -92,6 +93,11 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   ```
 - **Exactly two co-author trailers:** `Claude <noreply@anthropic.com>` and the current
   Claude model (currently `Claude Opus 4.8 (1M context) <noreply@anthropic.com>`).
+- **Verify trailers by parsing, never by counting.** Use
+  `git log -1 --format=%B | git interpret-trailers --parse`. **Never
+  `grep -c "Co-Authored-By"`** — a count matches prose mentioning the string, not just the
+  trailer construct. Commit `90bad0a` proves it: its body explains why counting fails, so
+  `grep -c` returns 3 where there are 2 trailers. Parse the construct; do not match its text.
 - **Subject prefixes.** One of five, chosen by what the commit contains:
   - `feat:` — new behavior
   - `refactor:` — behavior-preserving restructuring (e.g. `9ba23d6`)
@@ -129,24 +135,39 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
 1. **Stack / test / build.** Expo (React Native) + TypeScript + Expo Router.
    **Expo SDK pinned to 56** (`expo@56.x`) — the current App Store Expo Go predates
    SDK 56, so on-device testing uses an **EAS development build**, not Expo Go.
-   Tests = **Jest + React Native Testing Library** for app and parser code, and
-   **`deno test`** for Edge Functions (e.g.
-   `supabase/functions/ingest-coa/__tests__/ingestCoa.test.ts`). Builds = EAS.
-   Package manager = npm.
+   Tests = **Jest + `ts-jest`** (`testEnvironment: 'node'`), whose `roots` discover
+   **only** `supabase/functions/_shared/coa`, and **`deno test`** for Edge Function
+   code (e.g. `supabase/functions/ingest-coa/__tests__/ingestCoa.test.ts`).
+   **App-code tests are not currently possible** — React Native Testing Library,
+   `jest-expo`, and `react-test-renderer` are not installed, and Jest's `roots` would
+   not discover them if they were. A test file placed anywhere under `src/` is silently
+   never run: `npm test` still prints `36 passed` and exits 0, which is a green gate over
+   tests that did not execute. Wiring that up is a `chore:` of its own, undertaken when a
+   slice actually needs it — not before. UI slices gate on the physical iPhone; unit tests
+   are explicitly not evidence for them.
+   Builds = EAS. Package manager = npm.
    **Always install Expo-managed deps with `npx expo install`** (not bare `npm install`).
 2. **Repo / handbook / docs.** Repo root: `D:\Projects\Cultivar\cultivar`.
    Handbook: `CLAUDE.md`. Docs: `documentation/`. App source lives under `src/`
-   (Expo Router routes in `src/app/`). Shared client code in `lib/`.
-3. **Source-of-truth.** Supabase Postgres is canonical; a local cache serves offline
-   reads. COA PDFs **will** live in Supabase Storage — the bucket is not yet created
-   and nothing writes to it. No auto-transform on save. Never fabricate
-   terpene / cannabinoid values.
+   (Expo Router routes in `src/app/`). Shared client code in `src/lib/`, importable
+   as `@/lib/...`.
+3. **Source-of-truth.** Supabase Postgres is canonical; a local cache **will** serve
+   offline reads — none exists and nothing reads from one. COA PDFs **will** live in
+   Supabase Storage — the bucket is not yet created and nothing writes to it. No
+   auto-transform on save. Never fabricate terpene / cannabinoid values.
 4. **Protected data dirs.** COA fixtures
    (`supabase/functions/_shared/coa/__fixtures__/`) and any seeded or user data. The
    staging and prefix rules that govern them live in **Commit conventions**; this slot
    names the directories, not the rule.
-5. **Untracked dev files never staged.** `.env`, local Expo config (`.expo/`), and
-   editor/local config (`.vscode/` local settings).
+5. **Untracked dev files never staged.** `.env` and local Expo config (`.expo/`) — both
+   ignored by `.gitignore`. **`.vscode/` is tracked on purpose**: `extensions.json` and
+   `settings.json` are shared editor config, not local overrides. Do not gitignore it.
+   - **`.env.example` is tracked by explicit negation.** `.gitignore` ignores `.env*` and
+     rescues this one file with `!.env.example`, which must remain the **last** matching
+     pattern for that path. Never put a real value in it — it is the one env file guaranteed
+     to be committed. Verify with `git show HEAD:.gitignore | grep -Fxc '!.env.example'` → 1.
+     **Never `git check-ignore`**: it reads the working directory, not the commit, and it
+     short-circuits on tracked files without evaluating a pattern at all.
 6. **Warning baseline** (starter template on Expo SDK 56, pre-any-of-our-code):
    - `npx tsc --noEmit` → **0 errors, 0 warnings** (the SDK-57 template CSS
      side-effect-import errors do not occur under SDK 56).
