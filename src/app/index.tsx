@@ -1,7 +1,6 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 import { useEffect, useState } from 'react';
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AnimatedIcon } from '@/components/animated-icon';
@@ -10,7 +9,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WebBadge } from '@/components/web-badge';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { supabaseUrlHost } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 function getDevMenuHint() {
   if (Platform.OS === 'web') {
@@ -32,21 +31,18 @@ function getDevMenuHint() {
 }
 
 export default function HomeScreen() {
-  // Startup sentinel — temporary scaffolding, deleted by the first slice that
-  // renders real content here. Proves the @/lib/supabase module evaluated and
-  // that AsyncStorage round-trips a value on this device.
-  const [sentinel, setSentinel] = useState('…');
+  const [email, setEmail] = useState<string | null>(null);
   useEffect(() => {
-    (async () => {
-      try {
-        await AsyncStorage.setItem('cultivar:sentinel', 'ok');
-        const v = await AsyncStorage.getItem('cultivar:sentinel');
-        setSentinel(v === 'ok' ? 'ok' : 'read-mismatch');
-      } catch (e) {
-        setSentinel('error: ' + String(e));
-      }
-    })();
+    supabase.auth.getSession().then(({ data }) => {
+      setEmail(data.session?.user.email ?? null);
+    });
   }, []);
+
+  const signOut = async () => {
+    // The root-layout gate observes the auth change and swaps to sign-in on
+    // its own — no navigation here.
+    await supabase.auth.signOut();
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -58,10 +54,13 @@ export default function HomeScreen() {
           </ThemedText>
         </ThemedView>
 
-        <ThemedView type="backgroundElement" style={styles.sentinelContainer}>
-          <ThemedText type="code">
-            {sentinel} · {supabaseUrlHost}
+        <ThemedView type="backgroundElement" style={styles.accountRow}>
+          <ThemedText type="small" numberOfLines={1} style={styles.accountEmail}>
+            {email ?? '…'}
           </ThemedText>
+          <Pressable onPress={signOut}>
+            <ThemedText type="smallBold">Sign out</ThemedText>
+          </Pressable>
         </ThemedView>
 
         <ThemedText type="code" style={styles.code}>
@@ -113,12 +112,18 @@ const styles = StyleSheet.create({
   code: {
     textTransform: 'uppercase',
   },
-  sentinelContainer: {
+  accountRow: {
     alignSelf: 'stretch',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     borderRadius: Spacing.four,
+  },
+  accountEmail: {
+    flexShrink: 1,
   },
   stepContainer: {
     gap: Spacing.three,
