@@ -197,4 +197,5 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
 - Handoff specs (how prompts and session handoffs are written): `documentation/process/handoff-specs.md`
 - Current session handoff: `documentation/SESSION_HANDOFF.md`
 - Deferred items: `documentation/follow-ups.md`
+- Design docs (per-slice, document-before-implement): `documentation/design/`
 - Design/logic reference (not production code): `reference/`
