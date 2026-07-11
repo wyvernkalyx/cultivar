@@ -1,10 +1,13 @@
 # Cultivar — Session Handoff
 
-_Written 2026-07-10, against HEAD `dd8a88c`, pushed and verified (`d64bc70..dd8a88c main -> main`)._
+_Written 2026-07-12, against HEAD `09245f0`, pushed and verified (`2c17b8f..09245f0 main -> main` observed prior session)._
 _**The repo is authoritative over this document.** Every state claim below is a prediction to falsify, not a fact to trust._
 
 _Concrete refutations from this session, so this preamble is read and not skimmed:_
-_(1) The audit script "passed" a fresh session's read only because that session ran it in Git Bash. Run under **WSL** it laundered four absences as results — `deno: command not found` printed into the output slot where an observation belongs, and `tail`-based checks lost their summaries to a differently-formatted `npm notice`. The script renders no verdicts, so nothing caught it but reading the shell prompt in the output. **`session-audit.sh` is Git-Bash-only.** (2) I told the operator to gate a native-module change over Metro; a Metro reload carries JS only, so the app threw `AsyncStorage is null` on device. (3) I told the operator to read Metro's `iOS Bundled ... (N modules)` count as a cold-start proxy — it reflects Metro's **cache**, not the app's process lifecycle; a killed app relaunching against a warm cache gets a `1 module` no-op. The on-screen sentinel was always the only real observation. (4) I gated a staged-set criterion on an alphabetical order `git diff --cached --name-only` never prints (it byte-sorts; `-` precedes `.`). All four are mine._
+_(1) I asserted the Supabase Magic Link email template was "customized, not stock" with high confidence — twice. It is the current stock default; Supabase reworded the default template ("Your sign-in link" / "Follow the link below") since my training data, which still had the older "Follow this link to login." The docs list the exact stock body and it matched the screenshot verbatim. I was wrong; the repo/live-service won._
+_(2) I told the operator "don't enable SMTP," then "Office 365 makes SMTP setup quick." Both wrong: editing the email template REQUIRES custom SMTP (the default service's template is read-only), and Office 365 SMTP is basic-auth-only and on Microsoft's deprecation clock — a poor fit._
+_(3) My first sign-in build prompt claimed `_layout.tsx` had no `hideAsync` call "anywhere" — false. `AnimatedSplashOverlay` (`src/components/animated-icon.tsx`) owns the splash lifecycle and calls `hideAsync()` on first layout. The three-state gate was redesigned to render BENEATH the permanently-mounted overlay and never touch the splash. Claude Code caught it and STOPPED before editing._
+_(4) My presence-greps for the new `sign-in.tsx` were uncorrelated: `git grep` searches TRACKED files only, and the file is untracked, so the criteria returned "no matches" while the code was present. Use `git show :<path>` (blob) or `git grep --untracked` for a new file._
 
 _Begin with the Phase A audit below. **Run it in Git Bash (`MINGW64`), from `/d/Projects/...`, never WSL / `/mnt/d/`.** Try to break it._
 
@@ -12,38 +15,34 @@ _Begin with the Phase A audit below. **Run it in Git Bash (`MINGW64`), from `/d/
 
 ## Start here (Phase A, read-only)
 
-**Shell matters this time.** Open **Git Bash**, confirm `uname -s` starts with `MINGW`, `cd /d/Projects/Cultivar/cultivar`, then run the audit redirecting **outside** the repo:
+Open **Git Bash**, confirm `uname -s` starts with `MINGW`, `cd /d/Projects/Cultivar/cultivar`, then run the audit redirecting outside the repo:
 
 ```
 bash scripts/session-audit.sh > ../audit.txt 2>&1
 echo "exit: $?"
 ```
 
-The `2>&1` is new and load-bearing: without it, a tool that isn't on PATH prints `command not found` to stderr, which lands in your terminal instead of the file and reads like a result when it does. Paste `audit.txt` whole.
-
-Expected values, each a prediction that can be wrong:
+Paste `audit.txt` whole. Expected values, each a prediction that can be wrong:
 
 | Check | Expected |
 |---|---|
 | [1] branch | `main` |
-| [2] HEAD | a `docs:` commit whose subject begins `docs: update session handoff`, **parent `2c17b8f`**. Its own sha is unknowable here — a handoff cannot name the commit that contains it. The two commits *below* it in "What shipped" are `2c17b8f` (parent `dd8a88c`) then `dd8a88c` (parent `bc312cc`). |
-| [3] ahead of origin | **0**, *after* the operator's push lands. If it prints 1, the push has not run — that is the finding, not an error in this table. `2c17b8f` was pushed this session (`dd8a88c..2c17b8f`, observed); the handoff commit itself will read 1 until pushed. |
-| [4] working tree | `(clean)`. **If `.env` appears, stop everything.** |
+| [2] HEAD | If the handoff commit has NOT yet landed: `09245f0`, subject `docs: update session handoff after D18`, parent `2c17b8f`. If this handoff was committed: a `docs:` commit whose subject begins `docs: session handoff`, **parent `09245f0`** — its own sha is unknowable here. |
+| [3] ahead of origin | **0** after any push lands. If it prints non-zero, a commit is unpushed — that is the finding, not an error. |
+| [4] working tree | **NOT clean** — the sign-in build is uncommitted (see below). Expect ` M src/app/_layout.tsx`, ` M src/app/index.tsx`, `?? src/components/sign-in.tsx`, plus this handoff file if not yet committed. **If `.env` appears, stop everything.** |
 | [5] `.env` ever committed | `(never committed)` |
 | [6] client path | `src/lib/supabase.ts` tracked; `lib/` count **0** |
-| [7a/b] `.gitignore` blob | line 34 `.env*`, line 35 `!.env.example`, byte-for-byte LF. Line 40's bare `example` is template detritus, matches nothing (banked #4, prior handoff). |
+| [7a/b] `.gitignore` blob | line 34 `.env*`, line 35 `!.env.example`, byte-for-byte LF. Line 40's bare `example` is template detritus (banked). |
 | [8] unstable flags | `(none)` |
-| [9] `npm test` | **36 passed / 0 failed**, 1 suite. **Note:** the check uses `tail`, which drops the summary when npm prints its upgrade notice. If [9] looks empty, that is the check being unsound, not the tests failing — see banked A. |
-| [10] `deno test` ingest-coa | **5 passed / 0 failed** — *only if deno is on PATH.* Under WSL it prints `command not found`; that is the shell, not a regression. |
+| [9] `npm test` | **36 passed / 0 failed**, 1 suite (tail-drops summary if npm prints an upgrade notice — see banked A). |
+| [10] `deno test` ingest-coa | **5 passed / 0 failed** — only if deno on PATH. |
 | [11] `deno check` | silent (deno on PATH) |
-| [12] `tsc --noEmit` | `(no output)`, exit **0** |
-| [13] `expo lint` | **1 error, 0 warnings**, file `use-color-scheme.web.ts`. Ceiling, not target. Prints a backslash Windows path. |
-| [14] `expo install --check` | `jest@30.4.2` / `@types/jest@30.0.0` misaligned — expected, do not fix. (Prior handoff predicted 2 more packages; they did NOT recur in this session's audit — only the two jest packages flagged.) |
+| [12] `tsc --noEmit` | `(no output)`, exit **0** — **note: the uncommitted sign-in files are on disk, so tsc covers them; still expect 0 errors (verified last session).** |
+| [13] `expo lint` | **1 error, 0 warnings**, file `use-color-scheme.web.ts`. Ceiling, not target. |
+| [14] `expo install --check` | `jest@30.4.2` / `@types/jest@30.0.0` misaligned — expected, do not fix. (The "2 more packages" from an older handoff did NOT recur; verified live last session — only the two jest packages flag.) |
 | [15] trailers | exactly two, parsed |
 
-**New since the last handoff — `package.json` now carries two runtime deps** added this session: `@react-native-async-storage/async-storage@2.2.0` (native module) and `react-native-url-polyfill@^3.0.0` (JS). If [6]-adjacent or a `package.json` read does not show these, the repo and this document disagree and the repo wins.
-
-The audit also prints two SQL queries it cannot run. **Run them in the Supabase SQL editor.** Expect five tables in `public` — `profiles`, `coas`, `coa_terpenes`, `coa_cannabinoids`, `coa_safety` — each `rowsecurity = t` with at least one policy. This schema gate has **not** been observed in the last two sessions; it is the oldest unverified prediction here.
+Schema gate (run in Supabase SQL editor — this was OBSERVED PASSING last session, first time in three): five tables in `public` (`profiles`, `coas`, `coa_terpenes`, `coa_cannabinoids`, `coa_safety`), each `rowsecurity = t`; `pg_policies` shows one `ALL` policy per coa table and three (`INSERT`/`SELECT`/`UPDATE`) on `profiles`. No DELETE policy on `profiles` (intentional). No longer the oldest-unverified prediction — it's verified.
 
 **If any of these don't match, the repo wins — re-baseline before proceeding.**
 
@@ -51,62 +50,69 @@ The audit also prints two SQL queries it cannot run. **Run them in the Supabase 
 
 ## What shipped (newest first)
 
+- `09245f0` — docs: update session handoff after D18
 - `2c17b8f` — docs: promote D18 native-module gate rule into the handbook
 - `dd8a88c` — feat: configure Supabase client for React Native and wire first importer
 - `bc312cc` — chore: add async-storage and url-polyfill for the RN Supabase client
 - `d64bc70` — docs: correlation rule for criteria, and a handoff against b4c9028 _(prior session)_
-- `b4c9028` — chore: session audit script, and `.gitattributes` so it survives a clone
-- `afaf0e0` — docs: reconcile the handbook with the repo, nine corrections
+
+**Uncommitted in the working tree (the sign-in build — DONE, reviewed, NOT gated):**
+- `src/components/sign-in.tsx` (new) — email + 6-digit OTP component, two-phase local state, `signInWithOtp` -> `verifyOtp` (`type: 'email'`), no navigation.
+- `src/app/_layout.tsx` (modified) — three-state gate (`loading`/`signedOut`/`signedIn`) rendering BENEATH the permanently-mounted `AnimatedSplashOverlay`; `getSession()` + `onAuthStateChange`; never calls `hideAsync`.
+- `src/app/index.tsx` (modified) — sentinel retired; minimal signed-in row (email + Sign out); template content kept.
 
 ---
 
 ## The arcs
 
-**The client-config slice is complete and gated on-device.** `src/lib/supabase.ts` was a bare `createClient(url, key)` — no options object, so supabase-js v2 defaulted to `persistSession` over `window.localStorage` and `detectSessionInUrl: true`, neither of which exists on a native client. It now passes an `auth` options object: AsyncStorage adapter (platform-gated, spread only when `Platform.OS !== 'web'`), `autoRefreshToken`, `persistSession`, `detectSessionInUrl: false`, and `lock: processLock`. A foreground-only `AppState` listener starts/stops auto-refresh so the refresh timer cannot fire backgrounded and throw (which presents as "the app randomly logs me out"). The file also exports `supabaseUrlHost`. All of this matches the current Supabase RN quickstart (checked this session, not recalled) — the handoff's original sketch was missing `processLock` and the platform gate, which is exactly why the entry point said verify-before-drafting.
+**The sign-in slice is built and reviewed but cannot be gated until email works.** The build passed tsc (0 errors) and lint (1/0, unchanged) last session, and the diff was reviewed. It gates on the physical iPhone per the UI-slice rule — and the gate needs the user to receive a 6-digit CODE by email. That is the blocker, and it turned into the session's main work.
 
-**The client now has its first importer, and it was validated the only way a native client can be.** `src/app/index.tsx` imports `supabaseUrlHost` from `@/lib/supabase` and renders a startup sentinel: on mount it writes `ok` through AsyncStorage, reads it back, and displays `{result} · {host}`. Any named import from the module forces the whole module to evaluate — client construction, throw-guard, AppState listener all run — so `supabaseUrlHost` existing at all proves the module didn't throw. The sentinel proved five things at once on the physical iPhone: the `@/` alias resolves (D11, first on-device proof), `.env` is read on device, the module evaluates clean, the URL parses, and AsyncStorage round-trips. The observed string was `ok · zmmlgatxckplfzqyexjb.supabase.co`, across multiple app kills.
+**Why email is hard here, resolved to a decision.** Supabase's `signInWithOtp` sends whatever the Magic Link email template renders. The default template renders `{{ .ConfirmationURL }}` (a link), not `{{ .Token }}` (the code). To send a code, the template must be edited to `{{ .Token }}` — BUT the default built-in email service's template is READ-ONLY. Editing requires configuring custom SMTP. That forced an SMTP-provider decision. Office 365 (operator has Business Premium) was evaluated and rejected: its SMTP is basic-auth-only, disabled-by-default per mailbox, and on Microsoft's end-2026 deprecation clock; Supabase's SMTP form can't do OAuth2. **Decision: use Resend, free tier**, onboarding sender (`onboarding@resend.dev`), scoped API key as SMTP user/pass. Domain-verified sender is banked for pre-launch.
 
-**The gate cost a native rebuild, and that is the reusable lesson.** `npx expo install` added AsyncStorage to `package.json` and Metro served the new JS, but the dev-client binary on the phone predated the native module, so the app threw `NativeModule: AsyncStorage is null` at `index.tsx:1`. A Metro reload carries JS; it cannot add native code. The fix was a fresh EAS dev build (operator-run, `eas build --profile development --platform ios`), which autolinks AsyncStorage during server-side `expo prebuild` (the repo is CNG — `/ios` and `/android` are gitignored). This forced the slice into two commits: the dependency manifest (`bc312cc`, `chore:`) had to land so the build tarball could autolink, then the code (`dd8a88c`, `feat:`) after the device gate. That split is not a workaround — the native-build boundary falls exactly between installing a dep and using it, which is one-concern-per-commit working as intended.
+**The client already omits `emailRedirectTo`.** Per live docs, omitting it makes Supabase treat the request as OTP rather than magic-link — correct for code delivery. No client change needed on that axis; only the template edit is required.
 
-**Connecting the device to Metro was its own friction, none of it code.** Tunnel mode (`--tunnel`) failed twice on Windows — first `@expo/ngrok` resolved globally but Metro only finds it locally (`npm install --no-save @expo/ngrok` fixed that), then the ngrok handshake threw `Cannot read properties of undefined (reading 'body')`, an ngrok-service/path failure. LAN worked: Metro bound to `192.168.1.251:8081` (a real LAN IP, not loopback), and the dev client reached it. If this recurs, the fork is the Safari test — `http://<lan-ip>:8081` from the phone isolates "phone can reach the port" (firewall/subnet) from "dev client is broken."
+**The three-state gate exists to prevent a sign-in flash at cold start.** Session restore from AsyncStorage is async, so there's a "session unknown" window. The gate renders nothing (themed background) during `loading`, letting the splash overlay's ~600ms fade cover it; only on resolution does it show tabs or sign-in. Best-effort, not guaranteed (if AsyncStorage read ever exceeds the fade, a themed-blank frame shows — never a sign-in flash). This makes "kill app, reopen, land in tabs" a clean gate observation.
 
 ---
 
 ## Refuted hypotheses / memory corrections
 
-- **"`session-audit.sh` gives the same answer in any shell."** No. It is **Git-Bash-only.** Under WSL, deno is off PATH and prints `command not found` into the output; `tail`-based checks lose their summaries to a reformatted `npm notice`. The script renders no verdicts, so nothing flags the laundering but reading the shell prompt in the output. Run it in `MINGW64`, from `/d/...`.
-- **"A native module can be gated over Metro."** No. Metro serves JS; native modules require a fresh dev build. Adding AsyncStorage via `expo install` + Metro reload throws `AsyncStorage is null` on the old binary.
-- **"Metro's `iOS Bundled ... (N modules)` count indicates a cold start."** No. It measures Metro's **rebuild/cache** work. A killed app relaunching against a warm cache gets `1 module` — a no-op delta — and still cold-started. The on-screen sentinel is the observation; the terminal count is not.
-- **"`git diff --cached --name-only` prints paths alphabetically."** It byte-sorts: `-` (0x2D) before `.` (0x2E), so `package-lock.json` precedes `package.json`. Gate criteria on the **set**, never the order.
-- **"EAS builds from origin."** It uploads a tarball of the **local** repo. A commit does not need to be pushed for EAS to build from it; committing the manifest locally was enough. (Corollary: `requireCommit` in `eas.json` governs whether uncommitted changes are included — committing the manifest first made the build correct regardless of that setting.)
-- **Still true from prior handoffs:** file attachments in chat arrive empty (paste Claude Code output as text); `grep -c "Co-Authored-By"` is uncorrelated with trailer correctness (parse, don't count); `git check-ignore` reads the worktree, not the commit.
+- **"The Magic Link template is customized."** No — it's the current stock default (Supabase reworded it since training cutoff). See preamble (1).
+- **"Office 365 is a good/quick SMTP option."** No — basic-auth-only, deprecating, Supabase can't OAuth to it. Resend chosen instead.
+- **"`_layout.tsx` owns no splash hide."** No — `AnimatedSplashOverlay` owns it. The gate must not touch the splash.
+- **"`git grep` can verify a new untracked file's contents."** No — tracked-only. Use `git show :<path>` or `--untracked`.
+- **"Supabase OAuth Server / OAuth Apps could help with email auth."** No — that makes Cultivar an identity PROVIDER for other apps; wrong direction entirely. Leave disabled.
+- **Still true from prior handoffs:** run audit in Git Bash only; native module → new EAS dev build (D18, now in CLAUDE.md); paste Claude Code output as text; parse trailers don't count; `git check-ignore` reads worktree not commit.
 
 ---
 
 ## Ratified decisions
 
-D1–D16 stand as previously recorded. New this session:
+D1–D19 stand. New this session:
 
-- **D17 — The RN Supabase client matches the current Supabase quickstart, including `lock: processLock` and platform-gated storage.** Grounds: the config is checked against live docs at draft time, not recalled; the quickstart added `processLock` since the prior handoff's sketch was written. Anon key retained (not publishable) — swapping is banked #5, out of this slice's scope.
-- **D18 — A UI slice that adds a native module gates on a NEW EAS dev build, not the existing one.** Grounds: `AsyncStorage is null` this session. A Metro reload carries only JS. **Promoted into `CLAUDE.md` this session (`2c17b8f`).**
-- **D19 — The client-config slice is two commits: manifest (`chore:`) then code (`feat:`).** Grounds: the EAS build must autolink the native dep, so the manifest lands first; the code gates on device, so it lands after. The native-build boundary is the commit boundary.
+- **D20 — Email OTP delivery uses Resend (free tier) as custom SMTP; template edited to `{{ .Token }}`.** Grounds: default email service can't edit templates; Office 365 SMTP is basic-auth-only and deprecating; Resend uses a scoped, revocable API key (not a real credential) and is Supabase's recommended provider. Domain-verified sender banked for pre-launch.
+- **D21 — The auth gate is option (a): conditional render in the root layout, NOT route-group restructuring.** Grounds: there is no root Stack (`_layout.tsx` renders `<AppTabs/>` directly); route groups would be navigation surgery, explicitly out of a sign-in slice's scope. Sign-in is a component, not a route — acceptable because the app has no deep-link-into-signin need (D13 chose OTP-code precisely to avoid deep links).
+- **D22 — The gate is three-state and renders beneath the permanently-mounted splash overlay.** Grounds: async session restore would otherwise flash sign-in at cold start; the overlay covers the window. Best-effort splash cover accepted (worst case is a themed-blank frame, never a sign-in flash).
 
 ---
 
 ## Open items
 
 ### Runnable now
-- **D18 promoted into `CLAUDE.md` — DONE this session (`2c17b8f`, committed and pushed).** The native-module gate rule ("a UI slice adding a native module gates on a new EAS dev build; a Metro reload carries JS only") now lives in `CLAUDE.md`'s "Gates are typed by slice" section. No action for the next session.
-- **`docs:` commit pointing `CLAUDE.md` at `scripts/session-audit.sh` and its Git-Bash-only constraint** (banked #3 from prior handoff, plus banked A below). Stands alone; the D18 commit has landed.
+- **Nothing code-side is runnable without the email setup first.** The sign-in commit is blocked on the on-device gate, which is blocked on email.
 
 ### Blocked
-- **Deploying `ingest-coa`.** Two operator-only steps, in order: `supabase functions deploy ingest-coa`, and an authenticated user existing at all (the function is wrapped `withSupabase({ auth: 'user' })`). Nothing app-side can call it until sign-in ships.
-- **The confirm/edit screen.** Blocked on auth and on the unknown-lab decision (banked #1, prior handoff).
+- **Committing the sign-in slice.** Blocked on the on-device gate, which is blocked on email delivery (Resend setup + template edit). This is the whole next-session path.
+- **Deploying `ingest-coa`.** Operator-only: `supabase functions deploy ingest-coa`, plus an authenticated user existing (needs sign-in shipped).
+- **The confirm/edit screen.** Blocked on auth and the unknown-lab decision (banked).
 
 ### Banked
-- **A. `session-audit.sh` is Git-Bash-only, and check [9]/[10]/[11] are stream-sloppy.** Run it in `MINGW64` from `/d/...`, never WSL. Deeper hardening is a rainy-afternoon `chore:`: a provenance header ([0] — `uname`, `pwd`, `command -v node npm npx deno git`, versions), per-check exit status, drop `tail` on [9] in favor of `grep -E '^(Test Suites|Tests):'`, and guard [10]/[11] on `command -v deno` so an absence prints `(deno not on PATH — NOT RUN)` instead of masquerading as output. Not a blocker; the script passed cleanly in Git Bash this session.
-- **B. url-polyfill necessity under SDK 56 + Hermes — unconfirmed.** Kept as failure-safe. The device gate can't answer it (polyfill present → `ok` renders either way; observing the protected case only). The one-minute control, when next in the dev client: comment out line 1 of `src/lib/supabase.ts`, reload — if `ok · host` still renders, Hermes doesn't need it and the dep can drop; if the module throws at load, it's required, keep it with a proven comment. Restore line 1 before any commit. _(Not run this session; operator declined the optional control.)_
-- Prior banked items **1–11 carry forward unchanged** (unknown-lab 200 shell; terpene whitelist silently drops rows; `.gitignore:40` bare `example`; publishable-key migration; CRLF-on-clone for future strict-parsed files; `unrs-resolver@1.12.2` allow-scripts warning surfaced again this session by `npm install` — still an operator call, do not run `approve-scripts` blind; ligature null-bytes; `reference/` near-empty; `npm audit` moderate template vulns, do not `--force`; Branch deep-link; no Storage bucket). See prior handoff and `documentation/follow-ups.md`.
+- **Resend domain-verified sender.** Free-tier onboarding sender (`onboarding@resend.dev`) for now; verify a Cultivar domain (SPF/DKIM DNS records) before real users so mail comes from a Cultivar address. Needs a domain the operator controls — unknown whether one is owned yet.
+- **url-polyfill necessity under SDK 56 + Hermes — unconfirmed** (banked B, carries forward). The control test when next in the dev client: comment line 1 of `src/lib/supabase.ts`, reload; if `ok`/sign-in still renders, Hermes doesn't need it. Restore before commit.
+- **A. `session-audit.sh` is Git-Bash-only, checks [9]/[10]/[11] stream-sloppy.** Hardening is a rainy-afternoon chore.
+- **Chained-grep laundering (new observation).** During Phase A last session, a `git grep` chained after another command in one Bash call silently returned empty; the standalone re-run found the hits. Run each grep standalone. Worth a line in `handoff-specs.md` eventually, not promoted mid-session.
+- **"A worktree-to-worktree delta cannot be phrased as a `git diff` against HEAD"** — process lesson from the handoff-correction chain; candidate for `handoff-specs.md`, banked deliberately rather than promoted mid-session.
+- Prior banked items carry forward (unknown-lab 200 shell; terpene whitelist drops rows; `.gitignore:40` bare `example`; publishable-key migration; CRLF-on-clone; `unrs-resolver` allow-scripts; ligature null-bytes; `reference/` near-empty; `npm audit` moderate template vulns; Branch deep-link; no Storage bucket). See `documentation/follow-ups.md`.
 
 ---
 
@@ -114,32 +120,20 @@ D1–D16 stand as previously recorded. New this session:
 
 Stable method lives in `CLAUDE.md` and `documentation/process/handoff-specs.md`.
 
-- **Run the audit in Git Bash, never WSL.** The single most important operational fact this session. `/mnt/d/` in any output means wrong shell; re-run.
-- **The device is the only witness for a UI gate, and only the operator holds it.** The architect cannot observe the phone. The sentinel-on-screen is the observation; commit messages pin the operator's report so it stays falsifiable. Metro terminal output (module counts, bundle times) is not a gate proxy.
-- **Native dep? Rebuild before gating.** Split the slice: manifest commit, EAS build, device gate, code commit.
-- **Report-back item 5 / "the one thing I didn't ask about" continued to earn its place** — it caught both the byte-sort order bug and the `rev-list` assumption this session, in the prompts written to be correct.
-- Paste Claude Code output as plain text; paste diffs indented, never fenced.
-- Redirect the audit **outside** the repo, with `2>&1`.
-
----
-
-## Pointers
-
-- Product spec, MVP scope, cohort: `documentation/Cultivar_MVP_and_Roadmap.md`
-- Method: `documentation/process/handoff-specs.md`; invariants in `CLAUDE.md`
-- Deferred: `documentation/follow-ups.md`
-- **Build order:** client config ✓ -> **sign-in (next)** -> confirm/edit screen -> COA detail + shelf -> device capture (QR -> browser -> download -> ingest) -> session logging -> prediction -> compliance.
+- **The sign-in build is uncommitted across this boundary — deliberately.** Committing ungated UI code breaks the two-step rhythm; stashing adds a failure surface. The files survived the prior session boundary intact. Phase A [4] is the protection: if the tree doesn't match, re-baseline. **Do not run `npm run reset-project` or anything destructive with these files uncommitted.**
+- **Email is an operator setup, hand-held.** Resend signup, API key, Supabase SMTP page, template edit — all operator-run, walked through step by step.
+- Run the audit in Git Bash, never WSL. Paste Claude Code output as plain text.
 
 ---
 
 ## Entry point
 
-**Write the build prompt for sign-in (D13): email + 6-digit OTP, `signInWithOtp` -> `verifyOtp`.**
+**Set up Resend, wire it into Supabase, edit the email template, then gate the sign-in slice on the physical iPhone.** In order:
+1. Resend: sign up (free), create an API key. (Operator; architect hand-holds.)
+2. Supabase → Authentication → Emails → SMTP Settings → enable custom SMTP, enter Resend's host/port and the API key as user/pass. (Operator.)
+3. Supabase → Authentication → Emails → Templates → Magic Link → Source now editable → replace the `{{ .ConfirmationURL }}` link with `{{ .Token }}` (the 6-digit code). (Operator; architect supplies exact HTML.)
+4. If the dev-client binary is stale, a new EAS dev build (operator). The sign-in slice added NO native module (no new dep), so the EXISTING dev build should suffice — verify before rebuilding.
+5. On-device gate (the seven steps in the sign-in build prompt): cold-start → sign-in screen; enter email → receive code → verify → land in tabs; **kill app, reopen, land DIRECTLY in tabs (session survives cold start — the criterion this slice exists to prove)**; sign out → back to sign-in.
+6. Only after the gate passes: the commit prompt for the sign-in slice (one `feat:` commit — three files; use `git show :<path>` not `git grep` to verify the new file's blob).
 
-This is the slice the whole client-config groundwork was for. The client now persists sessions correctly on native, so a session minted here will survive — which is the thing the client-config gate explicitly *could not* prove (no session existed to test). Sign-in is where session-survival-across-cold-start finally becomes observable; make that an explicit gate criterion, because it is the first time it can be checked.
-
-Before drafting, verify against current Supabase docs (not recalled): the exact `signInWithOtp` + `verifyOtp` shape for a 6-digit email OTP (as opposed to magic-link — D13 chose OTP precisely to avoid deep-link handling), and whether any email-template or dashboard setting must be toggled for OTP-as-code rather than link (an operator-only step if so). Name the importer/screen explicitly — do not repeat the prior handoff's "write the first component that imports the client" vagueness that nearly merged navigation surgery into a config slice. `src/components/app-tabs.tsx` declares the tab bar imperatively; decide deliberately whether sign-in is a route, a modal, or a gate before the tabs, and put the untouched-navigation pieces in Non-goals.
-
-The sentinel in `src/app/index.tsx` is scaffolding. The sign-in slice — or whichever slice first gives the home screen real content — retires it. Say which, in that prompt.
-
-**D18 landed this session (`2c17b8f`, pushed) — the handbook now carries the native-module gate rule.** Sign-in (D13) is the unconditional first action next session; the hygiene commit that used to precede it is done.
+The sign-in build is DONE and reviewed; this session is purely unblock-email → gate → commit. No new code should be needed unless the gate surfaces a device-only bug.
