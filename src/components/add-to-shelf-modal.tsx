@@ -2,6 +2,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet } from 'react-native';
 
+import { CoaReview, type CoaParseResult } from '@/components/coa-review';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
@@ -78,17 +79,23 @@ export default function AddToShelfModal({
           {phase === 'done' && result ? (
             <>
               <ScrollView style={styles.resultScroll}>
-                <ThemedText type="code">
-                  {result.ok
-                    ? JSON.stringify(result.json, null, 2)
-                    : [
-                        `status: ${result.status ?? 'network error'}`,
-                        result.message,
-                        result.body,
-                      ]
-                        .filter(Boolean)
-                        .join('\n')}
-                </ThemedText>
+                {result.ok ? (
+                  // The 200 body is the transport envelope { data: <parse> },
+                  // so this cast asserts two things: the envelope shape and
+                  // the parse shape. Both are produced server-side; runtime
+                  // validation remains the accepted debt this slice.
+                  <CoaReview coa={(result.json as { data: CoaParseResult }).data} />
+                ) : (
+                  <ThemedText type="code">
+                    {[
+                      `status: ${result.status ?? 'network error'}`,
+                      result.message,
+                      result.body,
+                    ]
+                      .filter(Boolean)
+                      .join('\n')}
+                  </ThemedText>
+                )}
               </ScrollView>
               <Pressable
                 onPress={() => {

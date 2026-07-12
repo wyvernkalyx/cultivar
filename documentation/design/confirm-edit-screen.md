@@ -1,6 +1,8 @@
 # Confirm/Edit Screen — COA Ingestion
 
-Status: design (document-before-implement). No implementation yet.
+Status: partially implemented — the slice 4 read-only render is landed (see
+"Slice 4 read-only render (landed)" below); editing and confirm/insert
+(slices 5–6) are not yet implemented.
 Contract fixture: `animal-face.pdf` (DRS/Confident). Validated against the live
 `ingest-coa` parse output observed at HEAD `4ab722f`. If the parser output for this
 fixture later differs, re-check this design against it.
@@ -26,8 +28,7 @@ affordance serves that reconciliation.
 
 The parsed JSON object `ingest-coa` returns (parser-key space, e.g. `totalThcPct`,
 `sourceLab`). The screen consumes and emits **this shape**. Mapping parser keys to
-DB column names (`totalThcPct` → `total_thc`, etc.) is the **insert slice's** job,
-not this screen's — see Non-goals.
+DB column names is the **insert slice's** job, not this screen's — see Non-goals.
 
 ## The three-state invariant (non-negotiable)
 
@@ -46,9 +47,11 @@ Editable as free text:
 - `batch`, `lab`
 
 Display-only (system, not user-authored):
-- `source_lab` ("drs-confident")
-- `total_thc` / `total_cbd` / `total_terpenes` — shown; editable as analyte values
-  under the same three-state rule (null preserved).
+- `sourceLab` ("drs-confident")
+- `totalThcPct` / `totalCbdPct` / `totalTerpenesPct` — shown; editable as analyte
+  values under the same three-state rule (null preserved).
+
+These are parser keys; mapping them to DB column names belongs to the insert slice.
 
 Absent this slice:
 - `type` (sativa/indica/hybrid) — no parser source; a COA is a chemical assay and
@@ -60,7 +63,7 @@ Absent this slice:
 
 ## Analyte rows (terpenes, cannabinoids)
 
-Each row: **name (editable), value (editable, three-state), delete.**
+Each row: **name (editable), value (the `pct` key; editable, three-state), delete.**
 
 - **Edit value** — number or ND, per the invariant.
 - **Rename** — required, not cosmetic. `g CBDVa` is a column-header bleed of real
@@ -86,6 +89,20 @@ hidden or removed** — but a flat list is a wall of noise. So:
 
 Display-and-confirm only this slice. 8 rows (e.g. "Solvents: Not Tested"). No edit
 affordance — no defect observed. Editing deferred until one is.
+
+## Slice 4 read-only render (landed)
+
+The add-to-shelf modal's success state renders this shape read-only, in the order:
+metadata, totals, terpenes, cannabinoids, safety. Terpenes render before
+cannabinoids because terpene profiles are the product's signal — the
+personal-empirical thesis correlates them, not potency. Within each analyte panel,
+detected rows render first in parser emission order; ND rows collapse under an
+always-present "Not detected (N)" control and every row remains individually
+visible on expand — collapsed, never hidden. A `null` value on `pct` renders as
+the literal string "ND", never 0 and never blank, per the three-state invariant;
+`totalCbdPct` gets the same treatment. `sourceLab` renders as subordinate
+secondary text — a system identifier, not user-facing vocabulary. Editing and
+confirm/insert remain slices 5–6.
 
 ## View source
 

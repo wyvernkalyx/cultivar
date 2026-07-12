@@ -11,6 +11,15 @@ enforced in code by `withSupabase({ auth: 'user' })`. Success: 200 with
 415 (content type), 400 (empty body or parse failure). The function is
 parse-and-return only — nothing is persisted.
 
+**Envelope refutation (2026-07-12, slice 4's first device gate):** on the
+client, `IngestResult.json` is this transport envelope — `{data: <parse>}` —
+not the parse object. Slice 4's first render cast `json` directly to the parse
+shape and failed on-device with `Cannot read property 'map' of undefined` at
+`safety.map`: every property read on the envelope was `undefined`, and the `as`
+cast had silenced the type checker at exactly the seam that diverged. Any
+consumer of `IngestResult.json` must unwrap `data` — the parse object never
+appears un-enveloped on the client.
+
 ## Decision (D33)
 
 Slice 3's transport is a **raw authenticated `fetch`** to
