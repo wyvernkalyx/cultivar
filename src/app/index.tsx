@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import AddToShelfModal from '@/components/add-to-shelf-modal';
 import { AnimatedIcon } from '@/components/animated-icon';
 import { HintRow } from '@/components/hint-row';
 import { ThemedText } from '@/components/themed-text';
@@ -32,6 +33,7 @@ function getDevMenuHint() {
 
 export default function HomeScreen() {
   const [email, setEmail] = useState<string | null>(null);
+  const [addToShelfVisible, setAddToShelfVisible] = useState(false);
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setEmail(data.session?.user.email ?? null);
@@ -62,6 +64,17 @@ export default function HomeScreen() {
             <ThemedText type="smallBold">Sign out</ThemedText>
           </Pressable>
         </ThemedView>
+
+        <Pressable style={styles.addToShelfPressable} onPress={() => setAddToShelfVisible(true)}>
+          <ThemedView type="backgroundElement" style={styles.addToShelfRow}>
+            <ThemedText type="smallBold">Add to shelf</ThemedText>
+          </ThemedView>
+        </Pressable>
+
+        <AddToShelfModal
+          visible={addToShelfVisible}
+          onClose={() => setAddToShelfVisible(false)}
+        />
 
         <ThemedText type="code" style={styles.code}>
           get started
@@ -124,6 +137,15 @@ const styles = StyleSheet.create({
   },
   accountEmail: {
     flexShrink: 1,
+  },
+  addToShelfPressable: {
+    alignSelf: 'stretch',
+  },
+  addToShelfRow: {
+    alignItems: 'center',
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: Spacing.four,
   },
   stepContainer: {
     gap: Spacing.three,
