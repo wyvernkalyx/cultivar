@@ -88,11 +88,11 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   <body>
 
   Co-Authored-By: Claude <noreply@anthropic.com>
-  Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>
   EOF
   ```
-- **Exactly two co-author trailers:** `Claude <noreply@anthropic.com>` and the current
-  Claude model (currently `Claude Opus 4.8 (1M context) <noreply@anthropic.com>`).
+- **Exactly one co-author trailer:** `Claude <noreply@anthropic.com>`. No
+  model-specific trailer — models change, and the handbook must not need an edit
+  per release.
 - **Verify trailers by parsing, never by counting.** Use
   `git log -1 --format=%B | git interpret-trailers --parse`. **Never
   `grep -c "Co-Authored-By"`** — a count matches prose mentioning the string, not just the

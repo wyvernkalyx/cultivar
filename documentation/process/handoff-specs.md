@@ -121,7 +121,7 @@ Rolling single file at `documentation/SESSION_HANDOFF.md`, **committed**, with a
    - *UI-visible slice*: gate is **Gregg exercising the app on the physical iPhone** via the EAS dev build (`npx expo start --dev-client`). Unit tests are not evidence. Expo Go is unusable on this project.
    - *Schema/infra slice*: gate is **observed state** (e.g. tables + RLS visible in the Supabase dashboard).
 
-4. **Commit conventions.** Explicit-path staging only; `git add -A` is banned. ASCII commit messages via `git commit -F - <<'EOF'` (Git Bash mangles apostrophes and backticks). File *contents* are written with the editor tool, never shell heredocs. Exactly two co-author trailers: generic Claude, plus the current model. `data:` prefix for fixtures and data; `feat:`/`chore:` for code.
+4. **Commit conventions.** Explicit-path staging only; `git add -A` is banned. ASCII commit messages via `git commit -F - <<'EOF'` (Git Bash mangles apostrophes and backticks). File *contents* are written with the editor tool, never shell heredocs. Exactly one co-author trailer: generic Claude; no model-specific trailer. `data:` prefix for fixtures and data; `feat:`/`chore:` for code.
 
 5. **Product invariants that outrank a smart prior.** Never fabricate analyte values — ND / `<LOQ` / not-reported becomes `null`, never `0`. Predictions are personal-empirical, never pharmacological or medical claims. These belong in `CLAUDE.md` and are restated in any prompt that touches ingestion or prediction.
 
