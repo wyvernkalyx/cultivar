@@ -1,8 +1,10 @@
 # Confirm/Edit Screen — COA Ingestion
 
-Status: partially implemented — the slice 4 read-only render and the slice 5a
-empty-parse guard are landed (see their sections below). Slice 5b (editing) is
-designed and placed (D37, D38), not yet implemented.
+Status: partially implemented — slices 4 (read-only render), 5a (empty-parse
+guard), and 5b (editing) are landed; see their sections below. Slice 6
+(confirm/insert) is designed and split (D39, D40): 6a insert RPC
+(documentation/design/coa-insert.md), 6b confirm wiring (below); neither yet
+built.
 Confirm/insert remains slice 6.
 Contract fixture: `animal-face.pdf` (DRS/Confident). Validated against the live
 `ingest-coa` parse output observed at HEAD `4ab722f`. If the parser output for this
@@ -200,9 +202,26 @@ must permit a single transactional insert (e.g. a Postgres RPC); it must not ass
 per-table client REST calls. RLS is already in place (owner = `auth.uid()` via
 `created_by`).
 
+### Confirm wiring (slice 6b, D40)
+
+- `CoaEditor` gains an `onConfirm(coa: CoaParseResult)` prop. Emission
+  converts the draft back to parser shape: generated ids and
+  `detectedAtInit` are stripped; deleted rows are simply absent; safety
+  rows pass through unedited; metadata strings and three-state values as
+  edited. The emitted object is the same shape the screen consumed — the
+  committed contract above.
+- The modal owns the insert call (`supabase.rpc('insert_coa', { payload })`)
+  and the confirming/success/error phases. The RPC returns the new
+  `coas.id`. Mechanism and mapping: `documentation/design/coa-insert.md`.
+- Gate (UI-visible, physical iPhone): confirm the corrected `animal-face`
+  draft; observe success; read back the inserted rows. A draft value
+  cleared to ND must land as SQL NULL — never 0 (the invariant, live at
+  the DB seam).
+- Ordering (D40): 6b builds only after 6a's RPC is applied and gated.
+
 ## Non-goals (this slice)
 
-- The insert mechanism (RPC vs client vs Edge Function) — next slice.
+- The insert mechanism is decided (D39: a Postgres RPC, slice 6a — see documentation/design/coa-insert.md); implementing it is not this screen's concern.
 - The Storage bucket / `pdf_url` persistence.
 - `type` field.
 - add-row; safety-row editing.
