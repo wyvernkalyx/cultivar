@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -37,24 +37,28 @@ function Total({ label, value }: { label: string; value: number | null }) {
 }
 
 // Neutral by construction (D41): every card is the same themed surface — no
-// mood, no color coding, no per-card visual variance. Non-interactive this
-// slice.
-function ShelfCard({ coa }: { coa: ShelfCoa }) {
+// mood, no color coding, no per-card visual variance. One interaction (D42):
+// long-press to delete.
+function ShelfCard({ coa, onDelete }: { coa: ShelfCoa; onDelete: () => void }) {
   return (
-    <ThemedView type="backgroundElement" style={styles.card}>
-      <ThemedText type="smallBold">{coa.strain}</ThemedText>
-      <ThemedText type="small" themeColor="textSecondary">
-        {coa.brand}
-      </ThemedText>
-      <ThemedText type="small" themeColor="textSecondary">
-        Added {new Date(coa.created_at).toLocaleDateString()}
-      </ThemedText>
-      <View style={styles.totalsRow}>
-        <Total label="THC" value={coa.total_thc} />
-        <Total label="CBD" value={coa.total_cbd} />
-        <Total label="Total terpenes" value={coa.total_terpenes} />
-      </View>
-    </ThemedView>
+    // Long-press only (D42), with no press feedback: the card stays
+    // visually neutral (discipline 2). Tap does nothing.
+    <Pressable onLongPress={onDelete}>
+      <ThemedView type="backgroundElement" style={styles.card}>
+        <ThemedText type="smallBold">{coa.strain}</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          {coa.brand}
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          Added {new Date(coa.created_at).toLocaleDateString()}
+        </ThemedText>
+        <View style={styles.totalsRow}>
+          <Total label="THC" value={coa.total_thc} />
+          <Total label="CBD" value={coa.total_cbd} />
+          <Total label="Total terpenes" value={coa.total_terpenes} />
+        </View>
+      </ThemedView>
+    </Pressable>
   );
 }
 
@@ -96,6 +100,35 @@ export function ShelfList() {
     setRefreshing(false);
   };
 
+  // Client delete, no RPC (D42): the child analyte rows are the schema's
+  // on-delete-cascade concern, not the client's; RLS scopes the delete.
+  const deleteCoa = (id: string) =>
+    supabase
+      .from('coas')
+      .delete()
+      .eq('id', id)
+      .then(({ error: deleteError }) => {
+        if (deleteError) {
+          Alert.alert('Delete failed', deleteError.message);
+          return;
+        }
+        // Honest state over optimistic removal: refetch through load.
+        return load();
+      });
+
+  const confirmDelete = (coa: ShelfCoa) => {
+    // Never render a blank where a name should be.
+    const name = coa.strain?.trim() ? coa.strain : 'this COA';
+    Alert.alert(
+      'Remove from shelf?',
+      `Deletes ${name} and all of its lab data (terpene, cannabinoid, and safety rows). This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => deleteCoa(coa.id) },
+      ]
+    );
+  };
+
   if (error) {
     return (
       <View style={styles.messageContainer}>
@@ -129,7 +162,7 @@ export function ShelfList() {
       contentContainerStyle={styles.listContent}
       data={rows}
       keyExtractor={(coa) => coa.id}
-      renderItem={({ item }) => <ShelfCard coa={item} />}
+      renderItem={({ item }) => <ShelfCard coa={item} onDelete={() => confirmDelete(item)} />}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
       ListEmptyComponent={
         <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
