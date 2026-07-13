@@ -1,11 +1,11 @@
 # Cultivar — Session Handoff
 
-_Written 2026-07-12, against HEAD `8f2ba20`, pushed and verified (`ffbbb49..8f2ba20 main -> main` observed this session; earlier, `754966d..ffbbb49` also observed)._
+_Written 2026-07-12, against HEAD `1024c3f`, pushed and verified (`4457c37..1024c3f main -> main` observed this session; earlier, `81cf5c7..4457c37` also observed)._
 _**The repo is authoritative over this document.** Every state claim below is a prediction to falsify, not a fact to trust._
 
 _Concrete refutations from this session, so this preamble is read and not skimmed:_
-_(1) **Slice 4's first device gate refuted the architect's cast.** `IngestResult.json` is the transport envelope `{data: <parse>}`, not the parse object — the screen crashed at `safety.map` with every property read undefined. The envelope was documented in the prior handoff's own D33 grounds and in `coa-ingest-transport.md`, and the architect still designed the cast from a local `parseCoa()` dump instead of the seam's payload. The `as` cast silenced `tsc` at exactly the divergence; the device gate caught what the type checker was told to ignore. Lesson, promoted below: design-from-dump must name WHICH dump — the parser's output and the seam's payload are different objects._
-_(2) **The session's opening premise was itself refuted, in the useful direction.** The prior handoff asserted "at least one of {handoff summary, design doc} is stale" over `lab` vs `sourceLab`. Neither was: they are two coexisting keys with different meanings (`lab` = "DRS Testing", display name; `sourceLab` = "drs-confident", parser-dispatch enum), both declared in `types.ts`, and the design doc already handled both correctly. The prior on-device observation "the key is `lab`" was true but incomplete — an enumeration that ended in an ellipsis got remembered as exhaustive._
+_(1) **The architect's first live probe of the unknown-lab arm was contaminated by its own author.** To exercise "a PDF from no known lab," the architect chose the project roadmap printed to PDF — the one document in the project most likely to name both labs. `identifyLab` matched `DRS Testing` in its prose and returned a fully-empty parse under `sourceLab: "drs-confident"`, HTTP 200. The accident was more informative than the intended probe: it proved the empty-parse state occurs under a KNOWN lab tag, which killed "check `sourceLab === 'unknown'`" as a guard design before it was ever proposed. Probe inputs must be checked against the matcher they exercise._
+_(2) **The architect committed the exact substring-surprise error one prompt after re-reading the rule that names it.** A `grep -c 'slices 5–6' → 0` criterion was written over the whole file to verify a one-paragraph edit; HEAD had a second, legitimate occurrence at line 105 inside a section the same prompt froze. The implementer's STOP caught it. The corrected rule (in Working rhythm below) is mechanical, not aspirational: execute every grep criterion against the text it gates before the prompt ships. It caught a third defect the same day._
 
 _Begin with the Phase A audit below. **Run it in Git Bash (`MINGW64`), from `/d/Projects/...`, never WSL.** Try to break it._
 
@@ -25,31 +25,33 @@ Paste `audit.txt` whole. Expected values, each a prediction that can be wrong:
 | Check | Expected |
 |---|---|
 | [1] branch | `main` |
-| [2] HEAD | If this handoff is NOT yet committed: `8f2ba20`, subject `docs: single generic co-author trailer (D35)`, parent `ffbbb49`. If it HAS been committed: a `docs: session handoff` commit whose **parent is `8f2ba20`** — its own sha unknowable here. |
+| [2] HEAD | If this handoff is NOT yet committed: `1024c3f`, subject `feat: guard empty COA parses before review (slice 5a)`, parent `4457c37`. If it HAS been committed: a `docs: session handoff` commit whose **parent is `1024c3f`** — its own sha unknowable here. |
 | [3] ahead of origin | **0**. Non-zero = an unpushed commit; that is the finding, not an error. |
 | [4] working tree | **clean** IF this handoff is already committed. If written-but-uncommitted, expect exactly ` M documentation/SESSION_HANDOFF.md` and nothing else. **If `.env` appears, stop everything.** |
 | [5] `.env` ever committed | `(never committed)` |
 | [6] client path | `src/lib/supabase.ts` tracked; `lib/` count **0** |
-| [7a/b] `.gitignore` blob | line 34 `.env*`, line 35 `!.env.example`, LF. Line 40 bare `example` is template detritus (banked). |
+| [7a/b] `.gitignore` blob | line 34 `.env*`, line 35 `!.env.example`, LF. Line 40 bare `example` is template detritus (banked). Unchanged this session. |
 | [8] unstable flags | `(none)` |
-| [9] `npm test` | **36 passed / 0 failed**, 1 suite. Parser tree untouched this session. |
-| [10] `deno test` ingest-coa | **5 passed / 0 failed**. `ingest-coa/index.ts` untouched this session (read for the envelope precondition; not edited). |
-| [11] `deno check` | exit **0** by inference only — the script still does not echo `$?` for this step; silence was observed again this session. The one-line `chore:` fix stays banked. |
-| [12] `tsc --noEmit` | `(no output)`, exit **0**. |
-| [13] `expo lint` | **1 error, 0 warnings**, file `use-color-scheme.web.ts`. Ceiling, not target. |
+| [9] `npm test` | **36 passed / 0 failed**, 1 suite. Parser tree untouched this session; the count was observed at the session-start audit (HEAD `81cf5c7`) and is carried as a prediction, not re-observed post-5a — Jest's roots do not reach `src/`. |
+| [10] `deno test` ingest-coa | **5 passed / 0 failed**. Function untouched this session (source read for the unknown-lab arm; not edited). Same carry caveat as [9]. |
+| [11] `deno check` | exit **0** by inference only — the script STILL does not echo `$?`; silence observed a fourth session. The one-line `chore:` stays banked. |
+| [12] `tsc --noEmit` | `(no output)`, exit **0**. Re-observed post-5a this session. |
+| [13] `expo lint` | **1 error, 0 warnings**, file `use-color-scheme.web.ts`. Re-observed post-5a. Ceiling, not target. |
 | [14] `expo install --check` | `jest@30.4.2` / `@types/jest@30.0.0` misaligned — expected, do not fix. `expo-document-picker` must NOT be flagged. |
-| [15] trailers | **exactly ONE, parsed: generic Claude only.** CHANGED from the prior handoff's two — D35 landed this session. If the audit script's own expectation text still says two, that is script staleness, not repo drift; the parse output is the observation. |
+| [15] trailers | **exactly ONE, parsed: generic Claude only** (D35, now four exemplars). The audit script's own expectation text may still say two — script staleness, banked; the parse output is the observation. |
 
-**New this session, not covered by the audit script** (each standalone; write expected hit counts, not "nothing else" — see refutation on the `SUPABASE_URL` grep below):
-- `git grep -n "coa-review" -- src/` → exactly **1** hit: the import in `src/components/add-to-shelf-modal.tsx`.
-- `git grep -n "CoaParseResult" -- src/` → hits in exactly **2** files: definition/export in `src/components/coa-review.tsx`, import + envelope cast in `src/components/add-to-shelf-modal.tsx`.
-- `grep -c "No implementation yet" documentation/design/confirm-edit-screen.md` → **0** (Status line now says partially implemented).
-- `grep -ci "exactly two co-author" CLAUDE.md` → **0**; `grep -c "Opus" CLAUDE.md` → **0** (D35).
-- `git ls-files documentation/design/` → the same four files as last session: `add-to-shelf-navigation.md`, `coa-ingest-transport.md`, `confirm-edit-screen.md`, `product-metaphor.md`.
+**New this session, not covered by the audit script** (each standalone; expected hit counts stated, never "nothing else"):
+- `git grep -n "ReviewOrGuard" -- src/` → exactly **2** hits, both in `src/components/add-to-shelf-modal.tsx` (definition + seam usage).
+- `grep -c "sourceLab" src/components/add-to-shelf-modal.tsx` → **0** (the guard must not consult it; note `coa-review.tsx` legitimately renders it, so this check is scoped to the modal file, not `src/`).
+- `git show HEAD:documentation/design/confirm-edit-screen.md | grep -Fxc '## Empty-parse guard (slice 5a)'` → **1**; same for `'## Editing interactions (slice 5b)'` → **1**.
+- `git show HEAD:documentation/design/confirm-edit-screen.md | grep -c 'slices 5–6'` → **0** (en dash; HEAD before this session had exactly two occurrences, both removed).
+- `git ls-files documentation/design/` → the same four files: `add-to-shelf-navigation.md`, `coa-ingest-transport.md`, `confirm-edit-screen.md`, `product-metaphor.md`.
 
-**Deployed function: current, untouched.** No redeploy occurred or is needed. The live deployed response was observed on-device this session rendering through the new structured view — including `source: drs-confident`, which converts the prior session's `sourceLab`-in-live-response inference into observed fact.
+**Deployed function: current, untouched, and freshly observed.** Two live authenticated invokes this session (D26 flow): a neutral non-COA PDF → HTTP 200, all-empty parse, `sourceLab: "unknown"` (byte-exact against the repo source's default arm); the roadmap PDF → HTTP 200, all-empty parse, `sourceLab: "drs-confident"` (the contaminated probe, preamble (1)). Both consistent with repo source — two more data points against deploy drift, still not proof.
 
-**Schema gate (Supabase SQL editor): NOT re-observed — third session carried.** Five tables, RLS on all five, `pg_policies` → 7 rows; migration at `supabase/migrations/20260708220816_create_core_schema.sql`. Slice 5 (editing) is client-state only and does not INSERT; the two queries become **mandatory** before slice 6.
+**Schema gate (Supabase SQL editor): NOT re-observed — now FOURTH session carried.** Five tables, RLS on all five, `pg_policies` → 7 rows; migration at `supabase/migrations/20260708220816_create_core_schema.sql`. Slice 5b is client-state only and does not INSERT; the two queries are **mandatory** before slice 6.
+
+**Gate asset:** `neutral.pdf` lives at `/d/projects/cultivar/neutral.pdf` — parent of the repo, untracked, deliberately. It is the reusable empty-parse gate input; it is also on the iPhone (Files) from this session's gate.
 
 **If any of these don't match, the repo wins — re-baseline before proceeding.**
 
@@ -57,58 +59,60 @@ Paste `audit.txt` whole. Expected values, each a prediction that can be wrong:
 
 ## What shipped (newest first)
 
-- `8f2ba20` — docs: single generic co-author trailer (D35)
-- `ffbbb49` — feat: structured read-only render of the ingest result (slice 4; device-gated, incl. one refuted-and-fixed envelope cast)
-- Session start HEAD was `754966d` (prior session's handoff commit). Working tree: clean once this handoff commits.
+- `1024c3f` — feat: guard empty COA parses before review (slice 5a; device-gated incl. control case)
+- `4457c37` — docs: design slice 5a empty-parse guard and 5b editing interactions (D36, D37)
+- Session start HEAD was `81cf5c7` (prior session's handoff commit). Working tree: clean once this handoff commits.
 
 ---
 
 ## The arcs
 
-**Slice 4 opened by refuting its own entry premise.** The mandated key-name reconciliation (read-only Claude Code dump of `parseCoa(extractText(animal-face.pdf))` diffed against `confirm-edit-screen.md`) found no staleness: `lab` and `sourceLab` coexist with different meanings, and the doc already treated both correctly. The real drift was internal — the doc's display-only section named DB snake_case columns (`source_lab`, `total_thc`, …) despite its own parser-key framing. D34 fixed that, named the per-item `pct` key, and recorded the render decisions. Every quantitative prediction in the doc (20/16 analytes, 6/2 detected, 14/14 ND, 8 safety rows) was confirmed by the dump, and the ND invariant passed with a 28-row null control set.
+**Slice 5 opened with the mandated live observation of the unknown-lab arm, and the observations redesigned the slice.** Reading order: `ingest-coa/index.ts` (a parser throw → 400 `{error}`; non-throw → 200 `{data}`), then `parseCoa.ts`, which refuted the architect's stated 70/30 prior that unknown lab throws — it returns a fully-formed empty shell tagged `unknown`, deliberately, per its own docstring. Two live invokes followed (token captured by command substitution, never hand-pasted — see Working rhythm). The contaminated probe (preamble (1)) proved empty-parse-under-known-lab; the clean probe confirmed the unknown arm byte-exact against source. Consequence, ratified as D36: the guarded input class is the **empty parse**, never `sourceLab`, and the guard is its own slice 5a ahead of editing (5b). `identifyLab` is presence-of-string matching (`Kaycha\s+Labs`, `DRS\s+Testing`, ligature-tolerant `Con\w*dent\s+LIMS`) — cheap misidentification is a fact of the design, acceptable for v1 exactly because the guard plus the human gate sit downstream.
 
-**The build shipped through one device-refuted design — the architect's, not the implementer's.** `CoaReview` (`src/components/coa-review.tsx`) is props-only and presentational: five sections (metadata, totals, terpenes-before-cannabinoids, safety — terpene profiles are the product's signal), detected rows in parser emission order, ND rows collapsed-never-hidden under a count control, `null` rendered as the literal string `ND` everywhere including `totalCbdPct`. The type is a local mirror of the observed parse shape — server types under `supabase/` must not enter the Metro bundle (accepted duplication debt). First gate crashed on the envelope cast (preamble (1)); the fix unwraps `(result.json as {data: CoaParseResult}).data` inline where `result.ok` is already narrowed, and the refutation is recorded in `coa-ingest-transport.md`. Second gate passed whole: full structured render of animal-face live, both ND groups expand/collapse with `g CBDVa` visible as `ND`, cancel/close/reopen/repick/tabs intact. The failure branch of `done` is untouched.
+**The docs commit (`4457c37`) recorded D36/D37 and cost the architect two criteria defects, both caught by implementer STOPs.** First: a whole-file absence count (`'slices 5–6'` → 0) that a second, in-scope-frozen occurrence at line 105 made unsatisfiable — resolved by amending that sentence too, since it was stale on the merits, not just inconvenient (resolution (b), architect's call). Second: a presence pattern that omitted the backticks its own verbatim insert carried — the implementer preserved the content and reported the defective pattern rather than bending either. Both defects are the same class: a grep criterion never executed against the text it gates. The mechanical rule that came out of it caught a third defect before shipping (the 5a build prompt's `sourceLab` absence criterion would have failed on the architect's own explanatory comment; the comment was reworded).
 
-**D35 landed as its own arc.** The model-specific second trailer went stale on its first model change (`CLAUDE.md` named Opus 4.8; this session's architect was Fable 5), its attribution precision was illusory (architect and implementer are separately-versioned models; it named only one), and it cost a handbook edit per release. One generic trailer, permanently, forward-only; `CLAUDE.md` and `handoff-specs.md` §3.4 both updated; the parse-never-count rule and its `90bad0a` example survive verbatim. `8f2ba20` is the convention's first exemplar.
+**Slice 5a shipped as a routing component at the seam.** `ReviewOrGuard` in `add-to-shelf-modal.tsx`: predicate `terpenes.length === 0 && cannabinoids.length === 0` on the already-cast parse; guard renders a non-editable title + sentence with the pre-existing "Pick another" button inherited for free (it sits outside the ok/error ternary); non-empty parse falls through to `CoaReview`, untouched. The ternary still branches on `result.ok` because that narrows the `IngestResult` union for the error arm — the type-system constraint that dictated a component over a hoisted predicate. Device gate passed whole: `neutral.pdf` → guard state, `animal-face.pdf` → full review (control), picker-cancel and close/reopen regressions intact. The architect predicted the guard text would render top-aligned in the flex scroll area rather than centered; the gate passed regardless — cosmetic centering is banked if it ever grates.
 
 ---
 
 ## Refuted hypotheses / memory corrections
 
-- **"`IngestResult.json` is the parse object."** REFUTED on-device: it is the envelope `{data: <parse>}`; the parse object never appears un-enveloped on the client. Recorded in `coa-ingest-transport.md`. The design error was dump-provenance confusion: props were designed from the local parser dump, which has no envelope. Any future design-from-dump must name which seam's payload it describes.
-- **"At least one of {prior handoff, confirm-edit doc} is stale on `sourceLab`."** REFUTED — the premise was wrong, not either document. Two coexisting keys; see preamble (2).
-- **"Values observed on-device prove client-path fidelity"** (prior session's claim) — weakened one structural level: values were observed, the payload's top-level shape never was; the raw-JSON view displayed the envelope unremarked. Value fidelity held; the shape claim was never actually made by the evidence.
-- **The `SUPABASE_URL` grep prediction failed a strict reading** while its intended property held: "an export, an import + usage, nothing else" met 5 hits, because `EXPO_PUBLIC_SUPABASE_URL` contains the search string. Predictions about grep output must state expected hit counts, not "nothing else." (Applied to this handoff's own grep list above.)
-- **Inference graduated to fact:** `sourceLab` is present in the live deployed response — observed on-screen (`source: drs-confident`) this session.
-- **Claude Code conduct: zero vouching instances this session** (streak broken in the good direction), and two unprompted correct behaviors worth trusting slightly more: it converted the architect's push authorization into a `rev-list → 0` observation before staging on it, and its inline-cast deviation from the fix prompt's example was better than the example and disclosed as a deviation. One judgment call to watch: it proceeded past a status-file-set contradiction because the extra entry was explainable (a prior fix's file). Sound here; the countermeasure is on the prompt author — prompts stacking on a moving tree must state their snapshot moment and explicitly tolerate known later-arriving entries, so STOP stays sharp for unexplained contradictions.
-- **Still true from prior handoffs:** Git Bash for the audit script, never WSL; native-module change → new EAS build, JS-only → Metro reload (slice 4 gated on reload); parse trailers never count; `git show HEAD:<path> | cat` for blob reads; 6-digit OTP; screenshots from the iPhone are painful — gates are now written so one-line text pass/fail verdicts suffice except for the first render of a brand-new screen.
+- **"`parseCoa` throws on unknown lab"** (architect, stated 70/30) — REFUTED by source: returns an empty shell tagged `unknown`, by design. The handler's 400 arm is for extraction/parse *throws*, a different class.
+- **"Any non-lab PDF exercises the unknown arm"** — REFUTED by the contaminated probe: `identifyLab` matches lab-name strings anywhere in the text, so the roadmap PDF *is* a DRS COA to ingestion. Probe inputs must be validated against the matcher's actual patterns before spending the invoke.
+- **"`sourceLab === 'unknown'` could flag the unreadable case"** — killed by the same observation before ever becoming a design: the empty parse occurs under known tags too. D36's predicate is the panel, not the tag.
+- **Two criteria defects shipped by the architect and caught by implementer STOPs** (whole-file absence count unchecked against HEAD; presence pattern unchecked against its own authored insert), plus a third caught pre-ship by the new execute-before-ship rule. Same class, three instances, one day.
+- **Project-knowledge copies of `CLAUDE.md`/`handoff-specs.md` went stale on D35** — both still said "exactly two trailers" at session start. Detected by blob greps (`git show HEAD:` counts → 0), predicted at ~90% and confirmed. Rule: in-context document copies are snapshots; anything convention-critical is verified against the blob before use.
+- **Claude Code conduct: two exemplary STOPs** — contradiction stated precisely, resolutions offered, decision explicitly left to the architect, nothing touched either time — plus one proactive full-body read when the first commit prompt omitted it (now baked into commit prompts as a formal criterion). Zero vouching instances. Separately: the Claude Code → chat paste channel dropped raw tool output (diffs, body reads) twice; see Working rhythm.
+- **Still true from prior handoffs:** Git Bash for the audit script, never WSL; native-module change → EAS build, JS-only → Metro reload (5a gated on reload); parse trailers, never count; `git show HEAD:<path> | cat` for blob reads; 6-digit OTP; gate evidence is one-line text verdicts, screenshots only for a brand-new screen's first render.
 
 ---
 
 ## Ratified decisions
 
-D1–D33 stand. New this session:
+D1–D35 stand. New this session:
 
-- **D34 — `confirm-edit-screen.md` speaks parser-key space throughout.** Display-only metadata names are `sourceLab` / `totalThcPct` / `totalCbdPct` / `totalTerpenesPct`; DB column mapping belongs to the insert slice and the doc says so generically (no literal snake_case tokens, keeping absence greppable); analyte-row prose names the `pct` key; a "Slice 4 read-only render (landed)" subsection records section order and ND treatment; the Status line reads partially-implemented. Landed `ffbbb49`.
-- **D35 — exactly one co-author trailer, `Co-Authored-By: Claude <noreply@anthropic.com>`, permanently.** Forward-only; existing commits stand under the convention of their time. Grounds in the arc above and in `8f2ba20`'s body. Resolves the long-banked "CLAUDE.md model-trailer simplification."
+- **D36 — the empty-parse guard is slice 5a, ahead of editing.** Predicate `terpenes.length === 0 && cannabinoids.length === 0`, checked in the success branch, independent of `sourceLab`; non-editable "couldn't read this COA" state with the existing repick affordance; own minimal UI, not coupled to the failure branch (which is banked for its own redesign). Grounds: both live observations above; an all-empty panel is not reconcilable and there is no add-row to recover with. Designed at `4457c37`, landed `1024c3f`.
+- **D37 — slice 5b editing primitives.** Tap-to-edit numeric (decimal-pad) value editor, commit on blur/done: empty/whitespace → null, typed `nd`/`ND` → null, valid number → number, unparseable → revert; **an explicitly typed 0 is a legal real number** — the invariant bans fabricated zeros, not deliberate ones. No row migration during edit (grouping computed once at draft init; a reading aid, not a data property). Delete behind a confirm alert (no add-row makes deletion otherwise unrecoverable). Inline rename, commit on blur, empty reverts. Metadata free-text, string-typed, `""` never null, no validation this slice. Draft state local and id-keyed at init (names editable → name is no key; index breaks under delete); reducer vs `useState` is the implementer's choice. Grounds argued and ratified in-session; recorded at `4457c37`.
 
 ---
 
 ## Open items
 
 ### Runnable now
-- **Slice 5 — editing** (metadata free-text, analyte name/value/delete with the three-state rule). **This is the entry point** — see below.
+- **Slice 5b — editing.** The design is committed and the interaction questions are settled (D37); what remains is a short placement pass and the build prompt. **This is the entry point** — see below.
 
 ### Blocked
 - Nothing hard-blocked.
 
 ### Banked
-- **Unknown-lab path behavior post-slice-4 is UNKNOWN** (changed this session): D28's note "renders as raw JSON today" is stale — the raw view is gone. An unknown-lab request now lands either in the failure branch (if the function 4xxs) or as a near-empty `CoaReview` (if it 200s with nulls); nobody has observed which. Slice 5's design pass should check the function's unknown-lab arm read-only. The honest blocking state remains its own slice before slice 6 ships.
-- **Envelope unwrap-at-the-seam redesign** (new, sharpened): move the unwrap into `src/lib/ingest-coa.ts` so no consumer sees the envelope — and consider BOTH arms together (`{data}` on success, `{error}` bodies rendering raw in the failure branch today). Related to, and should be decided alongside, the banked `functions.invoke` migration (D33). Post-slice-6, low.
-- **Stale-result race** — NOT verified absorbed by slice 4's rewrite; the state machine is unchanged, so the race likely persists with the structured view now receiving the late result. Still benign; fix only if it annoys.
-- **Audit script: no `$?` echo after `deno check`** — observed silent again. One-line `chore:`. The script's [15] trailer expectation may also now be stale against D35 — check when touching it.
-- **Parser: DRS/Confident `brand` sludge + stray `g CBDVa`** — now rendered verbatim in the structured UI (observed on-device). The confirm/edit screen (slices 5–6) is the human catch; fixture-backed parser cleanup remains banked. ~12 more COAs available as fixtures.
-- **Carried unchanged:** in-stock data primitive; scoring lexicon (+ `never_again`/`average_score` revisit); session-logging interaction; mood visual language; EAS-build-source unknown (commit-first remains default); dashboard-only auth config (OTP length, SMTP, `{{ .Token }}`) not in repo; Resend domain verification; config dedupe to per-function `deno.json`; deploy reproducibility (`^1` unpinned); `--no-lock` on deno check/test; url-polyfill necessity; `.gitignore:40`; terpene whitelist; CRLF-on-clone; `unrs-resolver` allow-scripts; `npm audit` template vulns; no Storage bucket / `pdf_url`. REMOVED from banked: model-trailer simplification (resolved, D35).
+- **Unknown-lab / empty-parse path: RESOLVED as an unknown** (was banked last session as unobserved). Observed live, guarded at `1024c3f`. What remains banked from that cluster: the failure branch still renders `{error}` bodies raw, tied to the **envelope unwrap-at-the-seam redesign** and the `functions.invoke` migration (D33) — post-slice-6, low.
+- **Guard layout** — text renders top-aligned in the flex scroll area, not centered. Gate passed; cosmetic; fix only if it grates.
+- **`identifyLab` brittleness** — presence-of-string matching means any text mentioning a lab name is that lab's COA. Acceptable for v1 because the empty-parse guard and human gate sit downstream; that acceptance makes the guard load-bearing. Revisit only with evidence of a *wrong non-empty* parse from misidentification.
+- **Stale-result race** — unchanged, still benign, still unverified-absorbed.
+- **Audit script** — no `$?` echo after `deno check` (fourth session), and its [15] expectation text likely still says two trailers (D35 staleness). One `chore:`, both fixes together.
+- **Parser: DRS/Confident `brand` sludge + stray `g CBDVa`** — 5b's rename and metadata edit affordances are the designed human catch; fixture-backed parser cleanup remains banked. ~12 more COAs available as fixtures.
+- **Schema gate re-observation** — mandatory before slice 6 (fourth session carried).
+- **Carried unchanged:** in-stock data primitive; scoring lexicon (+ `never_again`/`average_score` revisit); session-logging interaction; mood visual language; EAS-build-source unknown (commit-first remains default); dashboard-only auth config (OTP length, SMTP, `{{ .Token }}`) not in repo; Resend domain verification; config dedupe to per-function `deno.json`; deploy reproducibility (`^1` unpinned); `--no-lock` on deno check/test; url-polyfill necessity; `.gitignore:40`; terpene whitelist; CRLF-on-clone (surfaced twice this session as tolerated warnings); `unrs-resolver` allow-scripts; `npm audit` template vulns; no Storage bucket / `pdf_url`.
 
 ---
 
@@ -116,14 +120,15 @@ D1–D33 stand. New this session:
 
 Stable method lives in `CLAUDE.md` and `documentation/process/handoff-specs.md`.
 
-- **New: dump provenance is named in every design pass.** "Designed from the dump" is incomplete; the parser's local output and the seam's client payload are different objects. Any props/shape design states which one it derives from, and a cast at a seam is treated as an assertion needing its own observation, not a formality.
-- **New: prompts stacking on a moving tree state their snapshot.** Current-state blocks written mid-loop name the moment they describe and explicitly tolerate known later-arriving entries (e.g. a parallel fix's file), so the STOP-on-contradiction rule stays reserved for unexplained drift.
-- **Grep predictions carry expected hit counts** — "nothing else" is not a prediction, it's an invitation to a substring surprise.
-- **Gate evidence economy:** operator text pass/fail per numbered item is the standard; screenshots only for the first render of a new screen or visible defects.
-- The slice-N pattern (survey → design note → build prompt → typed gate → separate commit prompt → body read → authorize → operator pushes) ran twice more today including a mid-loop device refutation; unchanged, keep it.
+- **New, load-bearing: every grep criterion is EXECUTED against the text it gates before the prompt ships** — against the HEAD blob for absence claims, against the authored insert for presence claims. Three same-day data points: two defects shipped and caught by implementer STOPs before the rule, one caught by the rule before shipping. This subsumes last session's "grep predictions carry expected hit counts" — a stated count that was never run is still a guess.
+- **New: long secrets are never hand-pasted.** Two consecutive hand-pastes of a JWT arrived corrupted (a literal `^C`, then bracketed-paste garbage). The pattern: redirect the response to a file, capture with command substitution (`TOKEN=$(grep -o '"access_token":"[^"]*"' file | cut -d'"' -f4)`), verify with `${#TOKEN}`.
+- **New: raw evidence (diffs, commit bodies) reaches the architect via the operator's paste, never via the implementer's report alone.** The Claude Code → chat channel dropped raw tool output twice this session while the surrounding report survived; "pasted above" claims about content the architect cannot see are treated as unverified. Commit prompts now carry the full-body read as a formal criterion, and the operator pastes it and the diff directly.
+- **New: probe inputs are validated against the mechanism they exercise** before spending a live invoke — read the matcher/parser first, then choose the input (preamble (1)).
+- Carried: dump provenance named in every design pass; prompts stacking on a moving tree state their snapshot; gate evidence economy (one-line verdicts, screenshots only for a new screen's first render — exercised this session: the guard's first render got the screenshot slot, the rest were text verdicts).
+- The slice pattern (survey → design note → build prompt → typed gate → separate commit prompt → body read → authorize → operator pushes) ran twice more today, including two implementer STOPs resolved by corrected prompts; unchanged, keep it.
 
 ---
 
 ## Entry point
 
-**Slice 5: editing, inside the confirm/edit screen design.** Open with a short design pass that (a) re-reads `documentation/design/confirm-edit-screen.md` whole — it changed this session (D34) and is the governing spec; (b) checks, read-only, what the deployed function's unknown-lab arm actually returns, because the raw-JSON fallback that used to make that path legible is gone and its current behavior is unobserved (see Banked); and (c) settles the editing primitives before any build prompt: controlled-input strategy for metadata free-text, the three-state value editor (number ⇄ ND, never 0-as-default), and row delete/rename mechanics — the doc specifies WHAT is editable; the interaction HOW is the open design question. The gate is typed UI-visible: physical iPhone via Metro reload, and must include the three-state invariant exercised live (edit a value to ND and back; confirm no `0` ever appears as a stand-in). Confirm-emit and any INSERT stay in slice 6, behind the re-observed schema gate. This is the single next move: it turns the readable screen into a correctable one, which is the entire reason the human gate exists.
+**Slice 5b: editing.** The design is already committed (`confirm-edit-screen.md`, "Editing interactions (slice 5b)", D37) — this slice needs no ratification pass, only a **placement pass**: read `src/components/coa-review.tsx` whole (the architect has not read it this session; it is the file the diff will touch or wrap) and decide where the editing affordances live — inside `CoaReview` (mutating it from presentational to controlled) versus a new editing component that renders the same sections with inputs, with `CoaReview` retired or retained for a future read-only context. That single decision, plus the draft-state wiring in the modal (id-keyed at init per D37), is the build prompt's content. The gate is typed UI-visible, physical iPhone via Metro reload, and must exercise: the three-state invariant live (edit a value to ND and back; confirm no 0 ever appears as a stand-in; type an explicit 0 and confirm it sticks as a real value), the rename of `g CBDVa` → `CBDVa` (the real observed defect the affordance exists for), a delete behind its confirm, and the brand-sludge correction in metadata. Confirm-emit and any INSERT stay in slice 6, behind the mandatory re-observed schema gate. This is the single next move: it turns the readable screen into a correctable one, which is the entire reason the human gate exists.
