@@ -1,11 +1,9 @@
 # Confirm/Edit Screen — COA Ingestion
 
-Status: partially implemented — slices 4 (read-only render), 5a (empty-parse
-guard), and 5b (editing) are landed; see their sections below. Slice 6
-(confirm/insert) is designed and split (D39, D40): 6a insert RPC
-(documentation/design/coa-insert.md), 6b confirm wiring (below); neither yet
-built.
-Confirm/insert remains slice 6.
+Status: implemented through slice 6b — slices 4 (read-only render), 5a
+(empty-parse guard), 5b (editing), 6a (insert RPC, D39), and 6b (confirm
+wiring, D40) are landed and device-gated. Slice 6c (confirm action bar, D43)
+is designed below and not yet built.
 Contract fixture: `animal-face.pdf` (DRS/Confident). Validated against the live
 `ingest-coa` parse output observed at HEAD `4ab722f`. If the parser output for this
 fixture later differs, re-check this design against it.
@@ -105,8 +103,8 @@ visible on expand — collapsed, never hidden. A `null` value on `pct` renders a
 the literal string "ND", never 0 and never blank, per the three-state invariant;
 `totalCbdPct` gets the same treatment. `sourceLab` renders as subordinate
 secondary text — a system identifier, not user-facing vocabulary.
-Editing remains slice 5b (behind the 5a empty-parse guard); confirm/insert
-remains slice 6.
+Editing landed as slice 5b (behind the 5a empty-parse guard); confirm/insert
+landed as slice 6 (6a insert RPC, 6b confirm wiring).
 
 ## Empty-parse guard (slice 5a)
 
@@ -218,6 +216,54 @@ per-table client REST calls. RLS is already in place (owner = `auth.uid()` via
   cleared to ND must land as SQL NULL — never 0 (the invariant, live at
   the DB seam).
 - Ordering (D40): 6b builds only after 6a's RPC is applied and gated.
+
+## Confirm action bar (slice 6c, D43)
+
+Ratified 2026-07-13. Corrects the defect that manufactured the 6b false gate:
+this document never specified the confirm control's placement, the
+implementation defaulted to last-child-of-the-scroll-content, and on any full
+panel the control sat below the fold — the operator gated a flow whose confirm
+they had never seen.
+
+The contract:
+
+- The confirm action ("Add to shelf") is a **fixed footer owned by
+  `CoaEditor`**, rendered outside any scroll region. Whenever the editor
+  renders, the confirm control is visible without scrolling.
+- Mechanism: `CoaEditor`'s root becomes a flex column — an internal
+  `ScrollView` holds the five sections (metadata, totals, terpenes,
+  cannabinoids, safety); the confirm `Pressable` is its sibling below,
+  outside the scroll.
+- The modal's success branch stops wrapping `ReviewOrGuard` in its
+  `resultScroll` `ScrollView` — the editor now scrolls itself, and a
+  `flex: 1` child inside a `ScrollView` cannot fill the viewport. The
+  failure branch keeps its `ScrollView` (long error bodies). The guard arm
+  renders bare: a short fixed block with no confirm control (its centering
+  stays banked, untouched).
+- Rejected alternative: lifting the confirm button into the modal's fixed
+  region. The draft is editor-local by D38; the modal cannot emit it without
+  an imperative handle or a state lift — the former is heavier machinery,
+  the latter reverses a ratified decision. The control lives with the draft
+  it emits.
+- Unchanged: `confirmError` stays modal-owned below the editor (already
+  fixed-position); the `busy` disable; D37 editing semantics; D38 remount
+  keying; the saved branch.
+- Tolerated, stated: with the keyboard up mid-edit, the footer may sit
+  behind it. The property this slice buys is visibility at rest — the
+  operator's failure case — not visibility mid-edit.
+
+Gate (UI-visible, physical iPhone; per-step operator-attested verdicts):
+
+1. Pick `animal-face.pdf` → "Add to shelf" is visible on first render of the
+   editor, zero scrolling — the refuted property, observed directly.
+2. Scroll the panel to the bottom and back → content moves; the footer does
+   not.
+3. Full confirm → insert lands; read back the new row (per-step read-back
+   rule).
+4. Control: a neutral non-COA PDF → the guard renders with no confirm footer
+   anywhere on screen.
+5. Regression: a failure-branch response still renders inside a scrollable
+   region.
 
 ## Non-goals (this slice)
 
