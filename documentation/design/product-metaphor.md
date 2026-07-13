@@ -102,6 +102,9 @@ settled schema.
 
 ## Relationship to current work
 
-None of this is near-term. The active path remains COA ingestion and the confirm/
-edit screen (see `confirm-edit-screen.md`). This doc is the destination those slices
-are walking toward, not a spec to build now.
+Ingestion is complete (slices 1–6: parse, confirm/edit, atomic insert — see
+`confirm-edit-screen.md` and `coa-insert.md`). The active path is the shelf
+read: the compendium list (`shelf.md`, slice 7), the first UI this metaphor
+governs directly — neutral untried cards, no mood, no chemistry ordering.
+Books, moods, and sessions remain blocked on the scoring lexicon; this doc is
+still their destination, not a spec to build now.
