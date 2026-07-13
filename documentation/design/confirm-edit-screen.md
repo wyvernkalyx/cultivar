@@ -1,8 +1,8 @@
 # Confirm/Edit Screen — COA Ingestion
 
-Status: partially implemented — the slice 4 read-only render is landed (see
-"Slice 4 read-only render (landed)" below). Slice 5 is split: 5a (empty-parse
-guard) and 5b (editing), neither yet implemented — see their sections below.
+Status: partially implemented — the slice 4 read-only render and the slice 5a
+empty-parse guard are landed (see their sections below). Slice 5b (editing) is
+designed and placed (D37, D38), not yet implemented.
 Confirm/insert remains slice 6.
 Contract fixture: `animal-face.pdf` (DRS/Confident). Validated against the live
 `ingest-coa` parse output observed at HEAD `4ab722f`. If the parser output for this
@@ -153,6 +153,38 @@ Therefore the guarded input class is the empty parse, not "unknown lab", and
   the key; an index breaks under delete). Reducer vs. `useState` is the
   implementer's choice — it is not architecture.
 
+### Placement (slice 5b, D38)
+
+Ratified 2026-07-13. The editor is a new component, `CoaEditor` in
+`src/components/coa-editor.tsx`; `CoaReview` (`src/components/coa-review.tsx`)
+is retired in the same commit — deleted, not retained. Grounds:
+
+- The grouping invariant diverges. `CoaReview`'s `AnalyteSection` recomputes
+  detected/ND from current values on every render; D37 freezes grouping at
+  draft init (no row migration). Same-shaped code, opposite invariant —
+  reuse would violate D37 silently, and forking the logic inside one file
+  puts two grouping regimes in one component.
+- The props contract differs structurally: the editor consumes an id-keyed
+  draft with commit semantics, not `CoaParseResult`. Mutating `CoaReview`
+  falsifies its load-bearing "props-only and presentational" contract
+  rather than superseding it.
+- Post-5b, `CoaReview` has zero consumers. The plausible future read-only
+  consumer (the shelf's COA detail view) will read DB shape, not parser
+  shape, so the component would not fit it anyway. Retention is speculative
+  scaffolding; git history is the archive.
+
+Consequences:
+
+- The exported types (`CoaParseResult`, `CoaAnalyte`, `CoaSafetyRow`) move
+  to `coa-editor.tsx` — same parser-mirror pattern, same accepted-debt
+  comment. `add-to-shelf-modal.tsx` updates its import, and `ReviewOrGuard`'s
+  non-empty arm renders `CoaEditor`.
+- Draft state lives inside `CoaEditor`, initialized once from the `coa`
+  prop; the modal remount-keys the editor on pick identity so a repick
+  cannot leak a stale draft. Slice 6's confirm-emit arrives later as an
+  `onConfirm` callback; no state lifting is anticipated.
+- The view-source toggle is not part of 5b (see Non-goals).
+
 ## View source
 
 A "view source COA" toggle on-screen so the user compares parsed-vs-COA without
@@ -177,3 +209,4 @@ per-table client REST calls. RLS is already in place (owner = `auth.uid()` via
 - App-code test infra — UI slice gates on device, not unit tests.
 - Parser cleanup (the brand sludge / `g CBDVa` are *inputs* to this screen; fixing
   them at the parser is a separate banked concern).
+- The view-source toggle — designed above, not assigned to a slice; explicitly not 5b.
