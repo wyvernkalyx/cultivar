@@ -84,7 +84,7 @@ export default function AddToShelfModal({
                   // so this cast asserts two things: the envelope shape and
                   // the parse shape. Both are produced server-side; runtime
                   // validation remains the accepted debt this slice.
-                  <CoaReview coa={(result.json as { data: CoaParseResult }).data} />
+                  <ReviewOrGuard coa={(result.json as { data: CoaParseResult }).data} />
                 ) : (
                   <ThemedText type="code">
                     {[
@@ -132,6 +132,27 @@ export default function AddToShelfModal({
   );
 }
 
+function ReviewOrGuard({ coa }: { coa: CoaParseResult }) {
+  // Slice 5a guard. An unreadable or non-COA PDF comes back as HTTP 200 with
+  // an all-empty parse -- and a known lab tag is no evidence against that
+  // (lab identification is presence-of-string). The guarded class is the
+  // empty parse itself; see documentation/design/confirm-edit-screen.md,
+  // "Empty-parse guard (slice 5a)".
+  if (coa.terpenes.length === 0 && coa.cannabinoids.length === 0) {
+    return (
+      <ThemedView style={styles.guard}>
+        <ThemedText type="smallBold" style={styles.centered}>
+          {"Couldn't read this COA"}
+        </ThemedText>
+        <ThemedText style={styles.centered}>
+          {"This PDF doesn't look like a lab certificate of analysis Cultivar can read. Try picking a different file."}
+        </ThemedText>
+      </ThemedView>
+    );
+  }
+  return <CoaReview coa={coa} />;
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -161,5 +182,8 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.5,
+  },
+  guard: {
+    gap: Spacing.three,
   },
 });
