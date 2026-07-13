@@ -1,11 +1,11 @@
 # Cultivar — Session Handoff
 
-_Written 2026-07-13, against HEAD `2cec835`, pushed and verified (`459cb1a..2cec835 main -> main` observed; this session also observed `2642827..ea9e54e`, `ea9e54e..a882ad3`, `a882ad3..75bf461`, `75bf461..459cb1a` — five pushes)._
+_Written 2026-07-13, against HEAD `5a2f93f`, pushed and verified (`97e0974..5a2f93f main -> main` observed; this session also observed `a2d0ca2..97e0974` — two pushes)._
 _**The repo is authoritative over this document.** Every state claim below is a prediction to falsify, not a fact to trust._
 
 _Concrete refutations from this session, so this preamble is read and not skimmed:_
-_(1) **A device gate was reported passed and the database refuted it.** The 6b gate came back as an aggregate "all gates passed"; the read-back showed ONE coas row — the 6a curl insert — where two were predicted. The device insert had never happened. Root cause, owned by the architect's own spec: the confirm button was placed "at the bottom of the editor, below Safety," which puts it below the fold inside the modal's ScrollView — the operator had never seen it. Three hypotheses were drawn (RLS user mismatch / no insert / stale token) and one privileged SQL query (pg join to auth.users) settled it: one row, correct owner. The re-gate then produced the real observations, including the one the pipeline exists for: a user-cleared Humulene reading back NULL among 15 ND rows. Consequence, now a rule: **per-step verdicts are mandatory for UI gates; aggregate verdicts are not evidence.** Two aggregates were offered this session; one was false._
-_(2) **The architect's 6a build prompt contained a half-true claim about SQL semantics.** "A missing or null array key must insert zero child rows (SRF strictness covers this)" — SRF strictness covers only the MISSING key (`payload->'x'` on absence → SQL NULL → zero rows). An explicit JSON-null value yields jsonb 'null' and `jsonb_array_elements` raises "cannot extract elements from a scalar" — a clean atomic abort, not zero rows. The implementer dissected this precisely; the case is unreachable from the real client and the committed `coa-insert.md` makes no such claim, so the defect lived and died in the prompt._
+_(1) **The architect authored file edits against a terminal paste and the repo refuted them.** The slice-8 docs prompt (v1) reconstructed `shelf.md` from the operator's `cat` paste; the paste had silently dropped every blank line (56 reconstructed vs 71 real), Edit 1's OLD block spanned a blank line that wasn't in the reconstruction, and Claude Code's STOP-on-contradiction fired — correctly, changing nothing. Rule extracted: **a terminal paste is a lossy channel for blank lines; edit anchors must come from the blob (`git show HEAD:<path>`) or be adjacency-free (single whole lines, substrings, or implementer-verified blocks).** The v2 prompt was rebuilt adjacency-free and executed clean._
+_(2) **A destructive device gate was run under an aggregate "all passed" and deleted the wrong row.** The operator ran the slice-8 gate without per-step verdicts; the delete landed on Cosmic Cereal (`edb3dc6c`, the step-5 survive-target) instead of the sludge-branded `d6ba53e7` (the step-3 target). Caught because the step-4 orphan read-back returned the target's full baseline counts — impossible after a real cascade delete. Third session-event where the aggregate-verdict rule was the thing that slipped. The gate was re-run with position-and-brand target identification and closed clean; Cosmic Cereal was recovered by re-adding its PDF (new id `7bb5f095`). Hardened again, with a new clause: **the reviewer reconstructing verdicts from screenshots does not count as verdicts — the operator's per-step attestation is the artifact that carries ordering, and without it the gate does not close.**_
 
 _Begin with the Phase A audit below. **Run it in Git Bash (`MINGW64`), from `/d/Projects/...`, never WSL.** Try to break it._
 
@@ -25,32 +25,31 @@ Paste `audit.txt` whole. Expected values, each a prediction that can be wrong:
 | Check | Expected |
 |---|---|
 | [1] branch | `main` |
-| [2] HEAD | If this handoff is NOT yet committed: `2cec835`, subject `feat: shelf compendium list on the home screen (slice 7)`, parent `459cb1a`. If committed: a `docs: session handoff` commit whose **parent is `2cec835`**. |
+| [2] HEAD | If this handoff is NOT yet committed: `5a2f93f`, subject `feat: delete from shelf (slice 8)`, parent `97e0974`. If committed: a `docs: session handoff` commit whose **parent is `5a2f93f`**. |
 | [3] ahead of origin | **0** |
 | [4] working tree | **clean** if this handoff is committed; else exactly ` M documentation/SESSION_HANDOFF.md`. **If `.env` appears, stop everything.** |
 | [5] `.env` ever committed | `(never committed)` |
 | [6] client path | `src/lib/supabase.ts` tracked; `lib/` count **0** |
 | [7a/b] `.gitignore` blob | line 34 `.env*`, line 35 `!.env.example`, LF. Line 40 `example` banked. Unchanged. |
-| [8] unstable flags | `(none)` — note the new migration is SQL; the grep still covers `supabase/`. |
-| [9] `npm test` | **36 passed**, 1 suite. Parser untouched; re-observed at the slice-7 build criteria. |
-| [10] `deno test` ingest-coa | **5 passed**. Function untouched since deploy; carried. |
-| [11] `deno check` | exit 0 by inference; script still lacks `$?` echo (SIXTH session). Banked chore. |
-| [12] `tsc --noEmit` | `(no output)`, exit 0. Re-observed at slice-7 criteria. |
-| [13] `expo lint` | **1 error, 0 warnings** (`use-color-scheme.web.ts`). Re-observed at slice-7 criteria — held only because the implementer restructured an async effect body to promise-callback form mid-slice (see Arcs). |
+| [8] unstable flags | `(none)` |
+| [9] `npm test` | **36 passed**, 1 suite. Parser untouched; re-observed at slice-8 build criteria and at session close. |
+| [10] `deno test` ingest-coa | **5 passed**. Function untouched; carried. |
+| [11] `deno check` | exit 0 by inference; script still lacks `$?` echo (SEVENTH session). Banked chore. |
+| [12] `tsc --noEmit` | `(no output)`, exit 0. Re-observed at session close. |
+| [13] `expo lint` | **1 error, 0 warnings** (`use-color-scheme.web.ts`). Re-observed at session close. |
 | [14] `expo install --check` | jest 30 / @types/jest 30 misaligned — expected, do not fix. |
 | [15] trailers | **exactly ONE, parsed** (D35). Script's expectation text still stale; banked. |
 
 **New this session, not covered by the audit script:**
-- `ls supabase/migrations/` → exactly **two** files: `20260708220816_create_core_schema.sql`, `20260713170757_insert_coa_rpc.sql`.
-- `git ls-files documentation/design/` → **six** files: the prior four + `coa-insert.md` + `shelf.md`.
-- `git grep -n "ShelfList" -- src/` → exactly **4** hits: 3 in `src/app/index.tsx` (import, comment, keyed render), 1 in `src/components/shelf-list.tsx` (the export). Observed raw at the slice-7 criteria.
-- `grep -c "CoaParseResult" src/components/shelf-list.tsx` → **0** (D41: DB shape only).
-- `git grep -n "insert_coa" -- src/` → exactly **1** hit, the rpc call in `add-to-shelf-modal.tsx`.
-- `grep -c "HintRow\|AnimatedIcon\|expo-device" src/app/index.tsx` → **0** (template scaffolding removed at `2cec835`; the orphaned component FILES still exist — banked chore, `explore.tsx` still imports them).
+- `grep -Fc "onLongPress" src/components/shelf-list.tsx` → **1** (the Pressable; the prop is named `onDelete` by design — intent at the prop, gesture at the Pressable).
+- `git grep -c "Remove from shelf?" -- src/` → **1** (the confirm title, in `shelf-list.tsx`).
+- `grep -Fxc '## Delete-from-shelf (slice 8, D42)' documentation/design/shelf.md` → **1**.
+- `wc -l < documentation/design/shelf.md` → **130** (labeled prediction: 71 − 6 + 65; never verified directly).
+- `grep -Fxc '# Shelf' documentation/design/shelf.md` → **1** (doc retitled; it now spans slices 7–9).
 
-**Database state (observed this session, NOT predictable as counts):** `insert_coa` deployed (public, `payload jsonb → uuid`, **Invoker** — observed in the dashboard); schema gate CLOSED this session (five tables, RLS all, 7 policies, observed 2026-07-13). The `coas` table now holds **live user data** — rows were added and deleted during gates and exploration. **Do not write Phase A predictions about user-data row counts**; they went stale within minutes this session. The keeper provenance worth knowing: `abe82f1f…` is the 6a curl gate row (fully corrected, Humulene NULL by edit); `d6ba53e7…` is the device ND-gate row (Humulene NULL, brand left as sludge); later exploration rows are uncharacterized.
+**Database state (observed at session close, NOT predictable as counts):** shelf holds **3 rows** — `7bb5f095…` Cosmic Cereal (21/13/10 child counts; a RE-ADD, so its id differs from any earlier record of Cosmic Cereal), `e3c91b9f…` and `abe82f1f…` Animal Face / Moby & Zeke (20/16/8 each). Deleted this session: `edb3dc6c…` (Cosmic Cereal original — the wrong-target accident, cascade observed 0/0/0) and `d6ba53e7…` (the sludge-branded gate row — the intended slice-8 delete, cascade observed 0/0/0). **Phase A predicts repo state, never user-data state** (standing rule). Note all three current rows say "Animal Face" or have distinct strains; if gate targets ever collide on strain again, identify by position + brand line — the confirm dialog names strain only (banked defect).
 
-**Gate assets:** `insert-coa-gate-payload.json` and `insert-coa-broken-payload.json` at `/d/Projects/Cultivar/` (repo parent, untracked, deliberate — the neutral.pdf convention), plus `neutral.pdf` and the animal-face fixture as before.
+**Gate assets:** unchanged at `/d/Projects/Cultivar/` (repo parent, untracked, deliberate — the neutral.pdf convention). **Open hygiene item: `auth-resp.json` in that directory almost certainly holds an OTP access + refresh token pair; the architect recommended deleting it and never received confirmation. Check and delete.**
 
 **If any of these don't match, the repo wins — re-baseline before proceeding.**
 
@@ -58,67 +57,63 @@ Paste `audit.txt` whole. Expected values, each a prediction that can be wrong:
 
 ## What shipped (newest first)
 
-- `2cec835` — feat: shelf compendium list on the home screen (slice 7; device-gated per-step incl. two screenshots)
-- `459cb1a` — docs: design slice 7 shelf compendium list (D41)
-- `75bf461` — feat: confirm and insert from the editor (slice 6b; gated after a false pass was caught — see Arcs)
-- `a882ad3` — feat: insert_coa RPC, the atomic four-table COA write (slice 6a; typed schema/infra gate incl. atomicity control)
-- `ea9e54e` — docs: design slice 6 insert (D39 RPC, D40 split)
-- Scope note: `2642827` (the prior handoff) and everything before it are covered by the previous handoff, superseded by this file. Session start for this scope = `2642827`.
+- `5a2f93f` — feat: delete from shelf (slice 8; device-gated per step after a false start — see Arcs)
+- `97e0974` — docs: design slice 8 delete-from-shelf (D42; landed on the v2 prompt after v1's correct STOP)
+- Scope note: `a2d0ca2` (the prior handoff) and everything before it are covered by the previous handoff, superseded by this file. Session start for this scope = `a2d0ca2`.
 
 ---
 
 ## The arcs
 
-**Slice 6 opened by closing the five-session schema-gate carry, then ratified the RPC.** Both SQL-editor queries pasted whole (five tables, RLS true on all, 7 policy rows), the core-schema migration read end to end the same day — the mapping was designed from a read schema, not memory. D39: `insert_coa(payload jsonb) returns uuid`, security invoker so RLS stays load-bearing, plpgsql body as the atomic four-table transaction, no exception handler BY DESIGN (a constraint failure aborting whole IS the contract), grants to `authenticated` only, mapping at the seam. The typed gate ran as five operator paste-back steps: db push (with tolerated Docker-cache noise), dashboard observation (Database → Functions, not Edge Functions — the operator initially checked the wrong page), D26 token capture, live invoke returning a uuid, read-back (20/16/8, edited-Humulene AND the parser's own `total_cbd` NULL), and the atomicity control: a safety row missing `status` → Postgres `23502`, HTTP 400, exactly one coas id remaining, zero orphans. Gate payloads were derived by running the repo's real parser over the fixture via Node type-stripping — no hand-written analyte values, provenance corroborated by the recovered brand sludge.
+**Slice 8 was designed from observations, not memory, and the design survived contact.** The delete needed no RPC: the schema already carried `on delete cascade` on all three child FKs (migration lines 60/66/72, grep-observed) and the `coas_all_own` policy is `for all using (auth.uid() = created_by) with check (…)` (lines 53–54, sed-observed after the architect refused to write the clause from the policy's name alone). D42's shape: long-press → native destructive `Alert.alert` naming the strain (fallback "this COA" — the blank-brand lesson applied preemptively) → client `supabase.from('coas').delete().eq('id', id)` → refetch on success, alert-and-leave-alone on failure. Cascade deletions are referential actions, not user statements — child-table RLS does not re-gate them; the DELETE policy on `coas` is the only gate. Long-press over swipe: zero new dependencies, zero card chrome (discipline 2 intact), undiscoverability accepted at n=1 with the visible affordance assigned to the card detail view (renumbered slice 9). Implementer judgment approved and kept: `onDelete` prop naming, promise-callback form matching the file idiom, and superseding the stale "non-interactive" comment in the same pass the design doc superseded the same sentence.
 
-**Slice 6b shipped clean and gated dirty — the false pass is the session's most important event.** The code was right on first review (emission strip-by-construction, error state separated from `result` so the draft survives failure, guard branch gaining no confirm path). The gate came back "all gates passed"; the read-back said one row. Dissection: three hypotheses, one privileged SQL join settled it — no device insert had ever occurred, because the confirm button (placed per the architect's own spec at the editor's bottom, inside the ScrollView) renders below the fold and had never been seen. The re-gate then observed everything for real, including a second sequencing confusion: the operator's airplane test toggled airplane BEFORE picking, producing the ingest failure branch (screenshot: monospace network error, no editor) instead of the confirm-error path; re-instructed with exact ordering, then passed. The user-made ND closed last: Humulene cleared on-device, read back as 15 nulls with Humulene in the list, against the earlier 14-null control proving the RPC doesn't blanket-null.
+**The docs prompt cycle produced the session's best process artifact: a STOP that was right.** v1's Edit 1 failed verbatim-match because the architect's HEAD reconstruction (from a terminal paste) had no blank lines. The v2 rebuild made every anchor adjacency-free and pushed six anchor-precondition greps into the prompt itself. Two criterion-authoring lessons landed alongside: a diff-stat bound must be derived by summing every edit's line mechanics (C12 said ≤4; actual was exactly 6 — Edits 3 and 4 replace lines just as surely as the block edits), and even a correct implementer's summary arithmetic can be off by one while git's observed numbers reconcile exactly — the observation is what settles, never the narration.
 
-**Slice 7 landed D38's prediction and retired the template.** `shelf.md` designed the compendium under the metaphor's disciplines — neutral by construction (zero sessions exist), null totals render ND, `created_at` desc only with discipline 1 explicitly extended from coloring to ordering — and `product-metaphor.md`'s stale "active path" paragraph was corrected in the same docs commit. The build removed the Expo hero/hints from `index.tsx`, added `ShelfList` reading DB shape (snake_case columns; `CoaParseResult` banned from the file — the read-only consumer D38 predicted, vindicating the CoaReview retirement), refetch via an onClose-bumped remount key. Implementer course-correction worth keeping: the first `load` draft was an async effect body, tripping `react-hooks/set-state-in-effect` (lint 2 > baseline); restructured to promise-callback form matching the template's own `getSession().then()` pattern, baseline restored. Gate: screenshots at 2:27 and 2:28 showing a genuinely new COA (Cosmic Cereal) appearing on modal close without restart, with ND and a real CBD value (`0.0852%`) rendering side by side — the three-state invariant visible in one frame.
+**The gate closed only after the evidence discipline was enforced twice.** First the elided diff: the build report marked the card-body re-indent "byte-identical, pasted in tool output above" — which stops at Claude Code. The reviewer demanded the whole diff before authorizing a destructive gate; it was clean, but the demand stands as precedent: **diffs reach the reviewer whole; elision plus a fidelity claim is vouching.** Then the wrong-target delete (preamble refutation 2). The re-run gate closed with per-step evidence: confirm render screenshot, cancel control read-back, delete of `d6ba53e7` with zero-orphan read-back plus surviving-COA control, offline failure branch (airplane icon in-frame, fetch-failed alert, row persisted, DB unchanged), and the add regression doubling as Cosmic Cereal's recovery.
 
 ---
 
 ## Refuted hypotheses / memory corrections
 
-- **"All gates passed" (6b, aggregate)** — FALSE; refuted by read-back. Root cause the architect's below-the-fold button spec. Per-step verdicts now mandatory (see Working rhythm).
-- **SRF half-truth in the 6a prompt** (architect) — preamble (2). Missing key → zero rows; explicit JSON-null → clean atomic abort. Committed docs never carried the error.
-- **"Both shelf rows show the corrected brand"** (architect's slice-7 gate prediction) — WRONG: `d6ba53e7` was inserted with the sludge brand (the operator's ND run corrected Humulene but not the brand). Predictions about user-owned data are stale on arrival; Phase A predicts repo state only.
-- **Criterion count miss** (slice 7, `ShelfList` hits predicted 3, actual 4 — a comment): the binding clause (files) held; counts about not-yet-written code are predictions by nature and were labeled so.
-- **Operator dashboard navigation**: Postgres functions live at Database → Functions, not Edge Functions — checked wrong page once, corrected.
-- **Airplane-test sequencing**: toggling airplane before the pick exercises the ingest failure branch, not confirm error. The test's value is in the ORDER: online pick → edit → offline → confirm.
-- **Claude Code conduct: excellent throughout** — the SRF dissection, the lint course-correction with the template's own pattern cited, byte-faithful verbatim inserts five times, zero vouching, and the sentinel confirmed present in every prompt that carried it (no truncations this session).
-- **Still true:** parse trailers never count; blob reads via `git show HEAD:`; in-context doc copies stale on D35; probe inputs validated against mechanisms; long secrets by command substitution (exercised again for the token, 922 chars clean).
+- **Terminal paste = HEAD blob** (architect) — FALSE; blank lines dropped silently. Anchors from the blob or adjacency-free. (Preamble 1.)
+- **"All passed" (slice-8 gate, aggregate)** — unverifiable and materially wrong: the delete had hit the wrong target. Caught by the orphan read-back returning baseline counts. Third strike for aggregate verdicts; reviewer-reconstructed verdicts explicitly do not count. (Preamble 2.)
+- **C12 deletion bound ≤4** (architect) — actual 6; the bound skipped two single-line edits. Diff-stat criteria are derived by summing edit mechanics, not eyeballed.
+- **Implementer reconciliation "57-line section + blank = 58"** — off by one (section is 56); git's 65/6 reconciled exactly against the authored texts. Correct trees can ship with incorrect narration.
+- **Sentinel transliterated** (architect) — the ASCII-composed commit prompt turned `— END OF PROMPT —` into hyphens; the implementer correctly reasoned truncation-vs-transliteration but flagged it. Ruling: **the sentinel is a fixed em-dash byte pattern in every prompt; ASCII discipline applies to commit message content only.** Both encodings now deliberately coexist in commit prompts.
+- **Operator hypothesis "files above repo root are an error"** — refuted from the prior handoff's own text: repo-parent placement is the deliberate neutral.pdf convention (unstageable by construction). One real item found in the review: `auth-resp.json` (see Start here).
+- **Project-knowledge doc copies said "exactly two trailers"** — stale on D35; repo `CLAUDE.md:93` and `handoff-specs.md:124` verified amended to exactly one. In-context copies of governed docs are snapshots; the repo text governs.
+- **Claude Code conduct: strong again** — the v1 STOP was exactly right (refused to improvise an unambiguous-intent match because the prompt forbade it), anchor verification was thorough, the comment-supersession judgment call was correct and disclosed, and item-5 reporting caught the architect's C12 error and the sentinel drift. One correction issued: elided diff hunks (now a standing rule).
+- **Still true:** parse trailers never count; blob reads via `git show HEAD:`; per-step verdicts with read-backs for every DB-writing gate; probe inputs validated against mechanisms; Phase A predicts repo state only.
 
 ---
 
 ## Ratified decisions
 
-D1–D38 stand. New this session:
+D1–D41 stand. New this session:
 
-- **D39 — insert mechanism: single Postgres RPC** (`insert_coa(payload jsonb) returns uuid`, security invoker, atomic plpgsql body, mapping at the seam, grants to authenticated only). Grounds in `documentation/design/coa-insert.md` at `ea9e54e`; landed `a882ad3`; gate-observed live including the atomicity control.
-- **D40 — slice split 6a/6b, 6a gates first; gate row kept** as the first genuine shelf entry (operator may delete; the duplicate `ad93b685` WAS deleted via authenticated REST, HTTP 204 — incidentally observing RLS-scoped cascade from a user token).
-- **D41 — slice 7 shelf compendium**: home screen becomes the shelf, template scaffolding removed, DB-shape reads, neutral cards, created_at desc only (chemistry orders nothing), refetch on modal close + pull-to-refresh. Grounds in `documentation/design/shelf.md` at `459cb1a`; landed `2cec835`.
+- **D42 — delete-from-shelf (slice 8):** long-press affordance + native destructive confirm naming the strain and what is destroyed; client-side DELETE, no RPC (cascade FKs are the atomicity, `coas_all_own` is the only gate); success refetches via load, failure alerts and changes nothing; card detail view renumbered to slice 9. Grounds in `documentation/design/shelf.md` at `97e0974`; landed `5a2f93f`; device-gated per step including zero-orphan read-back and offline failure branch.
+- **Ruling — sentinel byte pattern:** `— END OF PROMPT —` (em dashes) in every prompt, unconditionally; never transliterated by other encoding constraints.
+- **Ruling — diffs reach the reviewer whole:** an elided hunk plus a fidelity claim is vouching; the destructive-gate bar is a full raw diff read by the architect.
+- **Ruling — verdicts are the operator's:** per-step verdict lines accompany gate evidence or the gate does not close; reviewer reconstruction from screenshots is diagnosis, not attestation.
 
 ---
 
 ## Open items
 
 ### Runnable now
-- **Delete-from-shelf — the entry point** (see below). Lived demand is concrete: junk rows accumulate from gates and exploration, and today the operator deletes them by hand-built curl.
+- **Below-the-fold confirm fix — the entry point** (see below). Caused the 6b false gate; every future editor gate flows past it.
 
 ### Blocked
-- Books / moods / bands / Never Again / session logging — all blocked on the **scoring lexicon design pass** (the heart of the product; its own dedicated session).
-- In-stock — blocked on schema (no possession state).
+- Books / moods / bands / Never Again / session logging — blocked on the **scoring lexicon design pass** (its own dedicated session; the heart of the product).
+- In-stock / possession — blocked on schema; **now also owns the remove-vs-delete distinction** (operator's live catch during the gate: "the shelf shows active product — removing from the shelf is not the same as deleting forever." The compendium-record vs physical-possession split is exactly the metaphor's territory).
 
 ### Banked (new this session)
-- **Confirm button below the fold** — caused the false gate; the fix (action pinned outside the scroll region) crosses the editor/modal boundary and is its own small slice, not a tweak. High priority among banked.
-- **Confirming-window race variant** — Pick-another mid-insert abandons an in-flight rpc; unlike the ingest race, a row IS inserted when this fires. Adjoins the banked stale-result race; this is the arm that matters if ever fixed.
-- **Blank brand line on cards** — empty metadata renders an empty line (Cosmic Cereal). Cosmetic.
-- **Template orphans** — `hint-row.tsx`, `animated-icon.*`, `explore.tsx` (which still imports them). One `chore:`.
-- **Docker-cache warning on `supabase db push`** — "failed to cache migrations catalog… docker_engine" is caching noise on a successful push; tolerated class.
-- **MinTTY/node pipe quirk** — `stdin is not a tty` when piping curl into `node -e`; countermeasure is file + `require()`, used successfully twice.
+- **Confirm dialog title/semantics gap** — "Remove from shelf?" over a permanent-delete body; title should say what the body means (candidate: "Delete COA?"). Folds with:
+- **Strain-ambiguous confirm** — three live cards read "Animal Face"; the dialog names strain only, so it cannot disambiguate the target. Candidate: name strain + brand or strain + added date. One small slice with the retitle.
+- **`auth-resp.json` at repo parent** — holds token material; delete (unconfirmed as of writing).
 
 ### Banked (carried)
-- Audit script `$?` echo + stale [15] text (one chore); parser brand-sludge/`g CBDVa` cleanup (~12 fixtures available; the editor affordances are the live human catch, now exercised in production data); guard layout centering; `identifyLab` brittleness; envelope-unwrap redesign + D33 `functions.invoke` migration (failure branch still renders raw `{error}` — observed live this session in the airplane screenshot); dashboard-only auth config; Resend domain verification; deploy reproducibility; `--no-lock`; url-polyfill; `.gitignore:40`; terpene whitelist; CRLF warnings (fired on every commit this session, tolerated); `unrs-resolver`; `npm audit` template vulns; no Storage bucket / `pdf_url`; payload-shape validation (banked with envelope-unwrap).
+- Confirm button below the fold (PROMOTED to entry point); audit script `$?` echo + stale [15] text (one chore); shelf.md `###` headings supersede the old zero-subheading convention (do not "restore" it); blank brand line on cards (re-observed on Cosmic Cereal); parser brand-sludge/`g CBDVa` cleanup; guard layout centering; `identifyLab` brittleness; envelope-unwrap redesign + D33 `functions.invoke` migration; dashboard-only auth config; Resend domain verification; deploy reproducibility; `--no-lock`; url-polyfill; `.gitignore:40`; terpene whitelist; CRLF warnings (tolerated, fired again); `unrs-resolver`; `npm audit` template vulns; no Storage bucket / `pdf_url`; payload-shape validation; template orphans (`hint-row`, `animated-icon`, `explore.tsx`).
 
 ---
 
@@ -126,16 +121,15 @@ D1–D38 stand. New this session:
 
 Stable method lives in `CLAUDE.md` and `documentation/process/handoff-specs.md`.
 
-- **HARDENED: per-step verdicts are mandatory for UI gates.** An aggregate "all gates passed" is not evidence; two were offered this session and one was false. The checklist numbers the steps; the verdict names them. Screenshots stay reserved for first renders.
-- **HARDENED: every DB-writing gate includes a read-back.** The read-back, not the screen, caught the false pass. For inserts: row presence, the invariant values (NDs as NULL), and where applicable a control (the 14-vs-15 Humulene pattern).
-- **New: Phase A predicts repo state, never user-data state.** Shelf rows changed between a read-back and its gate within minutes.
-- **Sentinel confirmed working**: `— END OF PROMPT —` carried in every prompt this session; the implementer verified it each time; zero truncations. Keep it.
-- **Every-clause rule held** (post-edit simulations run for both docs passes; the slice-7 count miss was a labeled prediction about unwritten code, which the rule permits — the binding clause was executed).
-- **Operator hand-holding pattern**: for multi-step credentialed flows, one action per message with an expected output and a stop condition beats a block of steps; the token flow succeeded on this pattern after two quoting failures cost nothing.
-- The slice pattern ran three more times (6a, 6b, 7) including a full typed schema/infra gate executed as operator paste-backs; unchanged, keep it.
+- **HARDENED (third strike): per-step verdicts, operator-attested, or the gate does not close.** Screenshots are evidence; the verdict line is the attestation of order and target. Destructive gates additionally identify targets by position + brand line when strains collide.
+- **New: edit anchors come from the blob or are adjacency-free.** Terminal pastes drop blank lines. Presence criteria are simulated against the authored insert, absence against the true blob — a reconstruction is not a blob.
+- **New: diff-stat criteria are derived, not estimated** — sum every edit's line mechanics; single-line replacements count.
+- **New: diffs to the reviewer whole; sentinel always em-dash** (both ratified above, restated here because they change prompt authoring).
+- **Operator note:** long git output pages through `less` — `q` quits, `Space` pages, `/` searches; no terminal restart needed.
+- The slice pattern ran once more end-to-end (design → docs commit → build → device gate → feat commit → push) including a correct implementer STOP and a gate re-run; unchanged, keep it.
 
 ---
 
 ## Entry point
 
-**Delete-from-shelf.** The lived demand is already here: gate and exploration rows accumulate (the sludge-branded `d6ba53e7` sits on the shelf now), and deletion currently requires the operator to hand-build an authenticated curl — which was done once this session (`ad93b685`, HTTP 204, cascade observed). The slice is small but principled: a data-destroying affordance on the card (the shelf's first interaction), behind a confirm that names what it destroys (the COA and all its analyte rows — sessions don't exist yet, so no history is at stake, which is exactly why NOW is the cheap time to build it), DELETE via the client with RLS scoping, list refetch on completion. It opens with a short design pass amending `shelf.md` (cards gain exactly one interaction; the non-interactive claim is superseded), then the established rhythm. The below-the-fold confirm fix is the named follow-on, not part of this slice. This is the single next move: the shelf just became real, and a shelf you can't take things off of isn't yours.
+**The below-the-fold confirm fix.** It is the highest-priority banked item by demonstrated cost: it manufactured the 6b false gate, and it sits in the add-to-shelf flow that every future ingestion slice gates through. The slice is small and principled — pin the confirm action outside the editor's scroll region so it is visible without scrolling, crossing the editor/modal boundary that made it its own slice rather than a tweak. It opens with a short design pass amending `documentation/design/confirm-edit-screen.md` (the action bar becomes a fixed element; the "at the bottom of the editor, below Safety" placement — the architect's own refuted spec — is superseded), then the established rhythm. The confirm-dialog retitle + disambiguation slice is the named follow-on, not part of this one. This is the single next move: the editor's confirm is the one control the operator literally could not see, and the next slice through that flow should not have to rediscover it.
