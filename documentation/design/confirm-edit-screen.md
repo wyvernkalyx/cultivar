@@ -1,8 +1,9 @@
 # Confirm/Edit Screen — COA Ingestion
 
 Status: partially implemented — the slice 4 read-only render is landed (see
-"Slice 4 read-only render (landed)" below); editing and confirm/insert
-(slices 5–6) are not yet implemented.
+"Slice 4 read-only render (landed)" below). Slice 5 is split: 5a (empty-parse
+guard) and 5b (editing), neither yet implemented — see their sections below.
+Confirm/insert remains slice 6.
 Contract fixture: `animal-face.pdf` (DRS/Confident). Validated against the live
 `ingest-coa` parse output observed at HEAD `4ab722f`. If the parser output for this
 fixture later differs, re-check this design against it.
@@ -101,8 +102,56 @@ always-present "Not detected (N)" control and every row remains individually
 visible on expand — collapsed, never hidden. A `null` value on `pct` renders as
 the literal string "ND", never 0 and never blank, per the three-state invariant;
 `totalCbdPct` gets the same treatment. `sourceLab` renders as subordinate
-secondary text — a system identifier, not user-facing vocabulary. Editing and
-confirm/insert remain slices 5–6.
+secondary text — a system identifier, not user-facing vocabulary.
+Editing remains slice 5b (behind the 5a empty-parse guard); confirm/insert
+remains slice 6.
+
+## Empty-parse guard (slice 5a)
+
+Observed live 2026-07-12 against the deployed function:
+
+- A PDF from no known lab returns HTTP 200 with an all-empty parse tagged
+  `sourceLab: "unknown"` — the success branch, never the failure branch.
+- A non-COA PDF whose text merely mentions a lab name returns the same
+  all-empty parse under a known `sourceLab` ("drs-confident"). Lab
+  identification is presence-of-string (`identifyLab.ts`), so misidentification
+  is cheap.
+
+Therefore the guarded input class is the empty parse, not "unknown lab", and
+`sourceLab` must not be the predicate.
+
+- Predicate: `terpenes.length === 0 && cannabinoids.length === 0`, checked in
+  the success branch, independent of `sourceLab`.
+- Render: a non-editable "couldn't read this COA" state with the existing
+  repick affordance. Metadata, totals, and safety are not shown — an empty
+  panel is not reconcilable, and there is no add-row to recover with.
+- Own minimal UI. Do not reuse or couple to the failure branch's rendering;
+  that branch is slated for its own redesign (banked envelope-unwrap item).
+- Gate (UI-visible, physical iPhone): a neutral non-COA PDF pushed through the
+  picker lands on the guard state, and `animal-face.pdf` still renders the full
+  review as the control case.
+
+## Editing interactions (slice 5b)
+
+- Value editor: tap the value to edit in a numeric (decimal-pad) input.
+  Prefill is the current number, or empty for ND. Commit on blur/done:
+  empty or whitespace → null (ND); typed `nd`/`ND` → null; a valid number →
+  that number; unparseable text → revert to the prior value, no error state
+  this slice. An explicitly typed `0` is a legal real number — the three-state
+  invariant bans fabricated zeros, not deliberate ones.
+- No row migration during edit: the detected/ND grouping is computed once when
+  the draft initializes and stays fixed for the session. A value edited to ND
+  updates in place; it does not move into the collapsed section. The grouping
+  is a reading aid, not a data property.
+- Delete requires a confirm alert: with no add-row, a mistaken delete is
+  unrecoverable short of a full repick, so the confirmation earns its friction.
+- Rename: inline text edit on the name, commit on blur; an empty name reverts.
+- Metadata: free-text inputs, string-typed, empty allowed (`""`, never null);
+  no validation this slice.
+- Draft state is local and id-keyed: rows receive stable generated ids when the
+  draft initializes from the parse (names are editable, so the name cannot be
+  the key; an index breaks under delete). Reducer vs. `useState` is the
+  implementer's choice — it is not architecture.
 
 ## View source
 
