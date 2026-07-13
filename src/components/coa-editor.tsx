@@ -80,6 +80,26 @@ function initDraft(coa: CoaParseResult): Draft {
   };
 }
 
+// Emission back to parser shape (slice 6b, D40): ids and detectedAtInit are
+// stripped by constructing the mapped object; deleted rows are absent because
+// they are no longer in the draft. A null pct emits as JSON null — never 0,
+// never dropped.
+function emitDraft(draft: Draft): CoaParseResult {
+  return {
+    lab: draft.lab,
+    brand: draft.brand,
+    strain: draft.strain,
+    batch: draft.batch,
+    totalThcPct: draft.totalThcPct,
+    totalCbdPct: draft.totalCbdPct,
+    totalTerpenesPct: draft.totalTerpenesPct,
+    terpenes: draft.terpenes.map(({ name, pct }) => ({ name, pct })),
+    cannabinoids: draft.cannabinoids.map(({ name, pct }) => ({ name, pct })),
+    safety: draft.safety,
+    sourceLab: draft.sourceLab,
+  };
+}
+
 // Three-state invariant: null is ND / <LOQ / not reported and renders as the
 // literal string "ND" — never 0, never blank.
 function pctLabel(pct: number | null): string {
@@ -330,10 +350,20 @@ function Row({ label, value }: { label: string; value: string }) {
  * Editable draft of a parsed COA (slice 5b). Draft state lives here,
  * initialized once from the `coa` prop — the parent remount-keys on pick
  * identity so a repick mounts a fresh draft (D38). Editing is reconciliation:
- * the user makes the record match what the lab actually printed. No
- * confirm/emit yet — that arrives with slice 6.
+ * the user makes the record match what the lab actually printed. Confirm
+ * emits the corrected parse to `onConfirm` (slice 6b); the insert itself is
+ * the parent's job.
  */
-export function CoaEditor({ coa }: { coa: CoaParseResult }) {
+export function CoaEditor({
+  coa,
+  onConfirm,
+  busy = false,
+}: {
+  coa: CoaParseResult;
+  onConfirm: (coa: CoaParseResult) => void;
+  busy?: boolean;
+}) {
+  const theme = useTheme();
   const [draft, setDraft] = useState<Draft>(() => initDraft(coa));
 
   const setMeta = (key: 'strain' | 'brand' | 'batch' | 'lab') => (text: string) =>
@@ -394,6 +424,17 @@ export function CoaEditor({ coa }: { coa: CoaParseResult }) {
           <Row key={`${i}-${s.category}`} label={s.category} value={s.status} />
         ))}
       </View>
+
+      <Pressable
+        onPress={() => onConfirm(emitDraft(draft))}
+        disabled={busy}
+        style={[
+          styles.confirmButton,
+          { backgroundColor: theme.backgroundElement },
+          busy && styles.confirmButtonDisabled,
+        ]}>
+        <ThemedText type="smallBold">Add to shelf</ThemedText>
+      </Pressable>
     </View>
   );
 }
@@ -441,5 +482,14 @@ const styles = StyleSheet.create({
   },
   ndToggle: {
     paddingVertical: Spacing.one,
+  },
+  confirmButton: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    borderRadius: Spacing.three,
+    paddingVertical: Spacing.three,
+  },
+  confirmButtonDisabled: {
+    opacity: 0.5,
   },
 });

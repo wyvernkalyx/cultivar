@@ -8,8 +8,9 @@ import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ingestCoaPdf, type IngestResult } from '@/lib/ingest-coa';
+import { supabase } from '@/lib/supabase';
 
-type Phase = 'idle' | 'picking' | 'sending' | 'done';
+type Phase = 'idle' | 'picking' | 'sending' | 'done' | 'confirming' | 'saved';
 
 export default function AddToShelfModal({
   visible,
@@ -24,6 +25,11 @@ export default function AddToShelfModal({
   // Pick identity (D38): remount-keys ReviewOrGuard so a repick — including
   // the same file — mounts a fresh editor draft rather than leaking a stale one.
   const [pickId, setPickId] = useState(0);
+  // Insert failure lives in its own state, NOT in `result`: overwriting the
+  // result would tear down the editor and lose the draft. The editor stays
+  // mounted; retry is just pressing Confirm again.
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [savedId, setSavedId] = useState<string | null>(null);
 
   // The component stays mounted while the Modal is hidden, so state would
   // survive a close; resetting here (not in an effect) keeps reopen-at-idle
@@ -31,10 +37,20 @@ export default function AddToShelfModal({
   const close = () => {
     setPhase('idle');
     setResult(null);
+    setConfirmError(null);
+    setSavedId(null);
     onClose();
   };
 
+  const pickAnother = () => {
+    setPhase('idle');
+    setResult(null);
+    setConfirmError(null);
+    setSavedId(null);
+  };
+
   const pick = async () => {
+    setConfirmError(null);
     setPhase('picking');
     try {
       const picked = await DocumentPicker.getDocumentAsync({
@@ -59,6 +75,19 @@ export default function AddToShelfModal({
     setPhase('done');
   };
 
+  const confirm = async (payload: CoaParseResult) => {
+    setConfirmError(null);
+    setPhase('confirming');
+    const { data, error } = await supabase.rpc('insert_coa', { payload });
+    if (error) {
+      setConfirmError(error.message);
+      setPhase('done');
+      return;
+    }
+    setSavedId(String(data));
+    setPhase('saved');
+  };
+
   const busy = phase === 'picking' || phase === 'sending';
 
   return (
@@ -80,7 +109,25 @@ export default function AddToShelfModal({
             Add to shelf
           </ThemedText>
 
-          {phase === 'done' && result ? (
+          {phase === 'saved' ? (
+            <>
+              <ScrollView style={styles.resultScroll}>
+                <ThemedText type="smallBold" style={styles.centered}>
+                  Added to your shelf
+                </ThemedText>
+                {savedId && (
+                  <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
+                    {savedId}
+                  </ThemedText>
+                )}
+              </ScrollView>
+              <Pressable
+                onPress={pickAnother}
+                style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+                <ThemedText type="smallBold">Pick another</ThemedText>
+              </Pressable>
+            </>
+          ) : (phase === 'done' || phase === 'confirming') && result ? (
             <>
               <ScrollView style={styles.resultScroll}>
                 {result.ok ? (
@@ -88,7 +135,12 @@ export default function AddToShelfModal({
                   // so this cast asserts two things: the envelope shape and
                   // the parse shape. Both are produced server-side; runtime
                   // validation remains the accepted debt this slice.
-                  <ReviewOrGuard key={pickId} coa={(result.json as { data: CoaParseResult }).data} />
+                  <ReviewOrGuard
+                    key={pickId}
+                    coa={(result.json as { data: CoaParseResult }).data}
+                    onConfirm={confirm}
+                    busy={phase === 'confirming'}
+                  />
                 ) : (
                   <ThemedText type="code">
                     {[
@@ -101,11 +153,13 @@ export default function AddToShelfModal({
                   </ThemedText>
                 )}
               </ScrollView>
+              {confirmError && (
+                <ThemedText type="small" style={[styles.centered, styles.confirmError]}>
+                  {confirmError}
+                </ThemedText>
+              )}
               <Pressable
-                onPress={() => {
-                  setPhase('idle');
-                  setResult(null);
-                }}
+                onPress={pickAnother}
                 style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
                 <ThemedText type="smallBold">Pick another</ThemedText>
               </Pressable>
@@ -136,7 +190,15 @@ export default function AddToShelfModal({
   );
 }
 
-function ReviewOrGuard({ coa }: { coa: CoaParseResult }) {
+function ReviewOrGuard({
+  coa,
+  onConfirm,
+  busy,
+}: {
+  coa: CoaParseResult;
+  onConfirm: (coa: CoaParseResult) => void;
+  busy: boolean;
+}) {
   // Slice 5a guard. An unreadable or non-COA PDF comes back as HTTP 200 with
   // an all-empty parse -- and a known lab tag is no evidence against that
   // (lab identification is presence-of-string). The guarded class is the
@@ -154,7 +216,7 @@ function ReviewOrGuard({ coa }: { coa: CoaParseResult }) {
       </ThemedView>
     );
   }
-  return <CoaEditor coa={coa} />;
+  return <CoaEditor coa={coa} onConfirm={onConfirm} busy={busy} />;
 }
 
 const styles = StyleSheet.create({
@@ -186,6 +248,11 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: {
     opacity: 0.5,
+  },
+  confirmError: {
+    // No error token exists in Colors; literal color follows the sign-in
+    // precedent. Legible on both light and dark backgrounds.
+    color: '#e5484d',
   },
   guard: {
     gap: Spacing.three,
