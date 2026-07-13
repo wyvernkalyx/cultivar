@@ -2,7 +2,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet } from 'react-native';
 
-import { CoaReview, type CoaParseResult } from '@/components/coa-review';
+import { CoaEditor, type CoaParseResult } from '@/components/coa-editor';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
@@ -21,6 +21,9 @@ export default function AddToShelfModal({
   const theme = useTheme();
   const [phase, setPhase] = useState<Phase>('idle');
   const [result, setResult] = useState<IngestResult | null>(null);
+  // Pick identity (D38): remount-keys ReviewOrGuard so a repick — including
+  // the same file — mounts a fresh editor draft rather than leaking a stale one.
+  const [pickId, setPickId] = useState(0);
 
   // The component stays mounted while the Modal is hidden, so state would
   // survive a close; resetting here (not in an effect) keeps reopen-at-idle
@@ -52,6 +55,7 @@ export default function AddToShelfModal({
         message: `Picker failed: ${err instanceof Error ? err.message : String(err)}`,
       });
     }
+    setPickId((n) => n + 1);
     setPhase('done');
   };
 
@@ -84,7 +88,7 @@ export default function AddToShelfModal({
                   // so this cast asserts two things: the envelope shape and
                   // the parse shape. Both are produced server-side; runtime
                   // validation remains the accepted debt this slice.
-                  <ReviewOrGuard coa={(result.json as { data: CoaParseResult }).data} />
+                  <ReviewOrGuard key={pickId} coa={(result.json as { data: CoaParseResult }).data} />
                 ) : (
                   <ThemedText type="code">
                     {[
@@ -150,7 +154,7 @@ function ReviewOrGuard({ coa }: { coa: CoaParseResult }) {
       </ThemedView>
     );
   }
-  return <CoaReview coa={coa} />;
+  return <CoaEditor coa={coa} />;
 }
 
 const styles = StyleSheet.create({
