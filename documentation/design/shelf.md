@@ -1,7 +1,8 @@
-# Shelf — Compendium List (slice 7)
+# Shelf
 
-Status: designed (D41), not implemented. North star:
-`documentation/design/product-metaphor.md`. This slice builds the compendium —
+Status: slice 7 (compendium list, D41) implemented at `2cec835`; slice 8
+(delete-from-shelf, D42) designed, not implemented. North star:
+`documentation/design/product-metaphor.md`. Slice 7 builds the compendium —
 the untried state only; books, moods, and sessions are out of scope and
 blocked on the scoring lexicon.
 
@@ -39,7 +40,8 @@ landing surface.
   negative).
 - Order: `created_at` descending ONLY. Chemistry never orders the shelf
   (discipline 1, extended from coloring to ordering).
-- Cards are non-interactive this slice.
+- Cards are non-interactive this slice. (Superseded in slice 8: cards gain
+  exactly one interaction — long-press to delete. See Delete-from-shelf.)
 
 ## States
 
@@ -63,9 +65,66 @@ landing surface.
 
 - Mood, books, bands, Never Again — blocked on the scoring lexicon.
 - In stock — blocked on schema (no possession state).
-- Card detail view (slice 8); delete-from-shelf (its own slice: a
-  data-destroying affordance deserving its own confirm design).
+- Card detail view (slice 9 — renumbered; slice 8 is delete-from-shelf,
+  designed below).
 - Sorting, filtering, pagination (no lived demand at n=2), local cache,
   realtime.
 - Deleting the orphaned template components (`hint-row`, `animated-icon`,
   `explore.tsx`) — banked `chore:`.
+
+## Delete-from-shelf (slice 8, D42)
+Status: designed, not implemented. The shelf's first interaction. Lived
+demand: gate and exploration rows accumulate, and deletion today requires a
+hand-built authenticated curl.
+### Affordance
+- Long-press on a card opens a native destructive confirm (`Alert.alert`
+  with a destructive-styled Delete button and a Cancel button).
+- Why long-press: zero new dependencies (swipe idioms need gesture-handler
+  wiring; no lived demand), and the card stays visually neutral — no
+  per-card chrome, so discipline 2 is untouched. Known tradeoff: long-press
+  is undiscoverable. Accepted at n=1 operator; the visible, explicit delete
+  affordance belongs to the card detail view (slice 9) when it exists.
+- Cancel is a first-class outcome: no write occurs.
+### Confirm copy
+- Title: "Remove from shelf?"
+- Body names the strain and states what is destroyed: this COA and all of
+  its lab data (terpene, cannabinoid, and safety rows). Cannot be undone.
+- No sessions exist yet, so no history is at stake — which is exactly why
+  the confirm is built now, while destruction is cheap.
+### Mechanism
+- Client delete, no RPC: `supabase.from('coas').delete().eq('id', id)`.
+- Atomicity is declarative: `coa_terpenes`, `coa_cannabinoids`, and
+  `coa_safety` all reference `coas (id) on delete cascade` (core-schema
+  migration, lines 60/66/72). The insert needed a plpgsql RPC to construct
+  a four-table transaction; the delete inherits one from the FK constraints.
+- The RLS gate is the `coas_all_own` policy on `coas` (`for all using
+  (auth.uid() = created_by) with check (auth.uid() = created_by)` —
+  observed at migration lines 53–54). Cascade deletions on the child
+  tables are referential actions, not user statements — they are not
+  re-gated by child-table RLS. The DELETE policy on `coas` is the only
+  gate, and the only one needed. Observed live 2026-07-13: authenticated
+  REST delete of `ad93b685…` returned HTTP 204 with RLS-scoped cascade.
+- Deleting a COA cannot touch the profile: user-directed cascades run
+  child-ward only (`auth.users → coas → analyte rows`).
+### States
+- Success: refetch via the existing load path — honest state over
+  optimistic removal at this scale. The row leaves the list without an app
+  restart.
+- Failure: error alert; the row remains; nothing else changes.
+### Gate (UI-visible, physical iPhone; per-step verdicts; read-back mandatory)
+1. Long-press a card: confirm appears naming that card's strain.
+2. Cancel: row persists on screen; read-back shows the row and its child
+   counts unchanged (control).
+3. Delete the sludge-branded gate row (`d6ba53e7…`): row leaves the list
+   without an app restart.
+4. Read-back: zero rows in all three child tables for the deleted id; a
+   surviving COA's child counts unchanged (the 14-vs-15 pattern, inverted).
+5. Offline variant, exact order: load the shelf online → airplane ON →
+   attempt delete → error alert shown, row persists → airplane OFF →
+   pull-to-refresh → row still present, read-back unchanged.
+6. Add-to-shelf regression: full add flow still lands a row.
+### Non-goals (slice 8)
+- Undo / soft delete (no lived demand; sessions do not exist).
+- Batch delete, swipe-to-delete, edit-in-place.
+- The below-the-fold confirm fix in the editor — named follow-on, its own
+  slice.
