@@ -1,11 +1,11 @@
 # Cultivar — Session Handoff
 
-_Written 2026-07-13, against HEAD `cefd02b`, pushed and verified (`cccca70..cefd02b main -> main` observed this session; earlier, `d7501af..cccca70` also observed)._
+_Written 2026-07-13, against HEAD `2cec835`, pushed and verified (`459cb1a..2cec835 main -> main` observed; this session also observed `2642827..ea9e54e`, `ea9e54e..a882ad3`, `a882ad3..75bf461`, `75bf461..459cb1a` — five pushes)._
 _**The repo is authoritative over this document.** Every state claim below is a prediction to falsify, not a fact to trust._
 
 _Concrete refutations from this session, so this preamble is read and not skimmed:_
-_(1) **The architect shipped a criterion bound it never executed, inside a prompt claiming all criteria were executed.** The D38 docs prompt's criterion 5 asserted "exactly one `###` line total"; the HEAD blob already carried `### ND grouping (…)` at line 78 — present in the architect's own local blob copy, which was grepped for four other strings but never for `^###`. The implementer caught it, restated the bound correctly, and shipped anyway (the protected property held). Fourth instance of the unexecuted-criterion class, first post-rule — the rule as written was followed for the greps that ran and defeated by a clause that never ran. Refinement in Working rhythm below._
-_(2) **The chat → Claude Code delivery channel truncated a commit prompt mid-sentence** — cut after the first `git add` line, no message, no criteria. The implementer stopped correctly after read-only verification, staged nothing, and the re-delivered prompt executed cleanly. Both directions of the paste channel are now known-lossy (last session it was Code → chat dropping raw output). Countermeasure proposed in Working rhythm._
+_(1) **A device gate was reported passed and the database refuted it.** The 6b gate came back as an aggregate "all gates passed"; the read-back showed ONE coas row — the 6a curl insert — where two were predicted. The device insert had never happened. Root cause, owned by the architect's own spec: the confirm button was placed "at the bottom of the editor, below Safety," which puts it below the fold inside the modal's ScrollView — the operator had never seen it. Three hypotheses were drawn (RLS user mismatch / no insert / stale token) and one privileged SQL query (pg join to auth.users) settled it: one row, correct owner. The re-gate then produced the real observations, including the one the pipeline exists for: a user-cleared Humulene reading back NULL among 15 ND rows. Consequence, now a rule: **per-step verdicts are mandatory for UI gates; aggregate verdicts are not evidence.** Two aggregates were offered this session; one was false._
+_(2) **The architect's 6a build prompt contained a half-true claim about SQL semantics.** "A missing or null array key must insert zero child rows (SRF strictness covers this)" — SRF strictness covers only the MISSING key (`payload->'x'` on absence → SQL NULL → zero rows). An explicit JSON-null value yields jsonb 'null' and `jsonb_array_elements` raises "cannot extract elements from a scalar" — a clean atomic abort, not zero rows. The implementer dissected this precisely; the case is unreachable from the real client and the committed `coa-insert.md` makes no such claim, so the defect lived and died in the prompt._
 
 _Begin with the Phase A audit below. **Run it in Git Bash (`MINGW64`), from `/d/Projects/...`, never WSL.** Try to break it._
 
@@ -25,37 +25,32 @@ Paste `audit.txt` whole. Expected values, each a prediction that can be wrong:
 | Check | Expected |
 |---|---|
 | [1] branch | `main` |
-| [2] HEAD | If this handoff is NOT yet committed: `cefd02b`, subject `feat: editable COA draft replaces read-only review (slice 5b)`, parent `cccca70`. If it HAS been committed: a `docs: session handoff` commit whose **parent is `cefd02b`** — its own sha unknowable here. |
-| [3] ahead of origin | **0**. Non-zero = an unpushed commit; that is the finding, not an error. |
-| [4] working tree | **clean** IF this handoff is already committed. If written-but-uncommitted, expect exactly ` M documentation/SESSION_HANDOFF.md` and nothing else. **If `.env` appears, stop everything.** |
+| [2] HEAD | If this handoff is NOT yet committed: `2cec835`, subject `feat: shelf compendium list on the home screen (slice 7)`, parent `459cb1a`. If committed: a `docs: session handoff` commit whose **parent is `2cec835`**. |
+| [3] ahead of origin | **0** |
+| [4] working tree | **clean** if this handoff is committed; else exactly ` M documentation/SESSION_HANDOFF.md`. **If `.env` appears, stop everything.** |
 | [5] `.env` ever committed | `(never committed)` |
 | [6] client path | `src/lib/supabase.ts` tracked; `lib/` count **0** |
-| [7a/b] `.gitignore` blob | line 34 `.env*`, line 35 `!.env.example`, LF. Line 40 bare `example` is template detritus (banked). Unchanged this session. |
-| [8] unstable flags | `(none)` |
-| [9] `npm test` | **36 passed / 0 failed**, 1 suite. Parser tree untouched this session; re-observed at the 5b build's criterion 3 against the working tree at what became `cefd02b`. |
-| [10] `deno test` ingest-coa | **5 passed / 0 failed**. Function untouched this session; observed at this session's start audit (HEAD `d7501af`), carried as a prediction since. |
-| [11] `deno check` | exit **0** by inference only — the script STILL does not echo `$?`; silence observed a fifth session. The one-line `chore:` stays banked. |
-| [12] `tsc --noEmit` | `(no output)`, exit **0**. Re-observed post-5b (build criterion 1). |
-| [13] `expo lint` | **1 error, 0 warnings**, file `use-color-scheme.web.ts`. Re-observed post-5b (build criterion 2). Ceiling, not target. |
-| [14] `expo install --check` | `jest@30.4.2` / `@types/jest@30.0.0` misaligned — expected, do not fix. `expo-document-picker` must NOT be flagged. |
-| [15] trailers | **exactly ONE, parsed: generic Claude only** (D35, now six exemplars). The audit script's own expectation text may still say two — script staleness, banked; the parse output is the observation. |
+| [7a/b] `.gitignore` blob | line 34 `.env*`, line 35 `!.env.example`, LF. Line 40 `example` banked. Unchanged. |
+| [8] unstable flags | `(none)` — note the new migration is SQL; the grep still covers `supabase/`. |
+| [9] `npm test` | **36 passed**, 1 suite. Parser untouched; re-observed at the slice-7 build criteria. |
+| [10] `deno test` ingest-coa | **5 passed**. Function untouched since deploy; carried. |
+| [11] `deno check` | exit 0 by inference; script still lacks `$?` echo (SIXTH session). Banked chore. |
+| [12] `tsc --noEmit` | `(no output)`, exit 0. Re-observed at slice-7 criteria. |
+| [13] `expo lint` | **1 error, 0 warnings** (`use-color-scheme.web.ts`). Re-observed at slice-7 criteria — held only because the implementer restructured an async effect body to promise-callback form mid-slice (see Arcs). |
+| [14] `expo install --check` | jest 30 / @types/jest 30 misaligned — expected, do not fix. |
+| [15] trailers | **exactly ONE, parsed** (D35). Script's expectation text still stale; banked. |
 
-**New this session, not covered by the audit script** (each standalone; expected hit counts stated; grep predictions were verified against the pasted file contents before this handoff shipped — the paste, not the repo, so they remain predictions):
-- `git grep -n "CoaEditor" -- src/` → exactly **3** hits: **1** in `src/components/coa-editor.tsx` (the `export function CoaEditor` line), **2** in `src/components/add-to-shelf-modal.tsx` (the import; the `ReviewOrGuard` non-empty-arm render).
-- `git ls-files src/components/ | grep -c "coa-"` → **1**, and the one hit is `coa-editor.tsx`. `git ls-files src/components/coa-review.tsx` → empty (deleted at `cefd02b`; history is the archive).
-- `grep -c "sourceLab" src/components/add-to-shelf-modal.tsx` → **0** (unchanged invariant: the guard must not consult it; `coa-editor.tsx` legitimately renders it).
-- `grep -c "detectedAtInit" src/components/coa-editor.tsx` → **4** (interface field, init assignment, two `AnalyteSection` filters) — the frozen-grouping invariant's fingerprint. If this is 0, the D37 no-migration invariant has been refactored or lost; read the file before proceeding.
-- `git show HEAD:documentation/design/confirm-edit-screen.md | grep -Fxc '### Placement (slice 5b, D38)'` → **1**.
-- `grep -Fc 'neither yet implemented' documentation/design/confirm-edit-screen.md` → **0** (the stale status claim, removed at `cccca70`).
+**New this session, not covered by the audit script:**
+- `ls supabase/migrations/` → exactly **two** files: `20260708220816_create_core_schema.sql`, `20260713170757_insert_coa_rpc.sql`.
+- `git ls-files documentation/design/` → **six** files: the prior four + `coa-insert.md` + `shelf.md`.
+- `git grep -n "ShelfList" -- src/` → exactly **4** hits: 3 in `src/app/index.tsx` (import, comment, keyed render), 1 in `src/components/shelf-list.tsx` (the export). Observed raw at the slice-7 criteria.
+- `grep -c "CoaParseResult" src/components/shelf-list.tsx` → **0** (D41: DB shape only).
+- `git grep -n "insert_coa" -- src/` → exactly **1** hit, the rpc call in `add-to-shelf-modal.tsx`.
+- `grep -c "HintRow\|AnimatedIcon\|expo-device" src/app/index.tsx` → **0** (template scaffolding removed at `2cec835`; the orphaned component FILES still exist — banked chore, `explore.tsx` still imports them).
 
-**Schema gate (Supabase SQL editor): NOT re-observed — now FIFTH session carried, and it is no longer deferrable.** Slice 6 (the entry point) writes to the database; the two queries are **mandatory before any slice-6 build prompt exists**:
-```
-select tablename, rowsecurity from pg_tables where schemaname='public' order by 1;
-select tablename, policyname, cmd from pg_policies where schemaname='public' order by 1,2;
-```
-Expected: five tables, RLS true on all five, 7 policy rows. Migration at `supabase/migrations/20260708220816_create_core_schema.sql`. The SQL editor runs privileged, so `pg_policies` is the observation — row counts prove nothing about RLS.
+**Database state (observed this session, NOT predictable as counts):** `insert_coa` deployed (public, `payload jsonb → uuid`, **Invoker** — observed in the dashboard); schema gate CLOSED this session (five tables, RLS all, 7 policies, observed 2026-07-13). The `coas` table now holds **live user data** — rows were added and deleted during gates and exploration. **Do not write Phase A predictions about user-data row counts**; they went stale within minutes this session. The keeper provenance worth knowing: `abe82f1f…` is the 6a curl gate row (fully corrected, Humulene NULL by edit); `d6ba53e7…` is the device ND-gate row (Humulene NULL, brand left as sludge); later exploration rows are uncharacterized.
 
-**Gate assets:** `neutral.pdf` and `animal-face.pdf` — `neutral.pdf` at `/d/projects/cultivar/` (parent of repo, untracked, deliberate) and on the iPhone (Files); `animal-face.pdf` is the contract fixture.
+**Gate assets:** `insert-coa-gate-payload.json` and `insert-coa-broken-payload.json` at `/d/Projects/Cultivar/` (repo parent, untracked, deliberate — the neutral.pdf convention), plus `neutral.pdf` and the animal-face fixture as before.
 
 **If any of these don't match, the repo wins — re-baseline before proceeding.**
 
@@ -63,60 +58,67 @@ Expected: five tables, RLS true on all five, 7 policy rows. Migration at `supaba
 
 ## What shipped (newest first)
 
-- `cefd02b` — feat: editable COA draft replaces read-only review (slice 5b; device-gated, all eight checklist steps incl. frozen-grouping)
-- `cccca70` — docs: record D38 placement for slice 5b editor (+ stale status-line correction, + view-source scoped out of 5b)
-- Session start HEAD was `d7501af` (prior session's handoff commit). Working tree: clean once this handoff commits.
+- `2cec835` — feat: shelf compendium list on the home screen (slice 7; device-gated per-step incl. two screenshots)
+- `459cb1a` — docs: design slice 7 shelf compendium list (D41)
+- `75bf461` — feat: confirm and insert from the editor (slice 6b; gated after a false pass was caught — see Arcs)
+- `a882ad3` — feat: insert_coa RPC, the atomic four-table COA write (slice 6a; typed schema/infra gate incl. atomicity control)
+- `ea9e54e` — docs: design slice 6 insert (D39 RPC, D40 split)
+- Scope note: `2642827` (the prior handoff) and everything before it are covered by the previous handoff, superseded by this file. Session start for this scope = `2642827`.
 
 ---
 
 ## The arcs
 
-**Phase A verified the prior handoff 20/20 — every audit-covered prediction and all five standalone checks held, including both conditional branches ([2] committed-case, [4] clean-case).** One dissolved alarm: the architect's in-context project-knowledge copies of `CLAUDE.md`/`handoff-specs.md` still say "exactly two trailers" — the known D35 staleness, re-encountered and re-dismissed via the prior session's blob-grep record plus the audit's [15] parse. In-context copies remain snapshots; convention-critical facts are verified against the blob.
+**Slice 6 opened by closing the five-session schema-gate carry, then ratified the RPC.** Both SQL-editor queries pasted whole (five tables, RLS true on all, 7 policy rows), the core-schema migration read end to end the same day — the mapping was designed from a read schema, not memory. D39: `insert_coa(payload jsonb) returns uuid`, security invoker so RLS stays load-bearing, plpgsql body as the atomic four-table transaction, no exception handler BY DESIGN (a constraint failure aborting whole IS the contract), grants to `authenticated` only, mapping at the seam. The typed gate ran as five operator paste-back steps: db push (with tolerated Docker-cache noise), dashboard observation (Database → Functions, not Edge Functions — the operator initially checked the wrong page), D26 token capture, live invoke returning a uuid, read-back (20/16/8, edited-Humulene AND the parser's own `total_cbd` NULL), and the atomicity control: a safety row missing `status` → Postgres `23502`, HTTP 400, exactly one coas id remaining, zero orphans. Gate payloads were derived by running the repo's real parser over the fixture via Node type-stripping — no hand-written analyte values, provenance corroborated by the recovered brand sludge.
 
-**The placement pass produced D38 by reading both files whole before arguing.** `coa-review.tsx` showed `AnalyteSection` recomputing detected/ND from current values per render — same-shaped code as 5b needs, opposite invariant to D37's frozen grouping; reuse would have violated D37 silently. `add-to-shelf-modal.tsx` showed no retained pick identity at all (`phase` + `result`; the URI consumed and dropped) — which settled the remount key as a **pick counter**, since a URI keys wrongly on repick-same-file. D38: new `CoaEditor` component, `CoaReview` deleted in the same code commit, types relocate, draft inside the editor. The plausible future read-only consumer (shelf COA detail) will read DB shape, not parser shape, so retention would have been speculative scaffolding.
+**Slice 6b shipped clean and gated dirty — the false pass is the session's most important event.** The code was right on first review (emission strip-by-construction, error state separated from `result` so the draft survives failure, guard branch gaining no confirm path). The gate came back "all gates passed"; the read-back said one row. Dissection: three hypotheses, one privileged SQL join settled it — no device insert had ever occurred, because the confirm button (placed per the architect's own spec at the editor's bottom, inside the ScrollView) renders below the fold and had never been seen. The re-gate then observed everything for real, including a second sequencing confusion: the operator's airplane test toggled airplane BEFORE picking, producing the ingest failure branch (screenshot: monospace network error, no editor) instead of the confirm-error path; re-instructed with exact ordering, then passed. The user-made ND closed last: Humulene cleared on-device, read back as 15 nulls with Humulene in the list, against the earlier 14-null control proving the RPC doesn't blanket-null.
 
-**The docs commit (`cccca70`) recorded D38 and cost the architect one criteria defect — the unexecuted `###` bound (preamble (1)).** The corrected bound: exactly two `###` lines, line 78 `### ND grouping (…)` pre-existing, line ~156 `### Placement (slice 5b, D38)` new. The same commit fixed a stale status line ("neither yet implemented" survived 5a's landing because the doc was amended at `4457c37`, before 5a shipped) and scoped the view-source toggle out of 5b via a Non-goals bullet.
-
-**Slice 5b shipped as designed, with three implementer notes ratified at review.** (1) The `nd`→ND text rule is mostly unreachable on-device: iOS decimal-pad has no letters, so clearing the field is the primary ND path; the rule remains implemented for hardware keyboard/paste. (2) "Always-present" ND control means present-while-nonempty — the slice-4 landed meaning; delete every frozen-ND row and the control disappears rather than showing "(0)". (3) Two-tap keyboard flow between cells (blur commits on first tap, second tap opens the next cell) — correct behavior, `keyboardShouldPersistTaps` untouched as out of prompt scope, banked as ergonomics. Device gate passed all eight steps: editor first render (screenshot), clear-to-ND in place, explicit 0 sticks / unparseable reverts, `g CBDVa` → `CBDVa` rename, delete behind confirm, brand-sludge correction, repick freshness (the pick counter's proof), `neutral.pdf` guard as control.
+**Slice 7 landed D38's prediction and retired the template.** `shelf.md` designed the compendium under the metaphor's disciplines — neutral by construction (zero sessions exist), null totals render ND, `created_at` desc only with discipline 1 explicitly extended from coloring to ordering — and `product-metaphor.md`'s stale "active path" paragraph was corrected in the same docs commit. The build removed the Expo hero/hints from `index.tsx`, added `ShelfList` reading DB shape (snake_case columns; `CoaParseResult` banned from the file — the read-only consumer D38 predicted, vindicating the CoaReview retirement), refetch via an onClose-bumped remount key. Implementer course-correction worth keeping: the first `load` draft was an async effect body, tripping `react-hooks/set-state-in-effect` (lint 2 > baseline); restructured to promise-callback form matching the template's own `getSession().then()` pattern, baseline restored. Gate: screenshots at 2:27 and 2:28 showing a genuinely new COA (Cosmic Cereal) appearing on modal close without restart, with ND and a real CBD value (`0.0852%`) rendering side by side — the three-state invariant visible in one frame.
 
 ---
 
 ## Refuted hypotheses / memory corrections
 
-- **"All acceptance criteria were executed before this prompt shipped"** (architect, in the D38 docs prompt) — FALSE for criterion 5's total-count bound, which was never run against the blob that plainly refuted it. Implementer catch. The property held; the claim did not. See Working rhythm for the refinement.
-- **Scrollback contamination, correctly diagnosed at ~90% and confirmed:** a paste opened with the pre-amendment design doc under a `git show HEAD:` prompt line — alarming if fresh, benign if scrollback. Byte-identity with an earlier paste (stray `^C` included) said scrollback; the 5b build prompt's precondition (`grep -Fxc '### Placement…'` → 1 at HEAD) confirmed it. Rule: a stale-looking paste is checked for byte-identity with prior scrollback before it triggers a re-baseline.
-- **Both push predictions held exactly** (`d7501af..cccca70`, `cccca70..cefd02b`) — calibration data, not refutations.
-- **Claude Code conduct: exemplary again.** The truncated commit prompt (preamble (2)) was handled by stopping after read-only checks with nothing staged; the criterion-5 catch was precise, restated the correct bound, and distinguished the failed bound from the held property. Zero vouching.
-- **Still true from prior handoffs:** Git Bash for the audit script, never WSL; JS-only → Metro reload, native-module → EAS build (5b gated on reload); parse trailers, never count; `git show HEAD:<path> | cat` for blob reads; in-context doc copies are stale on D35 (say "two trailers"; repo says one); probe inputs validated against the matcher; long secrets never hand-pasted.
+- **"All gates passed" (6b, aggregate)** — FALSE; refuted by read-back. Root cause the architect's below-the-fold button spec. Per-step verdicts now mandatory (see Working rhythm).
+- **SRF half-truth in the 6a prompt** (architect) — preamble (2). Missing key → zero rows; explicit JSON-null → clean atomic abort. Committed docs never carried the error.
+- **"Both shelf rows show the corrected brand"** (architect's slice-7 gate prediction) — WRONG: `d6ba53e7` was inserted with the sludge brand (the operator's ND run corrected Humulene but not the brand). Predictions about user-owned data are stale on arrival; Phase A predicts repo state only.
+- **Criterion count miss** (slice 7, `ShelfList` hits predicted 3, actual 4 — a comment): the binding clause (files) held; counts about not-yet-written code are predictions by nature and were labeled so.
+- **Operator dashboard navigation**: Postgres functions live at Database → Functions, not Edge Functions — checked wrong page once, corrected.
+- **Airplane-test sequencing**: toggling airplane before the pick exercises the ingest failure branch, not confirm error. The test's value is in the ORDER: online pick → edit → offline → confirm.
+- **Claude Code conduct: excellent throughout** — the SRF dissection, the lint course-correction with the template's own pattern cited, byte-faithful verbatim inserts five times, zero vouching, and the sentinel confirmed present in every prompt that carried it (no truncations this session).
+- **Still true:** parse trailers never count; blob reads via `git show HEAD:`; in-context doc copies stale on D35; probe inputs validated against mechanisms; long secrets by command substitution (exercised again for the token, 922 chars clean).
 
 ---
 
 ## Ratified decisions
 
-D1–D37 stand. New this session:
+D1–D38 stand. New this session:
 
-- **D38 — slice 5b placement: new component, old one retired.** `CoaEditor` at `src/components/coa-editor.tsx`; `CoaReview` deleted in the same commit; exported parser-mirror types move with it; draft state inside the editor, initialized once, remount-keyed by a `pickId` counter in the modal (incremented once per completed pick attempt — a URI would key wrongly on repick-same-file). Grounds: grouping-invariant divergence (recompute-per-render vs frozen-at-init), structurally different props contract (id-keyed draft vs `CoaParseResult`), zero post-5b consumers with the future read-only consumer reading DB shape. Recorded in `confirm-edit-screen.md` at `cccca70`; landed at `cefd02b`.
-- **D37 clarifications ratified at review (not new decisions):** "always-present" ND control = present-while-nonempty (slice-4 meaning); `nd`-text path secondary to clear-field on-device; `Number()` accepting exotica (negatives, hex) via paste is tolerated — D37 says a valid number is a valid number.
+- **D39 — insert mechanism: single Postgres RPC** (`insert_coa(payload jsonb) returns uuid`, security invoker, atomic plpgsql body, mapping at the seam, grants to authenticated only). Grounds in `documentation/design/coa-insert.md` at `ea9e54e`; landed `a882ad3`; gate-observed live including the atomicity control.
+- **D40 — slice split 6a/6b, 6a gates first; gate row kept** as the first genuine shelf entry (operator may delete; the duplicate `ad93b685` WAS deleted via authenticated REST, HTTP 204 — incidentally observing RLS-scoped cascade from a user token).
+- **D41 — slice 7 shelf compendium**: home screen becomes the shelf, template scaffolding removed, DB-shape reads, neutral cards, created_at desc only (chemistry orders nothing), refetch on modal close + pull-to-refresh. Grounds in `documentation/design/shelf.md` at `459cb1a`; landed `2cec835`.
 
 ---
 
 ## Open items
 
 ### Runnable now
-- **Slice 6 — confirm-emit + atomic insert.** Design pass first (the insert mechanism is undecided: the committed contract requires the four-table write to be atomic, permits a Postgres RPC, forbids assuming per-table client REST). **Hard precondition: the schema gate re-observation (see Phase A) — operator-run, before any design is trusted or any build prompt exists.** This is the entry point — see below.
+- **Delete-from-shelf — the entry point** (see below). Lived demand is concrete: junk rows accumulate from gates and exploration, and today the operator deletes them by hand-built curl.
 
 ### Blocked
-- Nothing hard-blocked. (Slice 6 is gated on an operator action, not blocked.)
+- Books / moods / bands / Never Again / session logging — all blocked on the **scoring lexicon design pass** (the heart of the product; its own dedicated session).
+- In-stock — blocked on schema (no possession state).
 
-### Banked
-- **Keyboard ergonomics in the editor** — two-tap flow between cells (`keyboardShouldPersistTaps` default). Cosmetic; fix only if it grates during real use.
-- **ND control at zero rows** — disappears if every frozen-ND row is deleted. Ratified behavior; recorded so it isn't re-litigated as a bug.
-- **Audit script** — no `$?` echo after `deno check` (fifth session), [15] expectation text likely still says two trailers. One `chore:`, both fixes together.
-- **Parser: DRS/Confident `brand` sludge + stray `g CBDVa`** — the editor affordances are now the live human catch (exercised at the gate); fixture-backed parser cleanup remains banked. ~12 more COAs available as fixtures.
-- **Guard layout centering** — carried, cosmetic.
-- **`identifyLab` brittleness** — carried; the guard is load-bearing; revisit only on a wrong non-empty parse.
-- **Stale-result race** — the pick counter incidentally tightened subtree freshness, but the race itself (a slow response landing after a newer pick) remains unverified-absorbed; carried.
-- **Carried unchanged:** in-stock data primitive; scoring lexicon (+ `never_again`/`average_score` revisit); session-logging interaction; mood visual language; EAS-build-source unknown (commit-first default); dashboard-only auth config (OTP length, SMTP, `{{ .Token }}`) not in repo; Resend domain verification; config dedupe to per-function `deno.json`; deploy reproducibility (`^1` unpinned); `--no-lock` on deno check/test; url-polyfill necessity; `.gitignore:40`; terpene whitelist; CRLF-on-clone (tolerated warnings again this session, both commits); `unrs-resolver` allow-scripts; `npm audit` template vulns; no Storage bucket / `pdf_url`; failure branch raw `{error}` render (tied to envelope-unwrap redesign + D33 `functions.invoke` migration, post-slice-6).
+### Banked (new this session)
+- **Confirm button below the fold** — caused the false gate; the fix (action pinned outside the scroll region) crosses the editor/modal boundary and is its own small slice, not a tweak. High priority among banked.
+- **Confirming-window race variant** — Pick-another mid-insert abandons an in-flight rpc; unlike the ingest race, a row IS inserted when this fires. Adjoins the banked stale-result race; this is the arm that matters if ever fixed.
+- **Blank brand line on cards** — empty metadata renders an empty line (Cosmic Cereal). Cosmetic.
+- **Template orphans** — `hint-row.tsx`, `animated-icon.*`, `explore.tsx` (which still imports them). One `chore:`.
+- **Docker-cache warning on `supabase db push`** — "failed to cache migrations catalog… docker_engine" is caching noise on a successful push; tolerated class.
+- **MinTTY/node pipe quirk** — `stdin is not a tty` when piping curl into `node -e`; countermeasure is file + `require()`, used successfully twice.
+
+### Banked (carried)
+- Audit script `$?` echo + stale [15] text (one chore); parser brand-sludge/`g CBDVa` cleanup (~12 fixtures available; the editor affordances are the live human catch, now exercised in production data); guard layout centering; `identifyLab` brittleness; envelope-unwrap redesign + D33 `functions.invoke` migration (failure branch still renders raw `{error}` — observed live this session in the airplane screenshot); dashboard-only auth config; Resend domain verification; deploy reproducibility; `--no-lock`; url-polyfill; `.gitignore:40`; terpene whitelist; CRLF warnings (fired on every commit this session, tolerated); `unrs-resolver`; `npm audit` template vulns; no Storage bucket / `pdf_url`; payload-shape validation (banked with envelope-unwrap).
 
 ---
 
@@ -124,15 +126,16 @@ D1–D37 stand. New this session:
 
 Stable method lives in `CLAUDE.md` and `documentation/process/handoff-specs.md`.
 
-- **Refined, load-bearing: a criterion is executed only when EVERY CLAUSE of it has run.** A bound stated alongside executed greps is not executed by association; shipping it makes the prompt's "all executed" claim false even when the property holds. Fifth data point in the unexecuted-criterion class, first that defeated the rule as previously worded. Mechanically: before shipping, enumerate each criterion's clauses (pattern, count, location bound, totals) and run each one; a clause that cannot be run pre-ship must be rewritten as the implementer's observation, never asserted as the author's.
-- **New: prompts carry a terminal sentinel.** The chat → Code channel truncated a commit prompt mid-sentence this session (preamble (2)). Every prompt now ends with a final line `— END OF PROMPT —`; the implementer treats its absence as truncation: stop, report, change nothing. (This session's prompts predate the rule; the next prompt is the first to carry it.)
-- **New: stale-looking pastes are checked for scrollback byte-identity** before triggering a re-baseline (see Refuted). A `^C` artifact or byte-exact repetition of an earlier paste is scrollback, not repo state.
-- **Gate-evidence economy, tolerated deviation noted:** this session's device gate returned a single aggregate "All gates passed" rather than per-step verdicts. Accepted with a stated caveat covering the invariant steps. Preference stands: one-line verdict **per step** for the steps the slice exists for (this session: clear-to-ND-in-place, explicit-0, repick freshness); aggregate is fine for regression steps.
-- Carried: raw evidence travels via the operator's paste, never the implementer's report alone; every grep criterion executed against the text it gates (now with the every-clause refinement); dump provenance named; prompts stacking on a moving tree state their snapshot.
-- The slice pattern (survey → design note → build prompt → typed gate → separate commit prompt → body read → authorize → operator pushes) ran twice more today, clean both times apart from the two channel/criteria findings above; unchanged, keep it.
+- **HARDENED: per-step verdicts are mandatory for UI gates.** An aggregate "all gates passed" is not evidence; two were offered this session and one was false. The checklist numbers the steps; the verdict names them. Screenshots stay reserved for first renders.
+- **HARDENED: every DB-writing gate includes a read-back.** The read-back, not the screen, caught the false pass. For inserts: row presence, the invariant values (NDs as NULL), and where applicable a control (the 14-vs-15 Humulene pattern).
+- **New: Phase A predicts repo state, never user-data state.** Shelf rows changed between a read-back and its gate within minutes.
+- **Sentinel confirmed working**: `— END OF PROMPT —` carried in every prompt this session; the implementer verified it each time; zero truncations. Keep it.
+- **Every-clause rule held** (post-edit simulations run for both docs passes; the slice-7 count miss was a labeled prediction about unwritten code, which the rule permits — the binding clause was executed).
+- **Operator hand-holding pattern**: for multi-step credentialed flows, one action per message with an expected output and a stop condition beats a block of steps; the token flow succeeded on this pattern after two quoting failures cost nothing.
+- The slice pattern ran three more times (6a, 6b, 7) including a full typed schema/infra gate executed as operator paste-backs; unchanged, keep it.
 
 ---
 
 ## Entry point
 
-**Slice 6: confirm-emit and the atomic insert — but the schema gate comes first, and it is not optional.** The re-observation (two SQL queries, Supabase SQL editor, operator-run; expected five tables / RLS on all / 7 policy rows) has been carried five sessions and slice 6 is the first slice that writes; a design pass built on an unverified schema would be a trusted narrative about the database. After the gate: a design pass on the insert mechanism — the committed contract (`confirm-edit-screen.md`, "Output / insert contract") already constrains it to a single transactional write across `coas` + `coa_terpenes` + `coa_cannabinoids` + `coa_safety`, permitting a Postgres RPC and forbidding per-table client REST; what remains to decide is RPC vs Edge Function, the parser-key → DB-column mapping (explicitly the insert slice's job), and where the confirm affordance lives in the editor (an `onConfirm` prop was anticipated at D38; the editor currently has no emit). That design amends the doc, then the build prompt — with a terminal sentinel, and with every clause of every criterion executed first. This is the single next move: the editor made the record correctable; slice 6 makes it real.
+**Delete-from-shelf.** The lived demand is already here: gate and exploration rows accumulate (the sludge-branded `d6ba53e7` sits on the shelf now), and deletion currently requires the operator to hand-build an authenticated curl — which was done once this session (`ad93b685`, HTTP 204, cascade observed). The slice is small but principled: a data-destroying affordance on the card (the shelf's first interaction), behind a confirm that names what it destroys (the COA and all its analyte rows — sessions don't exist yet, so no history is at stake, which is exactly why NOW is the cheap time to build it), DELETE via the client with RLS scoping, list refetch on completion. It opens with a short design pass amending `shelf.md` (cards gain exactly one interaction; the non-interactive claim is superseded), then the established rhythm. The below-the-fold confirm fix is the named follow-on, not part of this slice. This is the single next move: the shelf just became real, and a shelf you can't take things off of isn't yours.
