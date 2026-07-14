@@ -2,7 +2,7 @@
 
 Status: slice 7 (compendium list, D41) implemented at `2cec835`; slice 8
 (delete-from-shelf, D42) implemented; slice 10 (confirm dialog copy, D44)
-designed below, not implemented. North star:
+implemented at `4f9a5b0`. North star:
 `documentation/design/product-metaphor.md`. Slice 7 builds the compendium —
 the untried state only; books, moods, and sessions are out of scope and
 blocked on the scoring lexicon.
@@ -134,7 +134,7 @@ hand-built authenticated curl.
 
 ## Confirm dialog copy (slice 10, D44)
 
-Status: designed, not implemented. Revises the D42 confirm dialog in
+Status: implemented at `4f9a5b0`. Revises the D42 confirm dialog in
 `src/components/shelf-list.tsx` only — no card changes, no button-label
 changes, no semantics changes.
 
