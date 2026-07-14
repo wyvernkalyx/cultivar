@@ -1,8 +1,9 @@
 # Shelf
 
 Status: slice 7 (compendium list, D41) implemented at `2cec835`; slice 8
-(delete-from-shelf, D42) implemented; slice 10 (confirm dialog copy, D44)
-implemented at `4f9a5b0`. North star:
+(delete-from-shelf, D42) implemented; slice 9 (card detail, D45)
+implemented at `8cef60d`; slice 10 (confirm dialog copy, D44) implemented
+at `4f9a5b0`. North star:
 `documentation/design/product-metaphor.md`. Slice 7 builds the compendium —
 the untried state only; books, moods, and sessions are out of scope and
 blocked on the scoring lexicon.
@@ -217,7 +218,7 @@ operator discretion but is not gate-required.
 
 ## Card detail view (slice 9, D45)
 
-Status: designed, not implemented. The shelf's second read surface: tap a
+Status: implemented at `8cef60d`. The shelf's second read surface: tap a
 card, see the whole record, delete it without ambiguity.
 
 ### Why / lived demand
@@ -350,3 +351,16 @@ card, see the whole record, delete it without ambiguity.
 - The navigation restructure (Stack conversion) — banked above.
 - A `position` column — banked above.
 - Sorting or filtering the analyte panels.
+
+### Implementation deltas (accepted at `8cef60d`)
+
+- Null or blank metadata (`batch`, `lab`, `source_lab`) omits its line
+  entirely — the D44 guard class — never "ND", which is analyte
+  vocabulary; the spec's ND rule names totals and analyte `pct` only.
+- The loaded state carries a Close button alongside Delete in the fixed
+  footer, per the presentation family (`AddToShelfModal` always shows an
+  explicit Close); swipe-down dismissal is wired through both
+  `onRequestClose` and `onDismiss`.
+- The ND control renders "Not detected (0)" when a panel has no ND rows —
+  always-present taken literally; expanding then shows nothing, which is
+  the honest state.
