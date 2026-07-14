@@ -1,13 +1,13 @@
 # Cultivar — Session Handoff
 
-_Written 2026-07-14, against HEAD `9e3124a`, pushed and verified (`ababe82..9e3124a main -> main` observed, rev-list 0 observed; this session also observed `9ef0b8d..ababe82` — two pushes)._
+_Written 2026-07-14, against HEAD `6104b16`, pushed and verified (`4f9a5b0..6104b16 main -> main` observed, rev-list 0 observed; this session also observed `990c62c..4f5606e` and `4f5606e..4f9a5b0` — three pushes)._
 _**The repo is authoritative over this document.** Every state claim below is a prediction to falsify, not a fact to trust._
 
 _Concrete refutations from this session, so this preamble is read and not skimmed:_
-_(1) **The architect's derived diff-stat missed by one for a reason it had not anticipated.** The docs-prompt prediction was 55 insertions / 8 deletions with a stated contingency (a blank line hidden inside the deleted status block); actual was 54/8, deletions exactly 8 — the contingency never fired and the paste channel was vindicated on that stretch. The miss was in the architect's own simulation tool: splitting the authored insert on newlines produced a phantom empty line from the file's terminal newline (49 counted, 48 real). Rule extracted: **diff-stat derivations must account for the derivation tool's own mechanics — a trailing newline is an edit mechanic too.** The implementer caught and reconciled it exactly._
-_(2) **The vouching construction fired twice in one session** — both the docs build report and the feat build report wrote "full diff pasted whole in the tool output above," which stops at Claude Code and reaches the architect not at all. Both times the diff was demanded and came back clean, but twice in one day graduated the countermeasure from re-request to prompt text: **report-back criteria now state explicitly that output goes in the report body, and that "in the tool output above" does not satisfy the criterion.** The slice-6c commit prompt carried it; every future build and commit prompt does too._
+_(1) **The architect raised a false alarm against the repo and the repo won.** Phase A surfaced "exactly two co-author trailers" in the architect's project-knowledge copies of `CLAUDE.md` and `handoff-specs.md`, contradicting D35 and the parsed HEAD trailer. The architect predicted the repo files carried the stale claim; `git show HEAD:CLAUDE.md` refuted it — the repo was swept clean at D35, and the stale copies are the ones loaded into the architect's own context. Operator action banked: refresh both files in project knowledge, or this false alarm re-derives every session._
+_(2) **The architect shipped a wrong criterion into its own simulation and the simulation caught it.** The docs-prompt prediction was `grep -Fc 'Remove from shelf?'` -> 1 post-edit; the authored D44 "Why" section quotes the old title, so the true value is 2. First save of a wrong *criterion* (not a wrong anchor) by executing criteria against the authored text before shipping. The same run surfaced tool mechanics: grep parses dash-prefixed patterns as options — every such criterion now carries `-e`._
 
-_Begin with the Phase A audit below. **Run it in Git Bash (`MINGW64`), from `/d/Projects/...`, never WSL.** Try to break it — noting that this session's Phase A broke nothing at all, which itself refuted the streak-based prior that a handoff always fails somewhere. Zero breaks is a legitimate outcome; it is not the expected one._
+_Begin with the Phase A audit below. **Run it in Git Bash (`MINGW64`), from `/d/Projects/...`, never WSL.** Try to break it. The zero-break streak is now two sessions; a third would be evidence the discipline works, not evidence the audit is soft — but read the mismatches first if any appear._
 
 ---
 
@@ -25,30 +25,28 @@ Paste `audit.txt` whole. Expected values, each a prediction that can be wrong:
 | Check | Expected |
 |---|---|
 | [1] branch | `main` |
-| [2] HEAD | If this handoff is NOT yet committed: `9e3124a`, subject `feat: confirm action bar (slice 6c, D43)`, parent `ababe82`. If committed: a `docs: session handoff` commit whose **parent is `9e3124a`**. |
+| [2] HEAD | If this handoff is NOT yet committed: `6104b16`, subject `docs: mark slice 10 implemented in shelf.md`, parent `4f9a5b0`. If committed: a `docs: session handoff` commit whose **parent is `6104b16`**. |
 | [3] ahead of origin | **0** |
 | [4] working tree | **clean** if this handoff is committed; else exactly ` M documentation/SESSION_HANDOFF.md`. **If `.env` appears, stop everything.** |
 | [5] `.env` ever committed | `(never committed)` |
 | [6] client path | `src/lib/supabase.ts` tracked; `lib/` count **0** |
 | [7a/b] `.gitignore` blob | line 34 `.env*`, line 35 `!.env.example`, LF. Line 40 `example` banked. Unchanged. |
 | [8] unstable flags | `(none)` |
-| [9] `npm test` | **36 passed**, 1 suite. Parser untouched; re-observed at slice-6c build criteria. |
-| [10] `deno test` ingest-coa | **5 passed**. Function untouched; carried. |
-| [11] `deno check` | exit 0 by inference; script still lacks `$?` echo (EIGHTH session). Banked chore — the count is becoming its own argument. |
-| [12] `tsc --noEmit` | `(no output)`, exit 0. Re-observed at slice-6c build criteria. |
-| [13] `expo lint` | **1 error, 0 warnings** (`use-color-scheme.web.ts`). Re-observed at slice-6c build criteria. |
+| [9] `npm test` | **36 passed**, 1 suite. Re-observed at the slice-10 build criteria. |
+| [10] `deno test` ingest-coa | **5 passed**. Observed at this session's opening audit; function untouched since (all four commits this session touched only `shelf.md` and `shelf-list.tsx` — diff-stats prove it). |
+| [11] `deno check` | exit 0 by inference; script still lacks `$?` echo (NINTH session). Banked; the count is now its own argument for either promoting or declaring it permanent. |
+| [12] `tsc --noEmit` | `(no output)`, exit 0. Re-observed at slice-10 build criteria. |
+| [13] `expo lint` | **1 error, 0 warnings** (`use-color-scheme.web.ts`). Re-observed at slice-10 build criteria. |
 | [14] `expo install --check` | jest 30 / @types/jest 30 misaligned — expected, do not fix. |
 | [15] trailers | **exactly ONE, parsed** (D35). Script's expectation text still stale; banked with [11]. |
 
 **New this session, not covered by the audit script:**
-- `grep -Fc "ScrollView" src/components/coa-editor.tsx` → **3** (import, opening tag, closing tag on its own line).
-- `grep -Fc "resultBody" src/components/add-to-shelf-modal.tsx` → **2** (one JSX usage, one style key).
-- `grep -Fxc '## Confirm action bar (slice 6c, D43)' documentation/design/confirm-edit-screen.md` → **1**.
-- `grep -Fc 'Status: implemented through slice 6b' documentation/design/confirm-edit-screen.md` → **1**; `grep -Fc 'remains slice 6' <same file>` → **0** (two stale claims corrected at `ababe82`).
+- `grep -Fc "'Delete COA?'" src/components/shelf-list.tsx` → **1**; `grep -Fc "'Remove from shelf?'" <same>` → **0**; `grep -Fc '${name}' <same>` → **0**.
+- `git show HEAD:documentation/design/shelf.md | wc -l` → **212**.
+- `git show HEAD:documentation/design/shelf.md | grep -Fc 'designed, not implemented'` → **0**; `grep -Fc -e 'implemented at \`4f9a5b0\`'` on the same blob → **2**. (Note the `-e`: dash-prefixed and backtick-bearing patterns need it or the shell/grep mangle them.)
+- `git show HEAD:documentation/design/shelf.md | grep -Fxc '## Confirm dialog copy (slice 10, D44)'` → **1**.
 
-**Database state (observed at session close, NOT predictable as counts):** shelf holds **4 rows** — `3f8f3729…` Permanent Shade (Kaycha; 21/13/10; added 7/14 via the slice-6c gate; **blank brand line — the Kaycha brand defect re-observed on a second fixture**), `7bb5f095…` Cosmic Cereal (21/13/10), `e3c91b9f…` and `abe82f1f…` Animal Face / Moby & Zeke (20/16/8 each). Do not confuse row `abe82f1f` with commit `ababe82` — the prefixes nearly collide. **Phase A predicts repo state, never user-data state** (standing rule).
-
-**Hygiene closed:** `auth-resp.json` at repo parent was deleted this session (`grep -ic auth` → 0 observed). Server-side session revocation was offered and **not performed** — the refresh token in that file remains redeemable until it rotates or the session is revoked. Deliberate operator choice at n=1, recorded, not forgotten.
+**Database state (observed at session close via gate screenshots, NOT predictable as counts):** the gate added **RAINBOW RUNTZ / Animal House / added 7/14** through the full add flow (operator-attested), on top of the prior session's four rows — inference says five rows, but only RAINBOW RUNTZ, Permanent Shade, Cosmic Cereal, and at least one Animal Face were directly visible in the stills. The prior handoff disagreed with itself on the Animal Face count (entry point said three, its own DB block said two); never resolved, absorbed by the D44 named limit, and recorded here so neither number is trusted. **Phase A predicts repo state, never user-data state** (standing rule).
 
 **If any of these don't match, the repo wins — re-baseline before proceeding.**
 
@@ -56,62 +54,63 @@ Paste `audit.txt` whole. Expected values, each a prediction that can be wrong:
 
 ## What shipped (newest first)
 
-- `9e3124a` — feat: confirm action bar (slice 6c, D43; device-gated per step, five verdicts)
-- `ababe82` — docs: design slice 6c confirm action bar (D43; also corrected two stale status claims in the same doc)
-- Scope note: `9ef0b8d` (the prior handoff) and everything before it are covered by the previous handoff, superseded by this file. Session start for this scope = `9ef0b8d`.
+- `6104b16` — docs: mark slice 10 implemented in shelf.md (self-created staleness, corrected in-session)
+- `4f9a5b0` — feat: confirm dialog copy (slice 10, D44; four-step device gate, two steps by screenshot)
+- `4f5606e` — docs: design confirm dialog copy (slice 10, D44; also corrected two stale slice-8 status claims)
+- Scope note: `990c62c` (the prior handoff) and everything before it are covered by the previous handoff, superseded by this file. Session start for this scope = `990c62c`.
 
 ---
 
 ## The arcs
 
-**Slice 6c closed the loop the 6b false gate opened, and the defect was a documentation gap, not a code bug.** The read of `confirm-edit-screen.md` at HEAD found no placement spec at all for the confirm control — the "below Safety" sentence the architect remembered refuting had only ever existed in a build prompt. Unspecified placement defaulted to last-child-of-scroll-content, which is below the fold on any full panel. D43's shape: the confirm action is a fixed footer **owned by `CoaEditor`** — root becomes a flex column, internal `ScrollView` holds the five sections, the Pressable is the scroll's sibling. The lift-to-modal alternative was rejected on D38 grounds: the draft is editor-local, and the modal cannot emit it without an imperative handle or a state lift. The modal's success arm stopped wrapping `ReviewOrGuard` in a ScrollView (a flex child inside a ScrollView cannot fill the viewport) and wraps it in a plain filling View; the failure arm keeps its own ScrollView; the guard arm renders bare. Keyboard-behind-footer mid-edit is tolerated by design and was incidentally photographed working exactly as specified during the gate — the property bought is visibility **at rest**.
+**Slice 10 ran end to end in one session — design, docs, build, gate, feat, and a staleness correction the session itself caused.** D44's shape: title "Delete COA?" (the old title contradicted its own permanent-delete body), and a line-echo body that repeats the pressed card's displayed identity — strain, brand, added date, in the card's own order and format — then the unchanged destruction sentence. The dialog's real job was reframed during design: not disambiguation in the abstract, but letting the user verify they pressed the card they meant, which is why the echo mirrors the card rather than composing a sentence. Nulls: strain falls back to "this COA"; a null/blank brand omits its line entirely (Permanent Shade was the live control). The named limit is recorded in `shelf.md`: identical-display duplicates cannot be disambiguated by any copy — position is the only distinguisher and a modal cannot convey it — accepted at n=1 because slice 9 deletes from a single-card context where ambiguity is impossible. One deliberate behavior delta beyond copy, found by reading the old code: it tested `trim()` but rendered the *untrimmed* strain; the new code renders trimmed, per the doc, and the feat commit body names it. Landing `4f9a5b0` made `shelf.md`'s two "designed, not implemented" claims false; per the practice ratified at `ababe82`, they were flipped at `6104b16` in the same session that broke them rather than banked.
 
-**The gate ran on a substituted fixture, disclosed and accepted.** The operator used a new Kaycha COA (Permanent Shade) for the full-confirm step rather than re-adding a fourth Animal Face. Same property exercised (full panel through confirm, 21/13/10 read-back matching the Kaycha signature), plus free new-fixture parser coverage, plus a second observation of the Kaycha blank-brand defect. The initial gate response was semi-aggregate ("all passed, except maybe 2 did not?"); per the third-strike rule the gate did not close until five per-step verdict lines were attested, including a deliberate re-run of step 2. Also during the gate the operator hypothesized "tapping a card should open the editor — maybe it's broken"; refuted from D42 (cards carry exactly one interaction, long-press delete) — but the instinct is demand-validation for the card detail view, slice 9.
+**Simulation discipline gained a runtime dimension.** Before the build prompt shipped, the authored dialog logic was *executed* (node), not just grepped: real strain+brand produced the three-line echo; null strain plus whitespace-only brand produced the fallback with no brand line and no gap — the gate's control case passed in simulation before it passed on the device. The same pre-ship runs caught a wrong criterion (preamble 2) and a grep mechanics trap (`-e` for dash-prefixed patterns). Diff-stat predictions hit exactly on all three commits (84/2, 13/4, 2/2).
 
-**Simulation discipline ran full-length for the first time and mostly held.** Every anchor and criterion in the docs prompt was executed in bash before shipping: preconditions against a reconstruction (content-line counts survive the lossy paste channel), presence against the authored insert. The one miss was the architect's own tool mechanics (preamble refutation 1). Both target code files were read whole at `9ef0b8d` before the build prompt, so its Current-state block carried verbatim, checkable claims — the implementer verified all of them and reported so.
+**The screenshot channel is now cheap, and the gate got better for it.** The operator supplied two stills unprompted ("easier to add screenshots") — refuting the carried belief that screenshot transfer is slow enough to design gates around one-line verdicts. Steps 1–2 of the D44 gate closed on photographic evidence (title, echo lines, and the absent-brand control all legible in the stills); steps 3–4 closed on operator attestation against two named questions. Future UI gates may request stills for copy verification, not just first renders.
 
 ---
 
 ## Refuted hypotheses / memory corrections
 
-- **"A handoff always breaks somewhere"** — refuted; this session's Phase A closed 15/15 audit checks plus all five new-item checks, including the previous session's own never-verified `wc -l` → 130 prediction. Zero breaks is real.
-- **C8 contingency (hidden blank line in the deleted block)** — wrong suspect; deletions were exactly 8. The actual cause was the simulation's trailing-newline phantom (preamble 1).
-- **"ScrollView count → 2"** (architect) — unreachable for a multi-child ScrollView; the closing tag takes its own line. Actual 3, implementer-reconciled. Presence-count predictions about code not yet written stay labeled predictions.
-- **Implementer per-file stat narration wrong, totals right** — narrated modal 16/13 + editor 53/36; git's own per-file sums (31 and 87) contradict the split while the 69/49 totals reconcile. Architect's hunk-derived split (modal 21/10, editor 48/39) matches git exactly. Third instance of correct-tree-incorrect-narration; the observation settles, never the narration.
-- **Operator: "clicking a card should open the editor"** — refuted from D42; the editor exists only in the import flow. Not a regression; it is the slice 9 gap, now demand-validated.
-- **Diff context-line anomaly** — the feat diff paste showed an import statement split across two lines in a *context* line; a context line cannot differ from the blob, `tsc` exit 0 and the clean commit settled it as channel wrap. Paste channels mangle more than blank lines.
-- **Vouching ×2** (preamble 2) — now countered in prompt text, not reviewer vigilance.
-- **Still true:** parse trailers never count; blob reads via `git show HEAD:`; per-step operator-attested verdicts with read-backs for DB-writing gates; edit anchors from the blob or adjacency-free; diffs and bodies in the report body, never by reference; Phase A predicts repo state only.
+- **"The repo's `CLAUDE.md` carries stale two-trailer claims"** (architect) — refuted by the blob; the architect's project-knowledge copies are the stale ones (preamble 1). Until refreshed, distrust context copies of `CLAUDE.md`/`handoff-specs.md` on anything D35-adjacent.
+- **`'Remove from shelf?'` post-edit count → 1** (architect) — refuted in simulation; 2, because the D44 rationale quotes the old title (preamble 2).
+- **iOS multi-line `Alert.alert` body might center illegibly** (architect, flagged at gate-setup) — refuted by screenshot; left-aligned and legible.
+- **Implementer ahead-of-remote narration, twice in one session** — reported "two ahead" then "three ahead" when observed push output proved one each time. Fifth recorded instance of correct-tree-incorrect-narration, and the first two against *remote* state the implementer has never observed. Rule, now standing: **the implementer's remote-state claims are never evidence; only push output and rev-list are.** Push-range outputs doubled as the refutation both times (`4f5606e..4f9a5b0`, `4f9a5b0..6104b16`).
+- **"Screenshot transfer is slow; design gates for one-line verdicts"** (carried from prior sessions) — refuted by practice; the operator now sends stills easily.
+- **Prior handoff's internal Animal Face count discrepancy** (three vs two) — caught, never resolved, deliberately absorbed: the D44 design handles duplicates via the named limit regardless of the true count.
+- **Old confirm code trimmed the strain** — false; it tested trim and rendered untrimmed. Fixed and named in `4f9a5b0`'s body.
+- **Still true:** parse trailers never count; blob reads via `git show HEAD:`; report-body-or-nothing (held on all five reports this session, zero vouching); Phase A predicts repo state only; diff-stat derivations account for the derivation tool's own mechanics.
 
 ---
 
 ## Ratified decisions
 
-D1–D42 stand. New this session:
+D1–D43 stand. New this session:
 
-- **D43 — confirm action bar (slice 6c):** fixed footer owned by `CoaEditor`, outside any scroll region, visible without scrolling whenever the editor renders; internal ScrollView holds the sections; modal success arm unwraps to a plain filling View, failure arm keeps its ScrollView, guard arm bare; lift-to-modal rejected on D38 grounds; keyboard-behind-footer mid-edit tolerated. Grounds in `confirm-edit-screen.md` at `ababe82`; landed `9e3124a`; five-step device gate closed with per-step attestation.
-- **Ruling — report-body-or-nothing:** every build and commit prompt's report-back explicitly requires diffs and commit bodies pasted in the report body; "in the tool output above" is named in the prompt as non-satisfying.
-- **Ruling — derivation-tool mechanics count:** diff-stat derivations account for the tool's own artifacts (trailing-newline phantom lines included), and per-file splits are reconciled against git's per-file numbers, not the implementer's narration.
-- **Accepted practice — disclosed fixture substitution:** a gate step may run on a different fixture of the same input class when disclosed; it was accepted here because it strictly added coverage.
+- **D44 — confirm dialog copy (slice 10):** title `Delete COA?`; line-echo body (strain / brand / `Added <date>` in the card's own format, blank line, unchanged destruction sentence reading "this COA"); null/blank strain → "this COA", null/blank brand → line omitted entirely; strain renders trimmed (deliberate delta, named in the feat body); named limit on identical-display duplicates accepted with slice 9 as the real fix; remove-vs-delete boundary held. Grounds in `shelf.md` at `4f5606e`; landed `4f9a5b0`; statuses trued at `6104b16`. Numbering ruling: slice 10 executed before slice 9 — slice numbers are identifiers, not a schedule.
+- **Ruling — self-created staleness is corrected in-session:** a commit that falsifies a doc's status claims obligates the same session to flip them (as `6104b16` did), not bank them.
+- **Ruling — implementer remote-state claims are never evidence:** ahead-of-remote counts, sync status, and anything about origin come only from observed push output and `rev-list`.
+- **Accepted practice — screenshots as gate evidence:** stills are welcome for copy verification and controls, not only first renders; per-step verdicts still required where a still can't carry the step (cancel persistence, regressions).
+- **Accepted practice — criteria are executed before they ship, including runtime:** grep criteria run against the text they gate; behavioral claims in authored code run under node where feasible; dash-prefixed grep patterns always carry `-e`.
 
 ---
 
 ## Open items
 
 ### Runnable now
-- **Confirm-dialog retitle + strain disambiguation — the entry point** (see below). The slice-8 delete dialog in `shelf-list.tsx`: title says "Remove from shelf?" over a permanent-delete body, and it names strain only while three live cards read "Animal Face."
-- **Slice 9 — card detail view** (next in queue; newly demand-validated by the operator's own gate-time instinct; owns the visible delete affordance per D42).
+- **Slice 9 — card detail view: the entry point** (see below).
 
 ### Blocked
 - Books / moods / bands / Never Again / session logging — blocked on the **scoring lexicon design pass** (its own dedicated session; the heart of the product).
-- In-stock / possession — blocked on schema; owns the **remove-vs-delete distinction**. The dialog retitle above makes the dialog honest about *current* behavior (permanent delete); it does not resolve, and must not preempt, the compendium-vs-possession split.
+- In-stock / possession — blocked on schema; owns the **remove-vs-delete distinction**. D44 deliberately did not preempt it; the dialog is honest about today's permanent delete, nothing more.
 
 ### Banked (new this session)
-- Kaycha blank-brand defect re-observed on a second fixture (Permanent Shade card) — strengthens the parser-cleanup case.
-- Keyboard covers the fixed footer mid-edit — tolerated by D43, documented, photographed; becomes a defect only if a future gate shows it eating a confirm.
+- **Operator: refresh `CLAUDE.md` and `handoff-specs.md` in project knowledge** — the architect's copies predate the D35 one-trailer sweep and will re-derive the same false alarm every session until current.
+- RAINBOW RUNTZ / Animal House fixture landed via the gate's add-flow regression — a new brand on the shelf; whether it exercises new parser paths (lab unknown from the stills) is unverified and should not be claimed.
 
 ### Banked (carried)
-- Audit script `$?` echo + stale [15] text (one chore; EIGHTH session — promote soon or admit it is permanent); parser brand-sludge/`g CBDVa` cleanup; guard layout centering; `identifyLab` brittleness; envelope-unwrap redesign + D33 `functions.invoke` migration; dashboard-only auth config; Resend domain verification; deploy reproducibility; `--no-lock`; url-polyfill; `.gitignore:40`; terpene whitelist; CRLF warnings (tolerated, fired again ×3 this session); `unrs-resolver`; `npm audit` template vulns; no Storage bucket / `pdf_url`; payload-shape validation; template orphans (`hint-row`, `animated-icon`, `explore.tsx`); shelf.md `###` headings convention stands (do not "restore" zero-subheading); blank brand line on cards; server-side session revocation declined for the deleted `auth-resp.json` tokens.
+- Audit script `$?` echo + stale [15] text (one chore; NINTH session — promote next session or declare it permanent and stop counting); parser brand-sludge/`g CBDVa` cleanup; Kaycha blank-brand defect (two fixtures); guard layout centering; `identifyLab` brittleness; envelope-unwrap redesign + D33 `functions.invoke` migration; dashboard-only auth config; Resend domain verification; deploy reproducibility; `--no-lock`; url-polyfill; `.gitignore:40`; terpene whitelist; CRLF warnings (tolerated, fired on every diff/commit this session as always); `unrs-resolver`; `npm audit` template vulns; no Storage bucket / `pdf_url`; payload-shape validation; template orphans (`hint-row`, `animated-icon`, `explore.tsx`); shelf.md `###` headings convention stands; keyboard-behind-footer mid-edit (tolerated by D43); server-side session revocation declined for the deleted `auth-resp.json` tokens.
 
 ---
 
@@ -119,13 +118,13 @@ D1–D42 stand. New this session:
 
 Stable method lives in `CLAUDE.md` and `documentation/process/handoff-specs.md`.
 
-- **New: report-body-or-nothing** (ratified above) — already in the slice-6c commit prompt; carry it into every prompt's report-back section verbatim.
-- **New: simulate with the tool's mechanics in view** — the pre-ship simulation caught every anchor and missed only its own newline artifact; keep the full-length simulation, add the artifact check.
-- **New: reconcile per-file stats from hunks, not narration** — third correct-tree-wrong-narration instance; git's numbers are on the same line as the claim they refute.
-- The slice pattern ran end-to-end twice this session (docs commit and feat commit, each with its own gate and push) with zero implementer STOPs needed; unchanged, keep it.
+- **New: runtime simulation** — where authored code has checkable behavior (null paths, string assembly), execute it before the build prompt ships; greps alone missed nothing this session but would not have caught a logic error.
+- **New: implementer remote-state rule** (ratified above) — review every report's closing narration against observed push state before repeating it.
+- **Screenshot-friendly gates** — request stills where they carry the verdict; keep per-step attestation for what stills can't show.
+- Report-body-or-nothing held on all five reports with zero re-requests; unchanged, keep it.
 
 ---
 
 ## Entry point
 
-**The confirm-dialog retitle + strain disambiguation slice** (tentatively slice 10; numbering is the design pass's call). It is the smallest runnable item, it closes the two named defects in the D42 dialog — a title ("Remove from shelf?") that contradicts its own permanent-delete body, and a target line (strain only) that cannot disambiguate three live "Animal Face" cards — and it was the named follow-on when 6c was scoped, deliberately excluded then to keep one concern per slice. Candidate shape from the prior session, not yet ratified: title "Delete COA?", target named as strain + brand or strain + added date. It opens with a short design pass amending `documentation/design/shelf.md` (the D42 section owns the dialog), ratifying the exact title and target format before any build prompt exists. One boundary to hold in the design pass: this slice makes the dialog *honest about what the code does today*; the remove-vs-delete semantics split stays blocked on the in-stock/possession work and must not be smuggled in here. Slice 9 (card detail) is next behind it and now carries live operator demand. This is the single next move.
+**Slice 9 — the card detail view — opening with a design pass, not a build prompt.** It is next in queue, it carries live operator demand (the "tapping a card should do something" instinct at the 6c gate), and it retires the D44 named limit by giving delete a single-card context where ambiguity is impossible. The design pass re-reads `documentation/design/shelf.md`, `documentation/design/confirm-edit-screen.md`, and `documentation/design/product-metaphor.md` at HEAD, then settles at minimum: what the detail view shows (the card's identity plus, presumably, the full analyte panels — which means the first client read of the three child tables; the read path and its RLS posture need stating), how it is reached (tap — which supersedes D42's "exactly one interaction" rule and must be amended in `shelf.md` the same way slice 8 superseded slice 7's non-interactive cards), where the visible delete affordance lives on it (D42 assigned it here), and whether the D44 dialog is reused verbatim from the detail context (recommendation: yes — same component, same copy; the identity echo is redundant there but harmless and keeps one dialog). Integrity disciplines carry: ND renders `ND`, never 0; untried stays neutral — the detail view shows lab facts, no scores, nothing mood-like, because the scoring lexicon is not designed. This is the single next move.
