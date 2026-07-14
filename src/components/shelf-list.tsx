@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { FlatList, Modal, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
 
+import { CoaDetail } from '@/components/coa-detail';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -37,13 +38,13 @@ function Total({ label, value }: { label: string; value: number | null }) {
 }
 
 // Neutral by construction (D41): every card is the same themed surface — no
-// mood, no color coding, no per-card visual variance. One interaction (D42):
-// long-press to delete.
-function ShelfCard({ coa, onDelete }: { coa: ShelfCoa; onDelete: () => void }) {
+// mood, no color coding, no per-card visual variance. One interaction (D45):
+// tap opens the card detail, with no press feedback — the card stays
+// visually neutral (discipline 2). Long-press is retired; delete lives on
+// the detail view.
+function ShelfCard({ coa, onOpen }: { coa: ShelfCoa; onOpen: () => void }) {
   return (
-    // Long-press only (D42), with no press feedback: the card stays
-    // visually neutral (discipline 2). Tap does nothing.
-    <Pressable onLongPress={onDelete}>
+    <Pressable onPress={onOpen}>
       <ThemedView type="backgroundElement" style={styles.card}>
         <ThemedText type="smallBold">{coa.strain}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
@@ -66,6 +67,7 @@ export function ShelfList() {
   const [rows, setRows] = useState<ShelfCoa[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [detailCoaId, setDetailCoaId] = useState<string | null>(null);
 
   // Promise-callback form, not an async body: setState stays out of the
   // synchronous effect path (react-hooks/set-state-in-effect), matching the
@@ -100,44 +102,6 @@ export function ShelfList() {
     setRefreshing(false);
   };
 
-  // Client delete, no RPC (D42): the child analyte rows are the schema's
-  // on-delete-cascade concern, not the client's; RLS scopes the delete.
-  const deleteCoa = (id: string) =>
-    supabase
-      .from('coas')
-      .delete()
-      .eq('id', id)
-      .then(({ error: deleteError }) => {
-        if (deleteError) {
-          Alert.alert('Delete failed', deleteError.message);
-          return;
-        }
-        // Honest state over optimistic removal: refetch through load.
-        return load();
-      });
-
-  const confirmDelete = (coa: ShelfCoa) => {
-    // D44 line-echo body: echo the pressed card's displayed identity
-    // (strain, brand, added date), then the destruction sentence. Never
-    // render a blank where a name should be: strain falls back to
-    // "this COA"; a null/blank brand omits its line entirely.
-    const strain = coa.strain?.trim() ? coa.strain.trim() : 'this COA';
-    const brand = coa.brand?.trim();
-    const identity = [
-      strain,
-      ...(brand ? [brand] : []),
-      `Added ${new Date(coa.created_at).toLocaleDateString()}`,
-    ].join('\n');
-    Alert.alert(
-      'Delete COA?',
-      `${identity}\n\nDeletes this COA and all of its lab data (terpene, cannabinoid, and safety rows). This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteCoa(coa.id) },
-      ]
-    );
-  };
-
   if (error) {
     return (
       <View style={styles.messageContainer}>
@@ -164,21 +128,50 @@ export function ShelfList() {
   }
 
   return (
-    // created_at desc comes from the query ONLY — no client-side sorting or
-    // filtering; RLS scopes the rows, the DB orders them.
-    <FlatList
-      style={styles.list}
-      contentContainerStyle={styles.listContent}
-      data={rows}
-      keyExtractor={(coa) => coa.id}
-      renderItem={({ item }) => <ShelfCard coa={item} onDelete={() => confirmDelete(item)} />}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
-      ListEmptyComponent={
-        <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
-          Nothing on your shelf yet
-        </ThemedText>
-      }
-    />
+    <>
+      {/* created_at desc comes from the query ONLY — no client-side sorting
+          or filtering; RLS scopes the rows, the DB orders them. */}
+      <FlatList
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
+        data={rows}
+        keyExtractor={(coa) => coa.id}
+        renderItem={({ item }) => <ShelfCard coa={item} onOpen={() => setDetailCoaId(item.id)} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+        ListEmptyComponent={
+          <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
+            Nothing on your shelf yet
+          </ThemedText>
+        }
+      />
+      {/* Card detail (D45): same presentation family as AddToShelfModal.
+          Owning the modal here dissolves the post-delete refresh problem —
+          the list owns load(), so a detail-context delete closes and
+          refetches. The key remount-keys the detail on card identity (the
+          pickId pattern), so opening a different card never shows a stale
+          record. */}
+      <Modal
+        visible={detailCoaId !== null}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setDetailCoaId(null)}
+        // iOS gesture dismissal of a pageSheet does not reliably route
+        // through onRequestClose; wiring both keeps the state in sync, and
+        // closing twice is idempotent.
+        onDismiss={() => setDetailCoaId(null)}>
+        {detailCoaId !== null && (
+          <CoaDetail
+            key={detailCoaId}
+            coaId={detailCoaId}
+            onClose={() => setDetailCoaId(null)}
+            onDeleted={() => {
+              setDetailCoaId(null);
+              load();
+            }}
+          />
+        )}
+      </Modal>
+    </>
   );
 }
 
