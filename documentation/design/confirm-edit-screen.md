@@ -1,9 +1,9 @@
 # Confirm/Edit Screen — COA Ingestion
 
-Status: implemented through slice 6b — slices 4 (read-only render), 5a
-(empty-parse guard), 5b (editing), 6a (insert RPC, D39), and 6b (confirm
-wiring, D40) are landed and device-gated. Slice 6c (confirm action bar, D43)
-is designed below and not yet built.
+Status: implemented through slice 6c — slices 4 (read-only render), 5a
+(empty-parse guard), 5b (editing), 6a (insert RPC, D39), 6b (confirm
+wiring, D40), and 6c (confirm action bar, D43) are landed and device-gated.
+Slice 6c landed at `9e3124a`.
 Contract fixture: `animal-face.pdf` (DRS/Confident). Validated against the live
 `ingest-coa` parse output observed at HEAD `4ab722f`. If the parser output for this
 fixture later differs, re-check this design against it.
