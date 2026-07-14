@@ -1,6 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { CoaEditor, type CoaParseResult } from '@/components/coa-editor';
 import { ThemedText } from '@/components/themed-text';
@@ -129,19 +129,26 @@ export default function AddToShelfModal({
             </>
           ) : (phase === 'done' || phase === 'confirming') && result ? (
             <>
-              <ScrollView style={styles.resultScroll}>
-                {result.ok ? (
-                  // The 200 body is the transport envelope { data: <parse> },
-                  // so this cast asserts two things: the envelope shape and
-                  // the parse shape. Both are produced server-side; runtime
-                  // validation remains the accepted debt this slice.
+              {result.ok ? (
+                // No ScrollView on this arm (D43): the editor scrolls itself,
+                // and a flex child inside a ScrollView cannot fill the
+                // viewport — the plain View gives it real height. The guard
+                // arm renders bare, a short fixed block.
+                //
+                // The 200 body is the transport envelope { data: <parse> },
+                // so this cast asserts two things: the envelope shape and
+                // the parse shape. Both are produced server-side; runtime
+                // validation remains the accepted debt this slice.
+                <View style={styles.resultBody}>
                   <ReviewOrGuard
                     key={pickId}
                     coa={(result.json as { data: CoaParseResult }).data}
                     onConfirm={confirm}
                     busy={phase === 'confirming'}
                   />
-                ) : (
+                </View>
+              ) : (
+                <ScrollView style={styles.resultScroll}>
                   <ThemedText type="code">
                     {[
                       `status: ${result.status ?? 'network error'}`,
@@ -151,8 +158,8 @@ export default function AddToShelfModal({
                       .filter(Boolean)
                       .join('\n')}
                   </ThemedText>
-                )}
-              </ScrollView>
+                </ScrollView>
+              )}
               {confirmError && (
                 <ThemedText type="small" style={[styles.centered, styles.confirmError]}>
                   {confirmError}
@@ -237,6 +244,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   resultScroll: {
+    flex: 1,
+    alignSelf: 'stretch',
+  },
+  resultBody: {
     flex: 1,
     alignSelf: 'stretch',
   },

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
@@ -382,48 +382,53 @@ export function CoaEditor({
     setDraft((d) => ({ ...d, [panel]: d[panel].filter((r) => r.id !== id) }));
 
   return (
+    // Fixed-footer column (D43): the sections scroll; the confirm control is
+    // the scroll's sibling, visible without scrolling whenever the editor
+    // renders.
     <View style={styles.container}>
-      <View style={styles.section}>
-        <ThemedText type="smallBold">Metadata</ThemedText>
-        <MetadataField label="Strain" value={draft.strain} onChange={setMeta('strain')} />
-        <MetadataField label="Brand" value={draft.brand} onChange={setMeta('brand')} />
-        <MetadataField label="Batch" value={draft.batch} onChange={setMeta('batch')} />
-        <MetadataField label="Lab" value={draft.lab} onChange={setMeta('lab')} />
-        <ThemedText type="small" themeColor="textSecondary">
-          source: {draft.sourceLab}
-        </ThemedText>
-      </View>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.section}>
+          <ThemedText type="smallBold">Metadata</ThemedText>
+          <MetadataField label="Strain" value={draft.strain} onChange={setMeta('strain')} />
+          <MetadataField label="Brand" value={draft.brand} onChange={setMeta('brand')} />
+          <MetadataField label="Batch" value={draft.batch} onChange={setMeta('batch')} />
+          <MetadataField label="Lab" value={draft.lab} onChange={setMeta('lab')} />
+          <ThemedText type="small" themeColor="textSecondary">
+            source: {draft.sourceLab}
+          </ThemedText>
+        </View>
 
-      <View style={styles.section}>
-        <ThemedText type="smallBold">Totals</ThemedText>
-        <TotalRow label="THC" value={draft.totalThcPct} onCommit={setTotal('totalThcPct')} />
-        <TotalRow label="CBD" value={draft.totalCbdPct} onCommit={setTotal('totalCbdPct')} />
-        <TotalRow
-          label="Total terpenes"
-          value={draft.totalTerpenesPct}
-          onCommit={setTotal('totalTerpenesPct')}
+        <View style={styles.section}>
+          <ThemedText type="smallBold">Totals</ThemedText>
+          <TotalRow label="THC" value={draft.totalThcPct} onCommit={setTotal('totalThcPct')} />
+          <TotalRow label="CBD" value={draft.totalCbdPct} onCommit={setTotal('totalCbdPct')} />
+          <TotalRow
+            label="Total terpenes"
+            value={draft.totalTerpenesPct}
+            onCommit={setTotal('totalTerpenesPct')}
+          />
+        </View>
+
+        <AnalyteSection
+          title="Terpenes"
+          rows={draft.terpenes}
+          onEdit={editAnalyte('terpenes')}
+          onDelete={deleteAnalyte('terpenes')}
         />
-      </View>
+        <AnalyteSection
+          title="Cannabinoids"
+          rows={draft.cannabinoids}
+          onEdit={editAnalyte('cannabinoids')}
+          onDelete={deleteAnalyte('cannabinoids')}
+        />
 
-      <AnalyteSection
-        title="Terpenes"
-        rows={draft.terpenes}
-        onEdit={editAnalyte('terpenes')}
-        onDelete={deleteAnalyte('terpenes')}
-      />
-      <AnalyteSection
-        title="Cannabinoids"
-        rows={draft.cannabinoids}
-        onEdit={editAnalyte('cannabinoids')}
-        onDelete={deleteAnalyte('cannabinoids')}
-      />
-
-      <View style={styles.section}>
-        <ThemedText type="smallBold">Safety</ThemedText>
-        {draft.safety.map((s, i) => (
-          <Row key={`${i}-${s.category}`} label={s.category} value={s.status} />
-        ))}
-      </View>
+        <View style={styles.section}>
+          <ThemedText type="smallBold">Safety</ThemedText>
+          {draft.safety.map((s, i) => (
+            <Row key={`${i}-${s.category}`} label={s.category} value={s.status} />
+          ))}
+        </View>
+      </ScrollView>
 
       <Pressable
         onPress={() => onConfirm(emitDraft(draft))}
@@ -441,6 +446,10 @@ export function CoaEditor({
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    gap: Spacing.three,
+  },
+  scrollContent: {
     gap: Spacing.four,
     paddingBottom: Spacing.three,
   },
