@@ -1,7 +1,8 @@
 # Shelf
 
 Status: slice 7 (compendium list, D41) implemented at `2cec835`; slice 8
-(delete-from-shelf, D42) designed, not implemented. North star:
+(delete-from-shelf, D42) implemented; slice 10 (confirm dialog copy, D44)
+designed below, not implemented. North star:
 `documentation/design/product-metaphor.md`. Slice 7 builds the compendium —
 the untried state only; books, moods, and sessions are out of scope and
 blocked on the scoring lexicon.
@@ -73,7 +74,7 @@ landing surface.
   `explore.tsx`) — banked `chore:`.
 
 ## Delete-from-shelf (slice 8, D42)
-Status: designed, not implemented. The shelf's first interaction. Lived
+Status: implemented. The shelf's first interaction. Lived
 demand: gate and exploration rows accumulate, and deletion today requires a
 hand-built authenticated curl.
 ### Affordance
@@ -91,6 +92,8 @@ hand-built authenticated curl.
   its lab data (terpene, cannabinoid, and safety rows). Cannot be undone.
 - No sessions exist yet, so no history is at stake — which is exactly why
   the confirm is built now, while destruction is cheap.
+- Superseded in slice 10 (D44): title and target format revised — see
+  Confirm dialog copy below. This subsection stands as the slice-8 record.
 ### Mechanism
 - Client delete, no RPC: `supabase.from('coas').delete().eq('id', id)`.
 - Atomicity is declarative: `coa_terpenes`, `coa_cannabinoids`, and
@@ -128,3 +131,82 @@ hand-built authenticated curl.
 - Batch delete, swipe-to-delete, edit-in-place.
 - The below-the-fold confirm fix in the editor — named follow-on, its own
   slice.
+
+## Confirm dialog copy (slice 10, D44)
+
+Status: designed, not implemented. Revises the D42 confirm dialog in
+`src/components/shelf-list.tsx` only — no card changes, no button-label
+changes, no semantics changes.
+
+### Why
+
+Two defects, both live at n=1: the title ("Remove from shelf?") contradicts
+its own permanent-delete body, and a strain-only target line cannot
+distinguish same-strain cards — the shelf holds two Animal Face rows with
+identical strain, brand, and totals today.
+
+### Title
+
+- Exact string: `Delete COA?`
+- Names the object and the operation; permanence is carried by the body's
+  "cannot be undone." Honest about today's behavior (permanent delete)
+  without asserting anything about a future remove-vs-delete split.
+
+### Body (line-echo form)
+
+The body echoes the pressed card's displayed identity — strain, brand,
+added date, in the card's own order and date format — then the unchanged
+destruction sentence, separated by a blank line:
+
+    <strain>
+    <brand>
+    Added <date>
+
+    Deletes this COA and all of its lab data (terpene, cannabinoid, and
+    safety rows). This cannot be undone.
+
+- Strain line: trimmed strain; if null or blank after trim, the literal
+  "this COA" (the existing D42 rule, moved onto its own line).
+- Brand line: trimmed brand; if null or blank after trim, the line is
+  omitted entirely — never rendered blank (same guard class as strain).
+- Date line: "Added " + `new Date(created_at).toLocaleDateString()` —
+  identical to the card's own rendering.
+- The destruction sentence always reads "this COA"; the name no longer
+  interpolates into it.
+- `Alert.alert` bodies accept newlines; the blank line separates identity
+  from consequence.
+
+### Named limit (accepted)
+
+Identical-display duplicates (same strain, brand, and added date) cannot be
+disambiguated by any dialog copy. Confirmation of "the one I pressed" is
+positional, and a modal alert cannot convey position. Accepted at n=1
+operator; the real fix is the card detail view (slice 9), where delete runs
+from a single-card context and ambiguity is impossible. This slice makes
+the dialog honest, not omniscient.
+
+### Boundary
+
+The dialog describes what the code does today: permanent delete with
+cascade. The remove-vs-delete semantics split stays blocked on the
+in-stock/possession work and is not preempted here.
+
+### Numbering
+
+Slice 10, executed before slice 9. Slice numbers are identifiers, not a
+schedule; renumbering would churn the existing D42/slice-9 cross-references
+to preserve an ordinal reading the numbers do not carry.
+
+### Gate (UI-visible, physical iPhone; per-step verdicts)
+
+1. Long-press an Animal Face card: dialog title reads Delete COA?; body
+   lines read strain, brand, added date matching that card, then the
+   destruction sentence.
+2. Long-press the Permanent Shade card (blank brand): the brand line is
+   absent — no blank line where it would sit (control).
+3. Cancel: row persists on screen; no write occurs.
+4. Add-to-shelf regression: full add flow still lands a row.
+
+No delete step: the delete mechanism is untouched and D42's gate already
+observed it; this slice changes copy only. A delete may be exercised at
+operator discretion but is not gate-required.
