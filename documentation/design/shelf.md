@@ -42,7 +42,9 @@ landing surface.
 - Order: `created_at` descending ONLY. Chemistry never orders the shelf
   (discipline 1, extended from coloring to ordering).
 - Cards are non-interactive this slice. (Superseded in slice 8: cards gain
-  exactly one interaction — long-press to delete. See Delete-from-shelf.)
+  exactly one interaction — long-press to delete. See Delete-from-shelf.
+  Superseded again in slice 9, D45: tap opens the card detail view and
+  long-press is retired — see Card detail view.)
 
 ## States
 
@@ -86,6 +88,8 @@ hand-built authenticated curl.
   is undiscoverable. Accepted at n=1 operator; the visible, explicit delete
   affordance belongs to the card detail view (slice 9) when it exists.
 - Cancel is a first-class outcome: no write occurs.
+- Superseded in slice 9 (D45): long-press is retired and delete moves to
+  the card detail view. This subsection stands as the slice-8 record.
 ### Confirm copy
 - Title: "Remove from shelf?"
 - Body names the strain and states what is destroyed: this COA and all of
@@ -210,3 +214,139 @@ to preserve an ordinal reading the numbers do not carry.
 No delete step: the delete mechanism is untouched and D42's gate already
 observed it; this slice changes copy only. A delete may be exercised at
 operator discretion but is not gate-required.
+
+## Card detail view (slice 9, D45)
+
+Status: designed, not implemented. The shelf's second read surface: tap a
+card, see the whole record, delete it without ambiguity.
+
+### Why / lived demand
+
+- Operator instinct at the 6c gate: tapping a card should do something.
+- Retires the D44 named limit: delete runs from a single-card context, so
+  identical-display duplicates (two live pairs on the shelf today) stop
+  being ambiguous.
+- Delete gains the visible, explicit affordance D42 assigned here.
+- Surfaces the columns the list never shows — `batch`, `lab`, `source_lab` —
+  and the full analyte panels: the first client read of the child tables.
+
+### Presentation (modal, not navigation)
+
+- The detail renders in a React Native `Modal` owned by `ShelfList`, the
+  same presentation family as `AddToShelfModal`. Tap sets a local
+  `detailCoaId`; the modal hosts a new `CoaDetail` component
+  (`src/components/coa-detail.tsx`).
+- Why not a pushed route: no Stack exists. The root layout is the auth gate
+  rendering `NativeTabs` directly (`app-tabs.tsx`); introducing a Stack
+  restructures that gate and is its own slice, unsupported by lived demand
+  (no deep links, no nav-history need). Banked: when real navigation demand
+  arrives, the Stack conversion happens then and this modal converts.
+- Owning the modal in `ShelfList` dissolves the post-delete refresh problem:
+  the list owns `load()`, so a detail-context delete closes the modal and
+  refetches. No focus-listener machinery.
+
+### Interaction (supersedes D42's long-press)
+
+- Tap on a card opens its detail. Long-press is retired; delete lives only
+  on the detail view.
+- Grounds: retiring the list-context delete extinguishes the D44 ambiguity
+  entirely rather than leaving the ambiguous path alive beside the fixed
+  one; the fast-path demand long-press served is unproven at n=1 operator.
+- Cards remain visually neutral — tap adds no per-card chrome (discipline 2
+  untouched).
+
+### Data (DB shape; fresh single read)
+
+- Query — one embedded select, one consistent snapshot:
+  `supabase.from('coas').select('id, strain, brand, batch, lab, source_lab,
+  total_thc, total_cbd, total_terpenes, created_at, coa_terpenes(id, name,
+  pct), coa_cannabinoids(id, name, pct), coa_safety(id, category, status)')
+  .eq('id', id).single()`.
+- Fresh fetch, not the list row passed down: the detail shows columns the
+  list never selected, and one consistent read beats a stitched one.
+- RLS posture (observed at the core-schema migration): the child policies
+  (`coa_terpenes_all_own`, `coa_cannabinoids_all_own`, `coa_safety_all_own`)
+  are `for all` with the same parent-ownership predicate as `coas_all_own`
+  (`exists (select 1 from coas c where c.id = coa_id and c.created_by =
+  auth.uid())`). Embedded reads are re-gated by child RLS — unlike cascade
+  deletes, which are referential actions — but the predicate is identical,
+  so an owned COA always returns full panels. No partial-panel state exists.
+- A new local type mirrors the selected columns and embeds — DB shape,
+  snake_case. `CoaParseResult` must not be imported here (the D38/D41 rule).
+- Excluded: `type` (deferred at ingestion; same grounds apply on read) and
+  `pdf_url` (always null; no Storage bucket).
+
+### Rendering (integrity disciplines applied)
+
+- Section order mirrors slice 4: identity (strain, brand, added date,
+  `batch`, `lab`; `source_lab` as subordinate secondary text — a system
+  identifier, not user-facing vocabulary), totals, terpenes before
+  cannabinoids, safety.
+- A null value renders "ND" — never 0, never blank — on totals and on every
+  analyte `pct`. The invariant follows the data wherever it is displayed.
+- Detected rows first; ND rows collapse under an always-present
+  "Not detected (N)" control, every row individually visible on expand.
+  Grouping is recomputed from current values — there is no draft and no
+  editing here, so D37's no-migration rule does not apply; that was an
+  editing invariant, not a display law.
+- No scores, no mood, nothing Never-Again-shaped: lab facts only. The
+  scoring lexicon is not designed.
+
+### Row order (named divergence, accepted)
+
+- The child tables carry no position column, so slice 4's "parser emission
+  order" is unrecoverable at the DB seam — insertion order is not a SQL
+  guarantee.
+- Order: alphabetical by `name` within the detected group and within the
+  ND group; safety rows by `category`. A stated divergence from the
+  editor's ordering.
+- Rejected: `pct`-descending for detected rows — it begins ranking
+  chemistry visually, and alphabetical costs nothing.
+- Banked: a `position` column, if emission order ever earns lived demand.
+
+### Delete on detail (D44 dialog reused verbatim)
+
+- A visible, explicit Delete control on the detail view — the affordance
+  D42 assigned here from the start.
+- The D44 dialog is reused verbatim: same title, same line-echo body. The
+  identity echo is redundant in a single-card context but harmless, and
+  one dialog beats two.
+- On confirmed delete: the existing client delete path
+  (`from('coas').delete().eq('id', id)`; cascade via FKs; RLS-gated). On
+  success the modal closes and `ShelfList` refetches via `load()`. On
+  failure: error alert, the modal stays open, nothing else changes.
+
+### States
+
+- Loading: minimal text.
+- Error — including a row deleted underneath, where `.single()` errors on
+  zero rows: message, retry, and a close affordance.
+- Loaded: the rendering above.
+
+### Gate (UI-visible, physical iPhone; per-step verdicts; stills welcome)
+
+1. Tap a card with full data (a RAINBOW RUNTZ row): detail opens showing
+   strain, brand, batch, lab, added date, subordinate `source_lab`; the
+   three totals; terpene panel detected-first with "Not detected (N)";
+   cannabinoid panel; safety rows. Still requested — first render of a
+   new screen.
+2. ND rendering observed on a null value in the detail view.
+3. Long-press any card: nothing happens (the retirement control).
+4. Delete from detail: the D44 dialog appears (title "Delete COA?");
+   confirm; the modal closes; the row is gone from the list without an app
+   restart; read-back shows zero child rows for the deleted id. User data
+   is test-phase and disposable — a duplicate RAINBOW RUNTZ is the natural
+   target.
+5. Cancel path: dialog Cancel — the modal stays open, the row persists.
+6. Add-to-shelf regression: full add flow still lands a row.
+
+### Non-goals (slice 9)
+
+- Editing anything from the detail view (post-insert editing is
+  undesigned).
+- View-source PDF (no Storage bucket; the in-memory PDF exists only at
+  ingestion time).
+- Mood, scores, sessions, in-stock — blocked as ever.
+- The navigation restructure (Stack conversion) — banked above.
+- A `position` column — banked above.
+- Sorting or filtering the analyte panels.
