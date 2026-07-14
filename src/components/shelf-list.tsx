@@ -117,11 +117,20 @@ export function ShelfList() {
       });
 
   const confirmDelete = (coa: ShelfCoa) => {
-    // Never render a blank where a name should be.
-    const name = coa.strain?.trim() ? coa.strain : 'this COA';
+    // D44 line-echo body: echo the pressed card's displayed identity
+    // (strain, brand, added date), then the destruction sentence. Never
+    // render a blank where a name should be: strain falls back to
+    // "this COA"; a null/blank brand omits its line entirely.
+    const strain = coa.strain?.trim() ? coa.strain.trim() : 'this COA';
+    const brand = coa.brand?.trim();
+    const identity = [
+      strain,
+      ...(brand ? [brand] : []),
+      `Added ${new Date(coa.created_at).toLocaleDateString()}`,
+    ].join('\n');
     Alert.alert(
-      'Remove from shelf?',
-      `Deletes ${name} and all of its lab data (terpene, cannabinoid, and safety rows). This cannot be undone.`,
+      'Delete COA?',
+      `${identity}\n\nDeletes this COA and all of its lab data (terpene, cannabinoid, and safety rows). This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete', style: 'destructive', onPress: () => deleteCoa(coa.id) },
