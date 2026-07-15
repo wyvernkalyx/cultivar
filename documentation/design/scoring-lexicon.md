@@ -1,6 +1,6 @@
 # Scoring Lexicon
 
-Status: design ratified (D46); no implementation exists. The skeleton below is
+Status: design ratified (D46); amended (D47–D48); no implementation exists. The skeleton below is
 durable; every vocabulary is v1 and provisional. Refinement from live use is
 the designed path, not a failure of the design — the operator cannot know how
 to improve the survey until real sessions are logged against it, and the
@@ -35,6 +35,14 @@ corrupts or re-interprets recorded history.
    recompute automatically. A deliberate, ratified recompute remains
    possible from preserved raw answers — never silent, never default. Same
    family as ND != 0: never rewrite what was recorded.
+
+   Amended (D47): sessions are revisable and soft-deletable on top of the
+   append-only substrate. Revising preserves every prior answer beneath — the
+   latest answers drive the score; nothing is overwritten. Deleting is soft:
+   the session vanishes from all computation and display, but the row
+   survives, marked. Nothing recorded is ever silently destroyed. Hard
+   erasure is an account-level privacy feature, banked, never a per-session
+   gesture.
 4. **Fact classes stay distinct fields, even where v1 leaves them thin:**
    - **intent** — what was this for (purpose, chosen before/at the session)
    - **fit** — did it do what you wanted (intent-relative outcome)
@@ -117,13 +125,16 @@ labeling-completeness, symmetry, and hidden 1–5 mapping are skeleton.
   Named weakness, accepted: retrospective intent is softer than a fresh
   effect report (people back-fill wants from outcomes). Effect vocabulary
   remains a candidate rich-path question for v2.
+- **Unanswered is not an answer (D48).** No intent tap → intent stores as
+  null, never coerced to "just because" (aimless-on-purpose is an answer;
+  unanswered is a gap). Recorded = chosen, no exceptions.
 
 ## Rich-path questions (v1 forms, provisional)
 
 - **Fit** — "Did it do what you wanted?": No / Sort of / Yes (3-point,
   provisional). Fit is intent-relative and stored as its own fact; it
   never touches the score or the books. Asked only when the session's
-  intent is not "just because."
+  intent is answered and is not "just because."
 - **Context** — "What were you doing?": vocabulary deliberately unseeded;
   the operator's first weeks of real use author it. Free entry acceptable
   for v1.
@@ -155,6 +166,16 @@ engine as sessions. Their future value is the expectation-vs-reality
 surface ("you thought you were a sleep user; your logged sessions say
 create") — a read surface, banked by name.
 
+**Default intent chip (D48).** Onboarding asks "what's your usual reason?"
+That chip renders first and biggest in the session survey's chip row —
+friction reduction only. It is never auto-filled; a skipped chip row stores
+null, always.
+
+**Scan-your-favorites (banked).** Onboarding invites the user to scan in
+known favorites even if not on hand. They enter the compendium as neutral
+untried cards (discipline 2 applies in full) and double as expectation data
+for the expectation-vs-reality surface.
+
 ## Banked consumers (named, so the data is captured for them now)
 
 - **The quadrant** — per-intent scatter of quality (overall) x fit; the
@@ -172,6 +193,10 @@ create") — a read surface, banked by name.
 - **Multi-intent** — v2, if lived usage keeps producing genuinely
   dual-purpose sessions.
 - **Expectation-vs-reality** — the onboarding data's payoff surface.
+- **AI session summaries** — Bevel-style natural-language reads of the
+  user's own logs. Guardrail: generated copy obeys personal-empirical —
+  correlations in this user's data only, never causal or population-level
+  claims.
 
 ## Non-goals (this pass)
 
