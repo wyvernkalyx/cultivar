@@ -1,130 +1,284 @@
 # Cultivar — Session Handoff
 
-_Written 2026-07-14, against HEAD `7fe6187`, pushed and verified (`8cef60d..7fe6187 main -> main` observed; this session also observed `5457ff6..5e56ef7`, `5e56ef7..8cef60d` — four pushes counting the handoff to come)._
-_**The repo is authoritative over this document.** Every state claim below is a prediction to falsify, not a fact to trust._
+_Written 2026-07-15, against HEAD `ccd9a22`, pushed and verified
+(`d0a2e81..ccd9a22 main -> main` observed; this session also observed
+`ed7538b..d0a2e81` — three pushes counting the handoff to come)._
+_**The repo is authoritative over this document.** Every state claim below is
+a prediction to falsify, not a fact to trust._
 
-_Concrete refutations from this session, so this preamble is read and not skimmed:_
-_(1) **The architect designed against an imagined navigation layer.** The slice-9 proposal was a pushed route (`src/app/coa/[id].tsx`); the observed `_layout.tsx` has no Stack and no Slot — the root layout is the auth gate rendering `NativeTabs` directly. The route design died on the blob read and the detail became a `ShelfList`-owned Modal. Design-from-memory of an unobserved file shape is the same error class as design-from-dump._
-_(2) **The architect fell into the documented `-e` grep trap on its own run** — a dash-prefixed pattern executed without `-e` mid-session, caught only because the criterion was executed before shipping. The rule works; it also applies to the person who wrote it._
-_(3) **A red gate produced a wrong-shaped first hypothesis.** The step-6 add-flow failure was initially framed as a modal defect; the operator's retest revealed the app had been *fully unresponsive* — a different failure class. The gesture-dismiss desync hypothesis was then killed by a directed repro (swipe-dismiss → reopen → add: all pass). Disposition: unreproduced one-off; Metro-reload-over-stale-state favored but unconfirmed (the operator was not asked in time whether the frozen session was the reloaded one)._
+_Concrete refutations from this session, so this preamble is read and not
+skimmed:_
+_(1) **The architect's byte-compare gate was silently defeated by its own
+delivery channel.** The scoring-lexicon persistence prompt required a diff
+against "the operator-provided file"; the artifact arrived inline in the
+prompt message, so the implementer transcribed it and the diff proved
+repo-copy == its own transcription — the transcription step sat inside the
+trust boundary instead of under the gate. The implementer flagged it instead
+of vouching past it; closure required an after-the-fact sha256 comparison
+against the architect's original (`bc09a3f7…`, matched). Countermeasure
+ratified below: verbatim-persistence prompts embed the expected sha256._
+_(2) **The operator's "they are anonymous to us" premise was refuted.** RLS
+scopes users from each other, not from the operator, who can read every row
+today. This killed a maybe-meds argument and is now a recorded posture in
+`scoring-lexicon.md` (medications excluded; revisit bar is an architecture
+where the operator cannot read the field)._
+_(3) **Zero Phase A refutations this session — a first.** Every audit value
+and every new-this-session pin matched. Noted so the next session does not
+mistake a clean audit for a reason to skim: the byte-compare defeat above
+happened the same day._
 
-_Begin with the Phase A audit below. **Run it in Git Bash (`MINGW64`), from `/d/Projects/...`, never WSL.** Try to break it._
+_Begin with the Phase A audit below. **Run it in Git Bash (`MINGW64`), from
+`/d/Projects/...`, never WSL.** Try to break it._
 
 ---
 
 ## Start here (Phase A, read-only)
 
-Open **Git Bash**, confirm `uname -s` starts with `MINGW`, `cd /d/Projects/Cultivar/cultivar`, then:
+Open **Git Bash**, confirm `uname -s` starts with `MINGW`,
+`cd /d/Projects/Cultivar/cultivar`, then:
 
 ```
 bash scripts/session-audit.sh > ../audit.txt 2>&1
 echo "exit: $?"
 ```
 
-Paste `audit.txt` whole. Expected values, each a prediction that can be wrong:
+Paste `audit.txt` whole. Expected values, each a prediction that can be
+wrong:
 
 | Check | Expected |
 |---|---|
 | [1] branch | `main` |
-| [2] HEAD | If this handoff is NOT yet committed: `7fe6187`, subject `docs: mark slice 9 implemented in shelf.md`, parent `8cef60d`. If committed: a `docs: session handoff` commit whose **parent is `7fe6187`**. |
+| [2] HEAD | If this handoff is NOT yet committed: `ccd9a22`, subject `docs: design the scoring lexicon (D46)`, parent `d0a2e81`. If committed: a `docs: session handoff` commit whose **parent is `ccd9a22`**. |
 | [3] ahead of origin | **0** |
 | [4] working tree | **clean** if this handoff is committed; else exactly ` M documentation/SESSION_HANDOFF.md`. **If `.env` appears, stop everything.** |
 | [5] `.env` ever committed | `(never committed)` |
 | [6] client path | `src/lib/supabase.ts` tracked; `lib/` count **0** |
 | [7a/b] `.gitignore` blob | line 34 `.env*`, line 35 `!.env.example`, LF. Line 40 `example` banked. Unchanged. |
 | [8] unstable flags | `(none)` |
-| [9] `npm test` | **36 passed**, 1 suite. Re-observed at the slice-9 build criteria. |
-| [10] `deno test` ingest-coa | **5 passed**. Functions untouched all session (all four commits touched `shelf.md`, `shelf-list.tsx`, `coa-detail.tsx`, and this file only). |
-| [11] `deno check` | exit 0 by inference; script still lacks `$?` echo (TENTH session — disposition below). |
-| [12] `tsc --noEmit` | `(no output)`, exit 0. Re-observed at slice-9 build criteria. |
-| [13] `expo lint` | **1 error, 0 warnings** (`use-color-scheme.web.ts`). Re-observed at slice-9 build criteria. |
+| [9] `npm test` | **36 passed**, 1 suite. No code touched this session (docs-only). |
+| [10] `deno test` ingest-coa | **5 passed**. Functions untouched. |
+| [11] `deno check` | tail-silence is the standing observation — **declared permanent this session** (adopted per the prior handoff's terms; the operator did not object). Stop counting sessions. |
+| [12] `tsc --noEmit` | `(no output)`, exit 0. |
+| [13] `expo lint` | **1 error, 0 warnings** (`use-color-scheme.web.ts`). |
 | [14] `expo install --check` | jest 30 / @types/jest 30 misaligned — expected, do not fix. |
-| [15] trailers | **exactly ONE, parsed** (D35). Script's expectation text still stale; bundled with [11]. |
+| [15] trailers | **exactly ONE, parsed** (D35). Script's stale expectation text: tolerated **permanently**, bundled with [11]'s disposition. |
 
 **New this session, not covered by the audit script:**
-- `grep -Fc 'onLongPress' src/components/shelf-list.tsx` → **0**; `grep -Fc "'Delete COA?'" src/components/coa-detail.tsx` → **1**; `grep -Fc "'Delete COA?'" src/components/shelf-list.tsx` → **0**.
-- `git ls-files src/components/coa-detail.tsx` → tracked (one line).
-- `git show HEAD:documentation/design/shelf.md | wc -l` → **366**; on the same blob: `grep -Fc 'designed, not implemented'` → **0**; `grep -Fc -e 'implemented at \`8cef60d\`'` → **2**; `grep -Fc 'Implementation deltas'` → **1**.
 
-**Database state (Phase A predicts repo state, never user-data state — standing rule):** the gate and retest deleted at least two rows and added at least two (one mid-retest, one post-repro). No shelf count is trusted or needed. The session-wide orphan check (`not exists` against `coas`, all three child tables) returned **0/0/0**, observed via SQL — the strongest cascade evidence to date, covering every delete ever run. New fact: the RAINBOW RUNTZ fixture is a **Kaycha** COA (`source_lab: kaycha`) whose brand parsed clean — evidence against, not resolution of, the banked Kaycha blank-brand defect.
+- `git show HEAD:documentation/design/scoring-lexicon.md | wc -l` → **196**
+- `git show HEAD:documentation/design/scoring-lexicon.md | sha256sum` →
+  `bc09a3f7e8e2bdcfa538d8c49bfc9f265501c600dab8cab0a0175c9dd936c68e`
+  (byte count 10078) — the verified architect-original hash.
+- `git show HEAD:documentation/design/confirm-edit-screen.md | grep -Fc 'not yet built'` → **0**;
+  same blob, `grep -Fxc 'Slice 6c landed at \`9e3124a\`.'` → **1**; `wc -l` → **277**.
+- `git log --oneline -1 -- documentation/design/scoring-lexicon.md` →
+  `ccd9a22 docs: design the scoring lexicon (D46)`.
 
-**If any of these don't match, the repo wins — re-baseline before proceeding.**
+**Database state (standing rule: Phase A predicts repo state, never
+user-data state):** this session was docs-only — no gate ran, no app was
+opened, no row was written or deleted. The shelf is whatever the slice-9
+session left it.
+
+**If any of these don't match, the repo wins — re-baseline before
+proceeding.**
 
 ---
 
 ## What shipped (newest first)
 
-- `7fe6187` — docs: mark slice 9 implemented in shelf.md (status flip + three accepted implementation deltas, per the staleness ruling)
-- `8cef60d` — feat: card detail view (slice 9, D45; six-step device gate — red on step 6, then green on retest plus a directed swipe-dismiss repro; two stills)
-- `5e56ef7` — docs: design card detail view (slice 9, D45)
-- Scope note: `5457ff6` (the prior handoff) and everything before it are covered by the previous handoff, superseded by this file. Session start for this scope = `5457ff6`.
+- `ccd9a22` — docs: design the scoring lexicon (D46) — new 196-line
+  `documentation/design/scoring-lexicon.md`, byte-verified against the
+  architect's original by sha256.
+- `d0a2e81` — docs: mark slice 6c implemented in confirm-edit-screen.md
+  (the session opener; four-line status-block flip, the only stale text a
+  whole read surfaced).
+- Scope note: `ed7538b` (the prior handoff) and everything before it are
+  covered by the previous handoff, superseded by this file. Session start
+  for this scope = `ed7538b`.
 
 ---
 
 ## The arcs
 
-**Slice 9 ran end to end — and its design pass was rebuilt mid-flight by a blob read.** The proposal was a pushed route; `_layout.tsx` refuted it (no Stack anywhere; the root layout IS the auth gate, swapping `SignIn`/`AppTabs` on session state, and `AppTabs` is `NativeTabs` with two triggers). D45's ratified shape: an RN `Modal` owned by `ShelfList` (the `AddToShelfModal` presentation family), remount-keyed on card identity, hosting `CoaDetail` — which owns its own embedded single read (`coas` + all three child tables, one snapshot), the D44 dialog moved verbatim, and a fixed-footer Delete + Close (the 6c lesson: placement pinned, not defaulted). Long-press was retired (operator call): the single-card delete context extinguishes the D44 named limit *entirely* instead of leaving the ambiguous path alive. Child-table RLS was verified from the migration blob before the query was designed: the `*_all_own` policies are `for all` with the identical parent-ownership predicate, so embedded reads — which ARE re-gated by child RLS, unlike cascade deletes — always return full panels. Alphabetical row order is a named divergence: the child tables have no position column, so parser emission order is unrecoverable at the DB seam; `pct`-descending was rejected because it starts visually ranking chemistry.
+**The 6c flip ran exactly as the prior handoff prescribed** — whole read,
+two false claims found (both in the lines 3–6 status block; the D43 section
+itself carried no implementation claim and needed nothing), four-line
+replacement, criteria simulated against the authored blocks before the
+prompt shipped, committed and pushed in two round-trips. Ten minutes, as
+predicted.
 
-**The gate went red, and the failure was diagnosed before it was fixed — and then needed no fix.** Step 6 (add-flow regression) failed; the app was fully unresponsive. Three discriminating questions were put to the operator instead of a patch; a cold start cured everything and the full interleaving (add → detail-delete → add) passed warm. The one live hypothesis with a product implication — pageSheet gesture-dismiss leaving a phantom presented sheet — was killed by a directed repro of its exact trigger. Nothing was committed until the gate was green, and the commit body records the freeze honestly.
+**The scoring lexicon was designed end to end in conversation and shipped
+as `scoring-lexicon.md` (D46).** The shape it took and why: the survey
+splits into a lazy path (two taps: overall word + intent chip — a complete
+log, not a degraded one) and a rich path (fit, context, alcohol — all
+optional), chosen per session with no mode setting, because the operator's
+first requirement was "recording must never be a chore." The score comes
+from the overall word alone on both paths — composite scoring was rejected
+because it makes a lazy and a rich log of the same experience score
+differently, poisoning the average that drives book placement. The 5-point
+fully-labeled word scale is the psychometric consensus (reliability peaks
+at 5–7 points, fully-labeled beats numeric, odd counts give an honest
+midpoint) and 5 beat 7 on two Cultivar grounds: impaired-logger cognitive
+load, and point-count = book-count = a shelf readable at a glance. The
+operator authored the five words ("I hated it / No / Meh / Yes / I loved
+it", hidden values 1–5). Intent won question two over an effect vocabulary
+("sleepy/creative") because intent is what the onboarding survey mirrors,
+what expectation-vs-reality needs, and what the quadrant's x-axis is built
+from; effect banks for v2 with its named counterargument recorded
+(retrospective intent is softer than fresh effect report). The operator's
+intent-shelf and Gartner-quadrant ideas were resolved as **lenses over the
+one true shelf**, never a second organizing spine — books-as-intents
+collides with the ratified one-book-one-mood identity three ways
+(multi-purpose COAs need two books; purpose and quality mix in one
+dimension; mood stops meaning quality). The operator's own later doubt
+("forcing categories we don't fully understand") turned out to be an
+argument against the intent-shelf, not against ratified books — bands
+presume nothing about what "good" means. Iterate-from-use was ratified as
+the method: the skeleton (6 items, listed in the doc) is durable; every
+vocabulary is v1 provisional under `lexicon_version`, which exists
+precisely so revision cannot corrupt history.
 
-**Three implementation deltas were accepted at review and promoted into the doc** (`7fe6187`): null/blank metadata omits its line entirely — "ND" is analyte vocabulary and stays off metadata (the spec was silent; the implementer's call was better than a literal reading); Close joins Delete in the loaded footer per the presentation family; "Not detected (0)" renders when a panel has no ND rows. The review-not-rubber-stamp channel produced doc improvements this session, not just defect catches.
+**The trust-boundary incident (preamble 1) is the session's process
+story.** The persistence prompt's byte-compare gate assumed file-on-disk
+delivery; inline delivery downgraded it to a transcription self-check. The
+implementer's report named the downgrade precisely instead of claiming the
+gate passed. Closure was mechanical: architect computed sha256 of the
+original, operator hashed the committed blob, match observed, push then
+authorized. The lesson is now a rule (Working rhythm below).
 
 ---
 
 ## Refuted hypotheses / memory corrections
 
-- **Route-push placement for the detail view** (architect) — refuted by the `_layout.tsx` blob; replaced by the ShelfList-owned modal (preamble 1).
-- **Gesture-dismiss modal desync as the freeze cause** — refuted by directed repro: swipe-dismiss → reopen detail → add-to-shelf, all pass (preamble 3).
-- **Three commits in `990c62c..5457ff6`** (architect, opening Phase A) — refuted: four; the prior session split the status flip into its own commit, which this session then adopted as the pattern.
-- **Confirmed, not refuted — the banked 6c staleness:** `git log -- src/components/coa-editor.tsx` shows `9e3124a feat: confirm action bar (slice 6c, D43)`, so `confirm-edit-screen.md`'s "designed below and not yet built" is a false claim standing at HEAD. It predates the staleness ruling. Runnable fix below.
-- **Resolved banked item:** the architect's project-knowledge copies of `CLAUDE.md`/`handoff-specs.md` were refreshed — both now carry the D35 one-trailer text, read end to end this session. The recurring false-alarm generator is dead.
-- **Still true:** parse trailers, never count; blob reads via `git show HEAD:`; report-body-or-nothing (held on all four reports, zero vouching); criteria executed before shipping — including by the architect on its own runs, where the `-e` trap fired and was caught (preamble 2); diff-stats derived from edit mechanics hit exactly on all three commits (141/1, 378-60 over two files, 17/3).
+- **"The operator-provided file is present" as a precondition** (architect)
+  — defeated by inline delivery; the prompt failed to anticipate its own
+  delivery channel (preamble 1). Fixed by rule, below.
+- **"Users are anonymous to us"** (operator) — refuted: RLS scopes users
+  from each other, not from the operator (preamble 2). Now load-bearing in
+  the meds exclusion.
+- **The marker-vs-claim limit re-confirmed on its own turf:** the
+  architect's three grep patterns caught only line 3 of the 6c staleness;
+  the second false claim ("designed below and not yet built", line 6)
+  matched none of them and was found by the whole read — exactly the
+  failure mode `CLAUDE.md` documents. The whole-read step was already
+  prescribed and did its job.
+- **Still true:** parse trailers, never count; blob reads via
+  `git show HEAD:`; report-body-or-nothing (held on all three reports,
+  zero vouching — one report exceeded the bar by self-flagging a gate
+  downgrade); criteria executed before shipping (all three prompts'
+  criteria simulated against authored text first; all passed live).
 
 ---
 
 ## Ratified decisions
 
-D1–D44 stand. New this session:
+D1–D45 stand. New this session:
 
-- **D45 — card detail view (slice 9):** modal presentation owned by `ShelfList` (no Stack exists; navigation restructure banked, not smuggled); tap opens detail, **long-press retired** — delete lives only on the detail, reusing the D44 dialog verbatim; fresh embedded single read, DB shape, `CoaParseResult` banned; fixed-footer controls (the 6c lesson, placement pinned in the build prompt); ND everywhere on totals and `pct`; alphabetical row order as a named divergence; no scores, no mood. Grounds in `shelf.md` at `5e56ef7`; landed `8cef60d`; statuses trued and deltas recorded at `7fe6187`.
-- **Ruling — operator data is disposable during the test phase:** gate designs may freely delete or duplicate shelf rows; the duplicate RAINBOW RUNTZ was deliberate. Revisit when non-operator testers onboard.
-- **Ruling — device anomalies get a directed repro before any fix:** a red gate step with multiple candidate causes is diagnosed by discriminating questions and a targeted repro of the leading trigger; no patch ships against an unconfirmed hypothesis. (Applied this session; the "fix" would have been unnecessary code.)
-- **Recorded deferral — the SQL RLS observation (pg_tables/pg_policies)** was deferred this session on the grounds that no schema-touching commit has landed since the last observation; the two SQL screenshots run were user-data reads under `Role postgres` and do not substitute.
-- **Disposition proposed for the [11] `$?` chore, now at TEN sessions:** the architect recommends declaring it **permanent** — tail-silence plus criteria-time `deno check` runs have been the effective observation for ten sessions — and stopping the count. The operator has not called it despite two asks; next session's Phase A adopts permanent **unless the operator objects there**, and the audit-script text for [15] is bundled into the same disposition.
+- **D46 — the scoring lexicon:** full grounds in
+  `documentation/design/scoring-lexicon.md` at `ccd9a22`. Skeleton
+  (durable): score from the overall word alone on every path; overall word
+  is the product's only mandatory field; append-only sessions storing raw
+  answers + computed score + `lexicon_version`, immutable scores,
+  recompute only by deliberate ratification; four distinct fact classes
+  (intent / fit / context / co-consumption); five fully-labeled points =
+  five books, compendium as a sixth visual state that is not a band;
+  `never_again`/`average_score` confirmed as proposed (NA is a standing
+  verdict, never a survey answer). Provisional (v1): all vocabularies.
+  Excluded by posture: medications (revisit bar: operator-unreadable
+  architecture). Two architect defaults flagged and accepted at commit,
+  revisable like any v1 vocabulary: fit as 3-point (No / Sort of / Yes);
+  fit skipped when intent is "just because."
+- **Ruling — the [11] `$?` chore and [15] stale script text are
+  permanent dispositions.** Adopted per the prior handoff's stated terms
+  (operator did not object at the adoption point). The session count ends
+  at ten. Tail-silence plus criteria-time `deno check` runs are the
+  standing observation.
+- **Ruling — verbatim-persistence prompts are self-verifying:** any prompt
+  that persists architect-authored content byte-identical must embed the
+  expected sha256 (and byte count) of that content in the prompt itself,
+  so the gate holds regardless of delivery channel. Applied first to this
+  handoff's own commit prompt.
 
 ---
 
 ## Open items
 
 ### Runnable now
-- **The 6c status flip in `confirm-edit-screen.md`** — confirmed false claim at HEAD ("Slice 6c … not yet built" vs the observed `9e3124a`); a two-line `docs:` fix plus whatever adjacent 6c-status text a whole read surfaces. The session opener.
-- **The scoring lexicon design pass** — the session's substance (see Entry point).
+- **The session-logging design pass** — the survey UI/mechanic over the
+  now-designed lexicon (see Entry point).
 
 ### Blocked
-- Books / moods / bands / Never Again / session logging — blocked on the **scoring lexicon**.
-- In-stock / possession — blocked on schema; owns the **remove-vs-delete distinction**.
+- Books / moods / bands / Never Again — **no longer blocked on the lexicon
+  design**; now blocked on session logging existing (schema + UI for
+  sessions must land before any average exists to band).
+- In-stock / possession — blocked on schema; owns the remove-vs-delete
+  distinction. Unchanged.
+- Onboarding survey implementation — ratified as concept (D46); blocked
+  behind session logging (it mirrors the session survey, which must exist
+  first).
 
 ### Banked (new this session)
-- `#e5484d` literal error color now lives in two files, each with a "no error token in Colors" comment — at a third use, an error token becomes a `chore:` with lived demand. Cosmetic: `coa-detail.tsx`'s comment cites "the sign-in precedent"; the observed precedent is `add-to-shelf-modal.tsx`'s `confirmError`.
-- The mid-gate freeze: unreproduced one-off, Metro-reload explanation favored, unconfirmed. If a full-app freeze recurs on a warm dev-client session, this record is the prior.
-- RAINBOW RUNTZ = Kaycha fixture with a clean-parsing brand — evidence to weigh when the Kaycha blank-brand defect is picked up.
+- **Effect vocabulary** ("sleepy/creative") — rich-path candidate, lexicon
+  v2; counterargument recorded in the doc.
+- **Multi-intent** — v2, if lived usage shows genuinely dual-purpose
+  sessions.
+- **The quadrant** (per-intent quality x fit scatter), **the intent lens**,
+  **confound discounting**, **expectation-vs-reality** — named future
+  consumers; the lexicon captures their data now.
+- **Promoting the expectations-never-outcomes discipline into
+  `product-metaphor.md`'s discipline list** — optional `docs:` amendment.
+- **Meds revisit bar** — user-only architecture (client-side encryption or
+  local-only), its own design pass with its own threat model, only on
+  lived demand.
 
 ### Banked (carried)
-- Audit script `$?` echo + stale [15] text (disposition proposed above); parser brand-sludge/`g CBDVa` cleanup; Kaycha blank-brand defect (two fixtures; see new evidence above); guard layout centering; `identifyLab` brittleness; envelope-unwrap redesign + D33 `functions.invoke` migration; dashboard-only auth config; Resend domain verification; deploy reproducibility; `--no-lock`; url-polyfill; `.gitignore:40`; terpene whitelist; CRLF warnings (tolerated, fired on every add/diff this session as always); `unrs-resolver`; `npm audit` template vulns; no Storage bucket / `pdf_url`; payload-shape validation; template orphans (`hint-row`, `animated-icon`, `explore.tsx`); keyboard-behind-footer mid-edit (tolerated by D43, now also true of the detail footer — same acceptance); Stack conversion (D45 banked it); `position` column; server-side session revocation declined.
+- Parser brand-sludge / `g CBDVa` cleanup; Kaycha blank-brand defect (two
+  fixtures; RAINBOW RUNTZ counter-evidence); guard layout centering;
+  `identifyLab` brittleness; envelope-unwrap redesign + D33
+  `functions.invoke` migration; dashboard-only auth config; Resend domain
+  verification; deploy reproducibility; `--no-lock`; url-polyfill;
+  `.gitignore:40`; terpene whitelist; CRLF warnings (tolerated, fired as
+  always); `unrs-resolver`; `npm audit` template vulns; no Storage bucket /
+  `pdf_url`; payload-shape validation; template orphans (`hint-row`,
+  `animated-icon`, `explore.tsx`); keyboard-behind-footer (tolerated by
+  D43/D45); Stack conversion; `position` column; server-side session
+  revocation declined; `#e5484d` error-color literal (two files; token at
+  a third use); mid-gate freeze prior (Metro-reload favored, unconfirmed).
 
 ---
 
 ## Working rhythm (only what is in flux)
 
-Stable method lives in `CLAUDE.md` and `documentation/process/handoff-specs.md`.
+Stable method lives in `CLAUDE.md` and
+`documentation/process/handoff-specs.md`.
 
-- **New: directed-repro rule** (ratified above) — discriminating questions first, targeted trigger repro second, fix only against a confirmed cause.
-- **Stills as primary gate evidence, matured:** two stills carried gate steps 1–2 and the dialog verification outright this session; per-step text verdicts covered the rest. Keep requesting stills for first renders and copy checks.
-- **Full-length simulation held:** every fenced block in every prompt was byte-compared against the criteria-verified authored text before shipping; zero implementer STOPs were needed across four prompts.
-- Report-body-or-nothing: held on all four reports, unchanged, keep it.
+- **New: the sha256 rule for verbatim persistence** (ratified above) —
+  embed the content hash in the prompt; a byte-compare against a
+  transcription is not a gate.
+- **Directed-repro rule, stills-as-evidence, full-length criteria
+  simulation, report-body-or-nothing:** all held; all carried unchanged.
+- **Docs-only sessions are real sessions:** this one shipped two commits
+  and a ratified decision with zero code and zero device gates. The gate
+  type for a design-pass session is the operator reading and ratifying the
+  doc — which happened in-conversation, question by question, before a
+  line was authored.
 
 ---
 
 ## Entry point
 
-**Open with the 6c status flip (ten minutes: whole read of `confirm-edit-screen.md`, flip the confirmed-false status text, own docs commit), then spend the session on the scoring lexicon design pass.** The flip goes first because a confirmed false claim in a governed design doc is the named hazard class this project keeps paying for — it costs almost nothing to retire and it re-derives confusion every session it stands. The lexicon is the session's substance because it is the heart of the personal-empirical engine and the single blocker in front of books, moods, bands, Never Again, and session logging — the entire product beyond ingestion. It is a design-only session by construction (`product-metaphor.md` explicitly reserves it: "its own dedicated design pass… do not improvise"), opening with whole reads of `product-metaphor.md` and the D45-final `shelf.md`, and its integrity constraints are already ratified: scores derive from logged outcomes only, never chemistry; every session score is preserved; `never_again` overrides display, never data; the provisional `never_again`/`average_score` structure is direction to be revisited, not schema to be assumed. This is the single next move.
+**The session-logging design pass.** It is the single next move because it
+is the first consumer of D46 and the last blocker before the product's
+second half exists: sessions must be loggable before any score, average,
+band, book, or mood can be real, and `product-metaphor.md` already reserves
+the interaction ("a draggable, playful mechanic over the scoring lexicon —
+design pass pending the lexicon"; the lexicon no longer pends). The pass
+opens with whole reads of `scoring-lexicon.md` (the contract it implements)
+and `product-metaphor.md` (the feel it must honor), then designs: the
+survey UI (five word-buttons + intent chips, the two-path flow), where
+logging launches from (the in-stock card is the metaphor doc's answer, but
+no possession state exists — expect this pass to force the sessions-table
+schema design and possibly surface the in-stock question early), and the
+session slice boundaries (schema first as its own gated slice, then UI).
+It is design-only until a doc is committed; document-before-implement is
+not waived for the fun slice.
