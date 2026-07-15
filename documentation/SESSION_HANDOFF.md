@@ -1,174 +1,172 @@
-# Session Handoff — 2026-07-15
+# SESSION_HANDOFF — written 2026-07-15 against pushed HEAD `1c93740`
 
-The repo is authoritative over this document.
+The repo is authoritative over this document. Begin with a read-only
+Phase A audit (`scripts/session-audit.sh`, Git Bash only) and try to
+break every claim below before doing anything else.
 
-**Carried context was wrong this session, concretely:** the architect's memory
-ended at slice 5a / D37 and believed the latest decision was D37. Reality at
-session start: slices 6c, 9, and 10 had shipped, decisions ran through D46, and
-`scoring-lexicon.md` — the doc this whole session amended — was unknown to the
-architect until pasted. A smaller one: the audit script's [14] annotation
-predicted two outdated packages (jest, @types/jest); the run showed four
-(expo-router and expo-splash-screen drifted upstream). Registry drift, not tree
-drift, but the prediction was falsified as written. Trust nothing here you can
-check. Begin with a read-only Phase A audit.
+## Preamble — carried context was wrong this session; assume this doc is too
 
-## Start here (Phase A, read-only)
+Concrete refutations from this very session, so this warning gets read:
 
-- Branch `main`. `git log -1 --format='%h %p %s'` →
-  `b6b073d 61d8210 docs: amend scoring lexicon (D47-D48), bank follow-ups`.
-- `git fetch origin && git rev-list --count origin/main..HEAD` → `0`.
-  Note: the push to b6b073d was observed (`61d8210..b6b073d main -> main`),
-  but the post-push rev-list `0` was never seen in output — the paste ended at
-  the push line. Sync is inferred from the push output, so this prediction is
-  the one most worth actually running.
-- `git status --short` → clean. Ignore the usual `LF will be replaced by CRLF`
-  warnings on any git touch — Windows autocrlf noise, always present.
-- `npm test` → 36 passed, 1 suite. `deno test` (ingest-coa, per audit script)
-  → 5 passed. `npx tsc --noEmit` → 0 errors. `npx expo lint` → exactly 1 error
-  (template `src/hooks/use-color-scheme.web.ts`), 0 warnings.
-- `grep -rn "D47\|D48" documentation/` → hits ONLY in
-  `documentation/design/scoring-lexicon.md` (status line, skeleton item 3,
-  intent section, onboarding section). Zero hits in follow-ups.md, zero
-  anywhere else.
-- `npx expo install --check` → at least four outdated (jest, @types/jest,
-  expo-router, expo-splash-screen). Known, tolerated, do not fix.
+1. **The architect's memory said the ownership column was `user_id`.**
+   The repo's convention, observed at core-schema line 39, is
+   `created_by`. V1 of the schema doc carried the false name; the
+   implementer's convention check caught it before commit, and the doc
+   was amended to v2. Cost: one extra round-trip. Had it shipped, the
+   migration would have diverged from every other table silently.
+2. **A build-prompt acceptance criterion was written against one grep
+   hit when two existed.** "The `Delete COA` hit" — but the confirm
+   dialog title `'Delete COA?'` predates the footer button. The
+   criterion's intent held by luck of line ordering; the criterion
+   itself was sloppy. Architect's error, named.
+3. **A report claimed "the full diff is pasted in the tool output
+   above" and no diff had reached the review channel.** The reviewer
+   stopped rather than authorizing on the diff's claimed existence —
+   the vouching failure mode in a new costume. One paste closed it.
+4. **Inline artifact delivery struck twice more** (both design docs
+   arrived as text, not files). The sha256 transcribe-and-hash channel
+   absorbed both byte-exactly. Treat inline delivery as the norm, not
+   the exception; every architect-authored file ships with its hash.
+
+## Start here (Phase A, read-only) — every line is a falsifiable prediction
+
+| check | expected |
+|---|---|
+| branch | `main` |
+| HEAD | a `docs:` commit, subject `docs: session handoff at 1c93740`, **parent `1c93740`**. Its own sha is unknowable here. Below it: `1c93740` (parent `9eaf483`), `9eaf483` (parent `97b1b45`), `97b1b45` (parent `b28318f`), `b28318f` (parent `302843c`). |
+| `git rev-list --count origin/main..HEAD` | **0**, *after* the operator pushes the handoff commit. If it prints 1, the push has not run — that is the finding, not an error in this table. |
+| `git status --short` | clean |
+| `ls supabase/migrations/` | exactly **three** files; newest `20260715185455_create_session_entries.sql` |
+| Jest | 36 passed (untouched all session) |
+| Deno | 5 passed |
+| `npx tsc --noEmit` | exit 0 |
+| `npx expo lint` | 1 error, 0 warnings (template `use-color-scheme.web.ts`) |
+| audit script item [14] | **known-stale annotation**: it predicts two outdated packages (jest pair) but four appear — `expo-router` and `expo-splash-screen` patch drift. Observed identical on 2026-07-14 and -15: registry drift, tolerate. Re-annotation banked. |
+| Supabase (SQL editor, privileged) | pg_tables: **6** tables, all `rowsecurity = true`, newest `session_entries`. pg_policies: **9** rows — the 7 pre-existing plus `session_entries_insert_own` (INSERT) and `session_entries_select_own` (SELECT). Any UPDATE/DELETE policy on `session_entries` means the append-only invariant was breached — stop everything. Observed 2026-07-15 post-`db push`. |
 
 If any of these don't match, the repo wins — re-baseline before proceeding.
 
-## What shipped
+## What shipped (newest first)
 
-- `b6b073d` — docs: amend scoring lexicon (D47–D48), bank follow-ups. The
-  session's only commit; everything else was design work in chat.
+- `1c93740` — feat: session_entries table, the append-only session chain (D52-D53) — **applied to production and gated on observed state**
+- `9eaf483` — docs: design the session_entries schema (D52-D53)
+- `97b1b45` — feat: session-logging ladder spike (no persistence) — **device-gated, all steps passed**
+- `b28318f` — docs: design the session-logging mechanic (D49-D51)
 
 ## The arcs
 
-**The mis-tap tension, resolved by restructuring rather than choosing.** The
-lexicon's own grounds (respondent frequently impaired) + two-tap logging +
-append-only immutability jointly guaranteed wrong sessions carved in stone.
-Gregg pushed back on immutability itself: an hour-later opinion change is
-legitimate. Rather than break the skeleton, the rule's real purpose was
-extracted — never silently destroy what was recorded — and revise/soft-delete
-were layered on top of the append-only substrate (D47). The Never Again
-pattern (change what's seen, preserve what was recorded) supplied the shape.
-Hard delete was considered and rejected: deleting while high is exactly as
-fat-finger-prone as logging while high; soft delete makes delete itself
-mistake-proof. True erasure is banked as an account-level privacy feature.
+**Arc 1 — the mechanic pass and the spike.** The pass `scoring-lexicon.md`
+reserved. Shape: logging launches from the card detail (D49 — gesture-clean
+surface, card pre-selected, avoids resurrecting the retired long-press with
+a new meaning); drop is the save (D50 — the mandatory field and the save
+are one muscle motion; crash-safe; everything after the drop is a revision
+on the D47 substrate); vertical five-rung ladder (D51 — the shelf
+rehearsed, up = better, screen-height targets, midpoint literal). The spike
+shipped with **no persistence and no chip row** — a full-screen sibling
+modal (`presentationStyle="fullScreen"`), deliberately never nested inside
+the pageSheet and chained through its `onDismiss`, content wrapped in
+`GestureHandlerRootView` (gestures inside RN Modals are inert without it).
+Both native deps were already in the SDK 56 manifest — no new EAS build was
+needed, and none is needed for the wiring slice. **The gate verdict: the
+drag beats tap-and-settle.** The fallback stays banked, probably forever.
 
-**Null intent vs. "just because" (D48).** Whole reads of scoring-lexicon.md
-and product-metaphor.md surfaced the gap: intent is optional with no skip
-affordance, so an intent-less session is representable — and it is NOT the
-same fact as "just because" (aimless is an answer; unanswered is a gap).
-Gregg proposed auto-filling from an onboarding "usual reason" question; this
-was pressure-tested and rejected as fabrication (recording a word the user
-never chose — lazy loggers would accumulate false intent data). The instinct
-survived one layer up: the onboarding default renders as the first-and-biggest
-chip, pure friction reduction, never auto-filled. Fit renders only when intent
-is answered and isn't "just because."
-
-**The gesture lean.** Drag-card-onto-word primary, Daylio-style
-tap-and-settle fallback, settled at the physical-iPhone device gate. Stated
-honestly during ratification: no successful marketplace app logs by drag
-(Vivino/Untappd/Daylio all tap) — A is the distinctive risk, B the proven
-pattern. Gregg chose A-primary knowing that. D47's soft delete also lowered
-the stakes: the save gesture no longer has to be perfect, only reasonably
-accident-resistant.
-
-**Vivino as negative example, Bevel as split example.** Gregg's visceral
-reaction to Vivino recommending wines before knowing him ("full of shit")
-independently re-derived the founding discipline — recommendations with none
-of your data behind them are the thing Cultivar refuses. Bevel is the model
-for the READ side only (interpretation layer over accumulated data); its
-logging moment barely exists (data flows from the watch). Dark theme
-requirement also came out of this: banked for the art pass.
-
-**Original COA PDFs are currently discarded — confirmed and banked.** Gregg
-asked; the answer (moderate-high confidence from CLAUDE.md, then confirmed by
-Gregg observing zero Storage buckets in the dashboard) is that the PDF is
-thrown away after parsing. This matters more now that parses are editable:
-once the source is gone there is no ground truth to check an edit against.
-Banked in follow-ups.md with the save-time-not-parse-time upload rule already
-reasoned out.
+**Arc 2 — the schema.** A session is an append-only chain of entries in
+one table (`session_entries`): drop, chip tap, re-drag, soft delete are
+all INSERTs of full snapshots; latest entry wins. **No UPDATE or DELETE
+policy exists — history is unwritable by construction**, ND != 0's family.
+Rejected alternative: one-row-plus-revisions-table, because its guarantee
+rests on a trigger behaving. Word AND score both stored, no check tying
+them (vocabulary never enters the schema). `coa_id` cascades (D53): COA
+delete is the one dialog-guarded exception to soft-delete-only. Design of
+record: `documentation/design/session-entries-schema.md` — its v2 quotes
+observed migration lines, not memory.
 
 ## Refuted hypotheses / memory corrections
 
-- Architect memory ran two slices and nine decisions stale (see preamble).
-  Slices 6c (confirm action bar, D43), 10 (confirm dialog copy, D44), and 9
-  (card detail view, D45) shipped before this session; slice 7 (shelf list)
-  is inferred shipped — a detail view needs a list to open from — but this
-  was never directly observed. Verify via shelf.md before any shelf-touching
-  prompt.
-- "Five Supabase tables" was believed from slice-2 memory and happened to be
-  right — confirmed by observed pg_tables output (coas, coa_terpenes,
-  coa_cannabinoids, coa_safety, profiles; RLS on all; four `_all_own` ALL
-  policies + profiles insert/select/update-own, no delete). No sessions
-  table exists; nothing holds never_again/average_score. The sessions
-  migration is greenfield.
-- The commit-body paste showed no blank lines between paragraphs; this was
-  resolved as paste-flattening, not a malformed commit (%s printed the
-  subject alone and interpret-trailers parsed exactly one trailer — both
-  impossible without intact blank lines). Pattern worth remembering:
-  terminal pastes eat blank lines; corroborate structure from format-aware
-  commands before alarming.
+- `user_id` is not this repo's ownership column; **`created_by`** is
+  (core-schema :39, full convention: `default auth.uid() references
+  auth.users (id) on delete cascade`). Killed once; do not re-derive.
+- The analyte parent-ownership predicate is quoted verbatim in the schema
+  doc — read it there, not from memory.
+- Reanimated 4.3.1 + gesture-handler 2.31.1 + worklets 0.8.3 are in the
+  manifest and compiled into the current dev build. No build wait exists
+  for gesture work.
+- The `db push` Docker warning ("failed to cache migrations catalog") is
+  cosmetic on this Windows setup — the remote apply succeeds; the
+  observed-state gate adjudicates, never the CLI text.
+- An unexplained gear icon appears top-right on the ladder screenshots.
+  **Believed** (unconfirmed) to be the dev-client overlay bubble. If it
+  ever appears in a non-dev build, that belief was wrong.
 
 ## Ratified decisions
 
-- **D47** — skeleton item 3 amended: sessions revisable and soft-deletable
-  atop the append-only substrate; revisions preserve every prior answer;
-  deletes exclude from all computation/display but the row survives, marked;
-  nothing recorded is ever silently destroyed. Grounds: hour-later opinion
-  changes are legitimate data corrections; hard delete rebuilds the mis-tap
-  problem one level up; Never Again already proved the display-over-data
-  pattern.
-- **D48** — unanswered intent stores as null, never coerced to "just
-  because"; fit renders only when intent is answered and isn't "just
-  because"; onboarding default intent = first-and-biggest chip, never
-  auto-filled. Grounds: recorded = chosen (ND ≠ 0 family); auto-fill
-  fabricates data precisely from the laziest loggers.
-- **Gesture lean (ratified direction, not final)** — drag-onto-word primary,
-  tap-and-settle fallback, device gate decides. Recorded in follow-ups.md.
+- **D49** — logging launches from the card detail view. Grounds: card
+  pre-selected, gesture-clean surface, long-press semantic collision
+  avoided.
+- **D50** — drop is the save; no confirm, no done button; chip taps and
+  re-drags are revisions. World B (staged save) is the named fallback.
+  Grounds: skeleton item 2 made physical; crash-safety; gesture honesty.
+- **D51** — vertical five-rung ladder, best at top, snap-to-nearest with
+  typographic swell, home zone as cancel. Tap-and-settle is the named
+  mechanic fallback. Grounds: the shelf rehearsed; thumb ergonomics;
+  target size as the mis-drop defense.
+- **D52** — `session_entries` append-only chain; INSERT+SELECT policies
+  only. Grounds: a policy that does not exist cannot be bypassed.
+- **D53** — `coa_id` on delete cascade. Grounds: realistic delete is a
+  mistaken ingest whose sessions are part of the mistake; restrict makes
+  logged COAs permanent, a dead end.
+- Ownership column naming: `created_by`, repo convention adopted verbatim
+  (folded into the D52 doc v2).
 
 ## Open items
 
-**Runnable now:**
-- Session-logging mechanic design pass — unblocked by the amended lexicon.
-  This is the entry point below.
+**Runnable now**
+- **The wiring slice** (the entry point below). Opens with a design pass,
+  not a build prompt.
 
-**Blocked:**
-- Sessions-table migration — blocked on the mechanic design pass answering
-  what the survey UI actually captures per interaction. Predicted shape
-  (stated as prediction in-session, unratified): sessions table with COA ref,
-  user scoping, raw answers, computed score, lexicon_version, four distinct
-  fact-class columns, revision/soft-delete columns per D47, RLS, no
-  UPDATE/DELETE-of-substance policies; plus a home for
-  never_again/average_score (no per-user-per-COA relation exists — verify
-  against shelf/card-detail implementation before assuming).
+**Blocked**
+- Nothing newly blocked.
 
-**Banked (see follow-ups.md for the durable copies):**
-- Persist original COA PDFs (save-time upload; zero buckets observed
-  2026-07-15).
-- Dark theme as default (art pass).
-- Onboarding scan-your-favorites; AI session summaries with the
-  personal-empirical guardrail (both in scoring-lexicon.md).
-- Resend domain verification; parser quality defects (brand sludge,
-  column-header bleed) — carried from prior sessions, unchanged.
+**Banked (prioritized)**
+1. Settled card covers its rung word (spike feel defect) — fix rides the
+   wiring slice.
+2. Delete-dialog copy grows "...and its logged sessions" (D53
+   consequence) — rides the wiring slice.
+3. Brand sludge ("Adult Use Powered by ...") is now user-facing on the
+   ladder chip — parser defect priority raised; still post-confirm-screen.
+4. Latest-entry-per-chain read view — scoring slice; **`security_invoker
+   = true` is non-negotiable** (views bypass RLS otherwise).
+5. Audit script touch-up: re-annotate item [14]; add a section printing
+   the handoff's own Start-here table so the architect audits against
+   literal predictions (gap now three sessions old).
+6. `session_id` index — when something reads by chain.
+7. Haptics on the ladder — requires `expo-haptics`, a native module, a
+   new EAS build. Batch with the next build-forcing dependency.
+8. Gear-icon confirmation on any non-dev build.
+9. Rich-path question placement (fit/context/co-alcohol surface) —
+   deferred by the mechanic doc until the mechanic survived; it survived,
+   so this unbanks whenever chips land.
+10. Resend domain verification (carried; sender still
+    `onboarding@resend.dev`).
 
 ## Working rhythm
 
-Stable method lives in CLAUDE.md and handoff-specs.md. One thing in flux,
-worth carrying: Gregg asked for one-piece-at-a-time pacing (dyslexia + ADHD)
-— short numbered pieces, one question or one command per message, explicit
-"you're here, N of M" framing. It worked well; the session ratified two
-durable decisions without a single derailment. Default to it.
+Stable method lives in `CLAUDE.md` and
+`documentation/process/handoff-specs.md`. In flux this session and worth
+keeping: architect-authored files ship with an embedded sha256 and the
+transcribe-and-hash contingency written into the prompt itself — inline
+delivery is now the assumed channel. Commit prompts read staged blobs
+(`git show :<path>`) for invariant checks, never the worktree.
 
 ## Entry point
 
-Open the session-logging mechanic design pass. First act after Phase A: whole
-reads of `documentation/design/shelf.md` and the slice-9 card-detail design
-doc (never seen by the architect — the launch-surface inference "logging
-starts from the card detail view" rests on them), then the amended
-`scoring-lexicon.md` end to end. The pass designs the drag-onto-word
-interaction (fallback named), and will force the sessions-table schema
-question mid-pass — the pg_tables/pg_policies observation from this session
-is already banked above, so the migration prompt's Current-state block can be
-written from observed values. Document the mechanic in its own design doc
-before any build prompt exists.
+**The wiring slice, opening with a design pass** — whole reads of
+`documentation/design/session-logging.md` and
+`documentation/design/session-entries-schema.md` first, then the drop
+insert contract: what the ladder inserts at drop (coa_id, session_id
+client-generated, overall word + score, lexicon_version 1, intent null),
+what a chip tap inserts (the chip row exists only after this slice), the
+honesty label's removal, the detail dialog's D53 sentence, and the failure
+mode when an insert fails mid-couch (the drop must not silently lie).
+That last question is new and undesigned — start there. Not a menu: the
+wiring slice is the move.
