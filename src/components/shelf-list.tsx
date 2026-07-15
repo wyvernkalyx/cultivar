@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Modal, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { CoaDetail } from '@/components/coa-detail';
+import { SessionLadder } from '@/components/session-ladder';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
@@ -68,6 +70,12 @@ export function ShelfList() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [detailCoaId, setDetailCoaId] = useState<string | null>(null);
+  // Session-logging spike (D49): the ladder is a second modal, chained
+  // through the pageSheet's onDismiss — presenting it while the sheet is
+  // mid-dismissal is the known iOS failure, and onDismiss fires only after
+  // dismissal completes. The pending row holds the handoff in between.
+  const [pendingLogCoa, setPendingLogCoa] = useState<ShelfCoa | null>(null);
+  const [loggingCoa, setLoggingCoa] = useState<ShelfCoa | null>(null);
 
   // Promise-callback form, not an async body: setState stays out of the
   // synchronous effect path (react-hooks/set-state-in-effect), matching the
@@ -158,7 +166,15 @@ export function ShelfList() {
         // iOS gesture dismissal of a pageSheet does not reliably route
         // through onRequestClose; wiring both keeps the state in sync, and
         // closing twice is idempotent.
-        onDismiss={() => setDetailCoaId(null)}>
+        onDismiss={() => {
+          setDetailCoaId(null);
+          // Chained presentation (D49): promote the pending logging row
+          // only after the sheet has fully dismissed.
+          if (pendingLogCoa !== null) {
+            setLoggingCoa(pendingLogCoa);
+            setPendingLogCoa(null);
+          }
+        }}>
         {detailCoaId !== null && (
           <CoaDetail
             key={detailCoaId}
@@ -168,7 +184,26 @@ export function ShelfList() {
               setDetailCoaId(null);
               load();
             }}
+            onLogSession={() => {
+              setPendingLogCoa(rows.find((row) => row.id === detailCoaId) ?? null);
+              setDetailCoaId(null);
+            }}
           />
+        )}
+      </Modal>
+      {/* The ladder spike (D50/D51): full-screen sibling modal; gestures
+          inside an RN Modal are inert without their own root view. Closing
+          returns to the shelf, not the detail sheet — accepted spike
+          behavior. */}
+      <Modal
+        visible={loggingCoa !== null}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setLoggingCoa(null)}>
+        {loggingCoa !== null && (
+          <GestureHandlerRootView style={styles.gestureRoot}>
+            <SessionLadder coa={loggingCoa} onClose={() => setLoggingCoa(null)} />
+          </GestureHandlerRootView>
         )}
       </Modal>
     </>
@@ -176,6 +211,9 @@ export function ShelfList() {
 }
 
 const styles = StyleSheet.create({
+  gestureRoot: {
+    flex: 1,
+  },
   list: {
     flex: 1,
     alignSelf: 'stretch',

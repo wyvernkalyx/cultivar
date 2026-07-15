@@ -96,10 +96,12 @@ export function CoaDetail({
   coaId,
   onClose,
   onDeleted,
+  onLogSession,
 }: {
   coaId: string;
   onClose: () => void;
   onDeleted: () => void;
+  onLogSession: () => void;
 }) {
   const theme = useTheme();
   const [coa, setCoa] = useState<CoaDetailRecord | null>(null);
@@ -246,6 +248,14 @@ export function CoaDetail({
               </View>
             </ScrollView>
 
+            {/* Log session (D49): launches the logging surface; the caller
+                owns the modal chaining. First in the footer — the most
+                common action does not sit under the destructive one. */}
+            <Pressable
+              onPress={onLogSession}
+              style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+              <ThemedText type="smallBold">Log session</ThemedText>
+            </Pressable>
             <Pressable
               onPress={() => confirmDelete(coa)}
               style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
