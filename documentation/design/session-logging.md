@@ -1,12 +1,13 @@
 # Session Logging — The Mechanic
 
-Status: mechanic pass ratified as leans (D49–D51); no implementation exists.
-Every decision below is ratified *as the lean* — the physical-iPhone gate
-settles what ships, per the standing ruling that reserved this pass
-(drag-card-onto-word primary, Daylio-style tap-and-settle the named
-fallback). North stars: `documentation/design/scoring-lexicon.md` (the
-skeleton this mechanic serves) and
-`documentation/design/product-metaphor.md`.
+Status: mechanic ratified (D49–D51) and device-gated — the drag beat
+tap-and-settle at the spike gate (`97b1b45`). Persistence contract
+ratified as leans (D54–D55, 2026-07-15); the physical-iPhone gate
+refines feel values, not the shape. North stars:
+`documentation/design/scoring-lexicon.md` (the skeleton this mechanic
+serves), `documentation/design/product-metaphor.md`, and
+`documentation/design/session-entries-schema.md` (the table the wiring
+slice writes).
 
 ## Purpose
 
@@ -37,7 +38,8 @@ Grounds:
 Presentation mechanism (stacked Modal vs. state swap inside the detail
 modal) is an implementation choice, not a design commitment — the
 implementer reports which was used and why. iOS stacked-modal behavior is
-the known risk to check.
+the known risk to check. (Spike outcome: a full-screen sibling modal,
+`presentationStyle="fullScreen"`, never nested inside the pageSheet.)
 
 ## D50 — Drop is the save
 
@@ -54,8 +56,13 @@ no "done" button and no confirm dialog, ever.
 Grounds:
 - Skeleton item 2 made physical: the mandatory field and the save are the
   same muscle motion. An impaired user who drops the card is done.
-- Crash-safety: no window exists between the drop and the save in which
-  backgrounding, a dead battery, or distraction loses the log.
+- Crash-safety — **corrected 2026-07-15.** The v1 sentence here claimed
+  "no window exists between the drop and the save." False: the save is a
+  network insert, and a window exists between release and the server's
+  confirmation. The v1 grounds were written as if the save were local
+  and instantaneous. What D50 actually guarantees: nothing *after* the
+  drop is required of the user. The window itself is made visible and
+  short by D54; crash-safety holds from confirmation, not from release.
 - Gesture honesty: the drag feels like the commit, and it is. A staged
   variant ("World B": drop settles, dismiss saves) makes the satisfying
   drop theater and the boring dismiss the truth.
@@ -65,6 +72,8 @@ Grounds:
   score in that second; revision rows are pennies at n≈10.
 
 World B is the named fallback if drop-equals-saved fails the gate.
+(The spike gate it survived tested feel; the wiring gate tests it with
+persistence live.)
 
 ## D51 — The geometry: a vertical ladder
 
@@ -96,15 +105,85 @@ Mechanics (provisional; the gate refines feel values, not the shape):
 
 ## The chip row (placement; content is D48's)
 
-After the drop, the intent chip row fades in beneath the landed card:
-"What was this for?" Single-select; the onboarding default chip renders
-first and biggest (D48); there is no skip affordance; dismissing without a
-tap stores intent as null (D48 — unanswered is not an answer). A chip tap
-is a revision of the saved session, not part of the save.
+After the drop is **confirmed** (D54), the intent chip row fades in
+beneath the landed card: "What was this for?" Single-select; the
+onboarding default chip renders first and biggest (D48); there is no skip
+affordance; dismissing without a tap stores intent as null (D48 —
+unanswered is not an answer). A chip tap is a revision of the saved
+session, not part of the save.
 
 Rich-path questions (fit, context, co-consumption) are **not placed in
 this pass** — their surface (same screen below the chips vs. a later
 detail edit) is banked until the mechanic survives the gate.
+
+## Persistence contract (D54–D55) — the wiring slice
+
+Ratified 2026-07-15. Inserts are direct client writes via `supabase-js`
+against the RLS surface designed in
+`documentation/design/session-entries-schema.md` — no Edge Function.
+Ingestion needed one because parsing runs server-side; this is a plain
+RLS-guarded table write.
+
+### D54 — Pending until confirmed; the chip row is the confirmation
+
+The drop is the **save attempt**. The UI never claims a success it has
+not observed.
+
+- Release fires the insert immediately. The card snaps to its rung in a
+  visually distinct **pending** state (translucent or equivalent — feel
+  is gate-tuned).
+- **The chip row fades in only on confirmed insert.** D50's "the chip
+  row appears after the save" becomes literal rather than theatrical:
+  the element already designed *is* the success indicator. No new UI is
+  invented for it.
+- On failure, the card animates back to the home zone, a plain inline
+  error renders ("Couldn't save — check your connection"), and retry is
+  simply re-dropping. No partial state, no toast over a fake success.
+- **Dismissal is disabled while an insert is in flight.** The silent-lie
+  window is dismiss-during-pending. In-flight is sub-second on a live
+  connection; a hung request fails visibly at a client timeout (~10s)
+  and dismissal re-enables. Backgrounding or app-kill mid-flight can
+  still lose the log — accepted and named; engineering it away means an
+  offline outbox, which lived-demand rejects at this scale.
+- **One in-flight insert at a time.** Chip tap, re-drag, and dismissal
+  are disabled while an insert is pending — a whole class of
+  snapshot-ordering races dies for free at invisible UX cost.
+- **Duplicate-on-retry is absorbed by the schema; no idempotency
+  machinery.** If a request times out client-side but landed
+  server-side, the retry inserts a near-identical snapshot into the
+  same chain and latest-entry-wins makes it a semantic no-op. Do not
+  add idempotency keys out of reflex — the append-only design is why
+  they are unnecessary.
+
+### D55 — Revision failures revert to last confirmed truth
+
+- Chip tap: the chip renders pending-selected; settles on confirm; on
+  failure reverts to unselected plus the inline error. The session
+  stays saved with `intent = null` throughout — honest, valid data
+  (D48); a failed chip tap loses nothing that was ever claimed.
+- Re-drag: same pending pattern; on failure the card returns to its
+  **prior confirmed rung**, never the home zone — the last confirmed
+  entry is the truth, and the UI lands on it.
+
+### The three insert payloads
+
+The client sends `created_by` **never** (`default auth.uid()` owns it)
+and does not send `deleted` on any of these paths (default false).
+`lexicon_version` is a client constant (1 today) living in `src/lib/`.
+
+- **Drop (entry 1):** `session_id` = client-generated uuid minted **at
+  drop time** (a home-zone cancel mints nothing); `coa_id` from the
+  card detail; `lexicon_version`; `overall_word` = the rung word as
+  displayed; `overall_score` = that word's hidden value;
+  `intent` / `fit` / `context` / `co_alcohol` omitted (null, per D48).
+- **Chip tap (revision):** full snapshot — same `session_id`,
+  word + score copied from the last confirmed entry, `intent` = the
+  chip's value.
+- **Re-drag (revision):** full snapshot — new word + score, `intent`
+  **carried forward** from the last confirmed entry. Full-snapshot
+  semantics mean a re-drag after a chip tap must not silently null the
+  intent; the client holds last-confirmed-entry state in memory, and
+  D54's one-in-flight rule keeps that state unambiguous.
 
 ## Slice plan
 
@@ -115,24 +194,39 @@ detail edit) is banked until the mechanic survives the gate.
    tap-and-settle, does snap feel right, is the home-zone cancel
    discoverable. The spike is committed product code (it builds and
    runs), but its save path is explicitly absent, not stubbed —
-   no fake success states.
+   no fake success states. **Shipped and gated: `97b1b45`; the drag
+   won.**
 2. **Schema** — sessions table derived from the lexicon skeleton
    (raw answers, computed score, `lexicon_version`, four fact-class
    fields, revision/soft-delete structure per D47, RLS). Gated on a
-   fresh pg_tables/pg_policies observation. Not designed here.
-3. **Wiring** — drop inserts, chip tap revises, detail view gains a
-   sessions read. Not designed here.
+   fresh pg_tables/pg_policies observation. Designed in
+   `session-entries-schema.md` (D52–D53). **Shipped, applied, and
+   gated on observed state: `1c93740`.**
+3. **Wiring** — drop inserts, chip tap revises (D54–D55 above); the
+   chip row lands (rendering per D48); the spike's honesty label is
+   removed; the COA delete-dialog copy grows "...and its logged
+   sessions" (D53 consequence); the settled-card-covers-rung-word
+   spike defect is fixed in passing. **The detail-view sessions read
+   is not in this slice** — moved to the scoring slice (amended
+   2026-07-15), where the latest-entry-per-chain view lives; nothing
+   in wiring needs a read, and the chip row's appearance is the
+   in-session evidence a save happened. Gate: UI-visible — the
+   physical iPhone, with persistence verified by a fresh
+   `session_entries` SELECT in the SQL editor.
 
 ## Non-goals (this pass)
 
-- Schema — no tables, columns, or migrations (slice 2 above derives them).
 - Rich-path question placement (banked above).
+- Any sessions read, view, or scoring — the scoring slice, against the
+  metaphor doc, with `security_invoker = true` non-negotiable.
 - Mood visual language, card shading, book placement UI — the art pass.
 - Onboarding survey and default-chip sourcing — banked slice; this doc
   only consumes D48's rendering rule.
-- Any change to `scoring-lexicon.md` or `product-metaphor.md`.
+- Any change to `scoring-lexicon.md`, `product-metaphor.md`, or
+  `session-entries-schema.md`.
 - Never Again — not a survey answer (skeleton item 6); it does not appear
   on this surface at all.
+- Offline outbox / retry queue — rejected by lived-demand; named in D54.
 
 ## Refinement doctrine
 
