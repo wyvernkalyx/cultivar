@@ -7,6 +7,7 @@ import { SessionLadder } from '@/components/session-ladder';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
+import { RUNGS } from '@/lib/lexicon';
 import { supabase } from '@/lib/supabase';
 
 // DB shape (D41): exactly the selected columns, snake_case, as the coas
@@ -40,11 +41,25 @@ function Total({ label, value }: { label: string; value: number | null }) {
 }
 
 // Neutral by construction (D41): every card is the same themed surface — no
-// mood, no color coding, no per-card visual variance. One interaction (D45):
-// tap opens the card detail, with no press feedback — the card stays
-// visually neutral (discipline 2). Long-press is retired; delete lives on
-// the detail view.
-function ShelfCard({ coa, onOpen }: { coa: ShelfCoa; onOpen: () => void }) {
+// mood, no color coding, no per-card visual variance. Scoped in the scoring
+// slice (D62/D63, documentation/design/scoring-read.md): the claim now holds
+// for untried cards only — a scored card renders its band word, looked up in
+// RUNGS by score (never a second word table), and an untried card renders
+// nothing in its place (D61: untried is absence, never a value). One
+// interaction (D45): tap opens the card detail, with no press feedback — the
+// card stays visually neutral (discipline 2). Long-press is retired; delete
+// lives on the detail view.
+function ShelfCard({
+  coa,
+  band,
+  onOpen,
+}: {
+  coa: ShelfCoa;
+  band: number | undefined;
+  onOpen: () => void;
+}) {
+  const bandWord =
+    band === undefined ? undefined : RUNGS.find((rung) => rung.score === band)?.word;
   return (
     <Pressable onPress={onOpen}>
       <ThemedView type="backgroundElement" style={styles.card}>
@@ -55,6 +70,7 @@ function ShelfCard({ coa, onOpen }: { coa: ShelfCoa; onOpen: () => void }) {
         <ThemedText type="small" themeColor="textSecondary">
           Added {new Date(coa.created_at).toLocaleDateString()}
         </ThemedText>
+        {bandWord !== undefined && <ThemedText type="smallBold">{bandWord}</ThemedText>}
         <View style={styles.totalsRow}>
           <Total label="THC" value={coa.total_thc} />
           <Total label="CBD" value={coa.total_cbd} />
@@ -67,6 +83,10 @@ function ShelfCard({ coa, onOpen }: { coa: ShelfCoa; onOpen: () => void }) {
 
 export function ShelfList() {
   const [rows, setRows] = useState<ShelfCoa[] | null>(null);
+  // Band per COA (D63): absence of a key IS the untried state — a COA with
+  // no live sessions has no row in coa_session_stats (D61), so it has no
+  // entry here and the card renders nothing in the band's place.
+  const [bands, setBands] = useState<Map<string, number>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [detailCoaId, setDetailCoaId] = useState<string | null>(null);
@@ -87,27 +107,50 @@ export function ShelfList() {
   // getSession().then() pattern on the home screen.
   const load = useCallback(
     () =>
-      supabase
-        .from('coas')
-        .select('id, strain, brand, lab, total_thc, total_cbd, total_terpenes, created_at')
-        .order('created_at', { ascending: false })
-        .then(({ data, error: queryError }) => {
-          if (queryError) {
-            setError(queryError.message);
-            return;
-          }
-          setError(null);
-          // The client is untyped (no generated DB types); this cast asserts
-          // the selected-columns shape. Runtime validation remains the
-          // accepted debt.
-          setRows(data as ShelfCoa[]);
-        }),
+      // Two queries, merged client-side by a coa_id Map (D63) — not an
+      // embedded join: PostgREST relationship inference across a two-level
+      // view is not a guarantee worth betting the shelf on.
+      Promise.all([
+        supabase
+          .from('coas')
+          .select('id, strain, brand, lab, total_thc, total_cbd, total_terpenes, created_at')
+          .order('created_at', { ascending: false }),
+        supabase.from('coa_session_stats').select('coa_id, band'),
+      ]).then(([coasResult, statsResult]) => {
+        // One error state: either query's failure surfaces through the
+        // existing path, no second banner.
+        const queryError = coasResult.error ?? statsResult.error;
+        if (queryError) {
+          setError(queryError.message);
+          return;
+        }
+        setError(null);
+        // The client is untyped (no generated DB types); these casts assert
+        // the selected-columns shapes. Runtime validation remains the
+        // accepted debt.
+        setRows(coasResult.data as ShelfCoa[]);
+        setBands(
+          new Map(
+            (statsResult.data as { coa_id: string; band: number }[]).map((stat) => [
+              stat.coa_id,
+              stat.band,
+            ])
+          )
+        );
+      }),
     []
   );
 
   useEffect(() => {
     load();
   }, [load]);
+
+  // Every ladder-close path refetches (D63): a session may have landed, and
+  // a stale band beside a fresh entry is the defect the refetch exists for.
+  const closeLadder = () => {
+    setLoggingCoa(null);
+    load();
+  };
 
   const refresh = async () => {
     setRefreshing(true);
@@ -149,7 +192,9 @@ export function ShelfList() {
         contentContainerStyle={styles.listContent}
         data={rows}
         keyExtractor={(coa) => coa.id}
-        renderItem={({ item }) => <ShelfCard coa={item} onOpen={() => setDetailCoaId(item.id)} />}
+        renderItem={({ item }) => (
+          <ShelfCard coa={item} band={bands.get(item.id)} onOpen={() => setDetailCoaId(item.id)} />
+        )}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
         ListEmptyComponent={
           <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
@@ -207,16 +252,12 @@ export function ShelfList() {
         onRequestClose={() => {
           // Inert while an insert is in flight (D54).
           if (!logBusy) {
-            setLoggingCoa(null);
+            closeLadder();
           }
         }}>
         {loggingCoa !== null && (
           <GestureHandlerRootView style={styles.gestureRoot}>
-            <SessionLadder
-              coa={loggingCoa}
-              onClose={() => setLoggingCoa(null)}
-              onBusyChange={setLogBusy}
-            />
+            <SessionLadder coa={loggingCoa} onClose={closeLadder} onBusyChange={setLogBusy} />
           </GestureHandlerRootView>
         )}
       </Modal>
