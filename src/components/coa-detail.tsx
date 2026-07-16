@@ -170,7 +170,7 @@ export function CoaDetail({
     ].join('\n');
     Alert.alert(
       'Delete COA?',
-      `${identity}\n\nDeletes this COA and all of its lab data (terpene, cannabinoid, and safety rows). This cannot be undone.`,
+      `${identity}\n\nDeletes this COA, all of its lab data (terpene, cannabinoid, and safety rows), and its logged sessions. This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete', style: 'destructive', onPress: () => deleteCoa() },
