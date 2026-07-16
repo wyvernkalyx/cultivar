@@ -76,7 +76,9 @@ function Rung({
  * truth (D55). The intent chip row fades in only on confirmed insert —
  * it IS the success indicator (D54): seven uniform chips (D56); a
  * different chip revises with word + score carried forward, re-tapping
- * the confirmed chip is a no-op (D57).
+ * the confirmed chip is a no-op (D57). The vacated home-zone box echoes
+ * the settled answer word in large type (D58) — echo on settle only,
+ * never live tracking during the drag.
  */
 export function SessionLadder({
   coa,
@@ -120,6 +122,13 @@ export function SessionLadder({
   // selection falls back to lastConfirmed.intent by derivation, which is
   // exactly D55's revert.
   const [pendingIntent, setPendingIntent] = useState<string | null>(null);
+  // The answer echo (D58): the settled rung's word, displayed large in
+  // the vacated home-zone box. Set on every rung settle; cleared when
+  // the card returns home (cancel, or a failed FIRST drop); set to the
+  // last confirmed word on a failed revision, because that is where the
+  // card lands (D55). Chip taps never touch it, and it never tracks the
+  // drag live — the swell is the mid-drag signal (D58, ratified).
+  const [echoWord, setEchoWord] = useState<string | null>(null);
 
   // Card offset from its home-zone resting position.
   const tx = useSharedValue(0);
@@ -155,6 +164,9 @@ export function SessionLadder({
   };
 
   const clearSaveError = () => setSaveError(null);
+  // Home-zone release means no settled answer, so no echo (D58). A
+  // runOnJS target: the releasing path is the gesture's worklet.
+  const clearEcho = () => setEchoWord(null);
 
   // The save attempt (D54): every path is the same insert — same chain,
   // full snapshot (D52). A drop sends its rung with the confirmed intent
@@ -198,14 +210,19 @@ export function SessionLadder({
       }
       if (lastConfirmed !== null) {
         // D55: back to the last CONFIRMED rung, never the home zone —
-        // the last confirmed entry is the truth, and the card lands on it.
+        // the last confirmed entry is the truth, and the card lands on
+        // it. The echo names that rung too (D58): the confirmed word,
+        // sharing the box with the error.
         activeRung.value = lastConfirmed.index;
+        setEchoWord(lastConfirmed.word);
         tx.value = withSpring(0, SPRING);
         ty.value = withSpring(rungOffset(lastConfirmed.index), SPRING);
       } else {
         // Nothing confirmed yet: back to the home zone (D54). Retry is
-        // simply re-dropping.
+        // simply re-dropping. No answer, no echo (D58) — the error has
+        // the box to itself.
         activeRung.value = -1;
+        setEchoWord(null);
         tx.value = withSpring(0, SPRING);
         ty.value = withSpring(0, SPRING);
       }
@@ -239,6 +256,10 @@ export function SessionLadder({
   // null it; entry 1 sends null (D48 — unanswered is not an answer).
   const settleOnRung = (index: number) => {
     const rung = RUNGS[index];
+    // Echo on settle (D58): the box shows the settling word at once,
+    // pending-translucent until the insert confirms — same condition
+    // as the card's pending visual.
+    setEchoWord(rung.word);
     insertEntry(
       {
         index,
@@ -301,8 +322,11 @@ export function SessionLadder({
         tx.value = withSpring(0, SPRING);
         runOnJS(settleOnRung)(activeRung.value);
       } else {
+        // Home-zone release: the cancel (D51). The echo clears with it
+        // (D58) — the box only ever names a rung the card sits on.
         tx.value = withSpring(0, SPRING);
         ty.value = withSpring(0, SPRING);
+        runOnJS(clearEcho)();
       }
     });
 
@@ -341,14 +365,30 @@ export function SessionLadder({
 
         {/* The home zone: the card's resting shelf and the cancel — the
             card renders above the rungs because this zone is the later
-            sibling. The vacated slot carries the inline save error when
-            an insert fails (D54). */}
+            sibling. The vacated box carries the answer echo (D58) and
+            the inline save error (D54), stacked when both are visible;
+            neither intercepts the card's gesture. */}
         <View
           style={[styles.homeZone, { backgroundColor: theme.backgroundSelected }]}
           onLayout={onHomeLayout}>
-          {saveError !== null && (
+          {(echoWord !== null || saveError !== null) && (
             <View style={styles.notice} pointerEvents="none">
-              <ThemedText type="small">{saveError}</ThemedText>
+              {echoWord !== null && (
+                <ThemedText
+                  type="title"
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  style={[
+                    styles.echoWord,
+                    // Mirrors the card's pending translucency exactly
+                    // (D58): same condition, same style — a DROP insert
+                    // on the wire, solid on confirmation.
+                    inFlight && pendingIntent === null && styles.cardPending,
+                  ]}>
+                  {echoWord.toUpperCase()}
+                </ThemedText>
+              )}
+              {saveError !== null && <ThemedText type="small">{saveError}</ThemedText>}
             </View>
           )}
           <GestureDetector gesture={pan}>
@@ -463,6 +503,11 @@ const styles = StyleSheet.create({
     left: 0,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: Spacing.half,
+  },
+  echoWord: {
+    maxWidth: '100%',
+    paddingHorizontal: Spacing.three,
   },
   cardChip: {
     alignItems: 'center',
