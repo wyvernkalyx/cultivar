@@ -15,7 +15,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { LEXICON_VERSION, RUNGS } from '@/lib/lexicon';
+import { INTENTS, LEXICON_VERSION, RUNGS } from '@/lib/lexicon';
 import { supabase } from '@/lib/supabase';
 
 // Rung order is the lexicon's (D51): up = better, best word at the top,
@@ -68,12 +68,15 @@ function Rung({
 }
 
 /**
- * The session-logging surface (D49-D51 mechanic, D54-D55 persistence): the
- * vertical ladder. A drop on a rung is the save attempt — it inserts a
- * session entry immediately and the card renders pending until the insert
- * confirms (D54). A re-drag inserts a revision row into the same chain
- * (D52); a failed revision reverts to the last confirmed rung (D55). No
- * chip row yet — that slice follows this one.
+ * The session-logging surface (D49-D51 mechanic, D54-D57 persistence and
+ * chip row): the vertical ladder. A drop on a rung is the save attempt —
+ * it inserts a session entry immediately and the card renders pending
+ * until the insert confirms (D54). A re-drag inserts a revision row into
+ * the same chain (D52); a failed revision reverts to the last confirmed
+ * truth (D55). The intent chip row fades in only on confirmed insert —
+ * it IS the success indicator (D54): seven uniform chips (D56); a
+ * different chip revises with word + score carried forward, re-tapping
+ * the confirmed chip is a no-op (D57).
  */
 export function SessionLadder({
   coa,
@@ -103,13 +106,20 @@ export function SessionLadder({
   // inserts, so the captured value is never stale.
   const [sessionId, setSessionId] = useState<string | null>(null);
   // Last confirmed entry (D55): the revert target when a revision fails,
-  // and the snapshot source for the chip-row slice. State for the same
-  // reason as sessionId.
+  // and the snapshot a chip tap copies word + score from (D57). Its
+  // intent is null until a chip tap confirms (entry 1 sends none, D48).
+  // State for the same reason as sessionId.
   const [lastConfirmed, setLastConfirmed] = useState<{
     index: number;
     word: string;
     score: number;
+    intent: string | null;
   } | null>(null);
+  // The chip whose revision insert is on the wire (D54): renders
+  // pending-selected. Cleared on resolution either way — on failure the
+  // selection falls back to lastConfirmed.intent by derivation, which is
+  // exactly D55's revert.
+  const [pendingIntent, setPendingIntent] = useState<string | null>(null);
 
   // Card offset from its home-zone resting position.
   const tx = useSharedValue(0);
@@ -146,16 +156,24 @@ export function SessionLadder({
 
   const clearSaveError = () => setSaveError(null);
 
-  // The save attempt (D54): fired on every rung settle. Entry 1 and
-  // revisions are the same insert — same chain, full snapshot (D52).
-  const insertEntry = (index: number) => {
-    const rung = RUNGS[index];
+  // The save attempt (D54): every path is the same insert — same chain,
+  // full snapshot (D52). A drop sends its rung with the confirmed intent
+  // carried forward; a chip tap sends the confirmed word + score with the
+  // tapped chip (D57). Only a failed DROP moves the card (D55) — a failed
+  // chip tap reverts selection only.
+  const insertEntry = (
+    snapshot: { index: number; word: string; score: number; intent: string | null },
+    source: 'drop' | 'chip'
+  ) => {
     const chainId = sessionId ?? uuid.v4();
     if (sessionId === null) {
       setSessionId(chainId);
     }
     setSaveError(null);
     setInFlight(true);
+    if (source === 'chip') {
+      setPendingIntent(snapshot.intent);
+    }
     onBusyChange(true);
 
     // Hermes has no AbortSignal.timeout; compose abort from a timer.
@@ -165,12 +183,19 @@ export function SessionLadder({
     const finish = (failed: boolean) => {
       clearTimeout(timer);
       setInFlight(false);
+      setPendingIntent(null);
       onBusyChange(false);
       if (!failed) {
-        setLastConfirmed({ index, word: rung.word, score: rung.score });
+        setLastConfirmed(snapshot);
         return;
       }
       setSaveError("Couldn't save — check your connection.");
+      if (source === 'chip') {
+        // A failed chip tap never moves the card (D55): clearing the
+        // pending chip already reverted the selection to the last
+        // confirmed intent.
+        return;
+      }
       if (lastConfirmed !== null) {
         // D55: back to the last CONFIRMED rung, never the home zone —
         // the last confirmed entry is the truth, and the card lands on it.
@@ -186,16 +211,18 @@ export function SessionLadder({
       }
     };
 
-    // created_by and deleted are server defaults, never sent; the
-    // fact-class fields stay unsent (null, D48) until the chip row lands.
+    // created_by and deleted are server defaults, never sent; fit /
+    // context / co_alcohol stay unsent (null, D48) — intent is the only
+    // fact-class field this surface writes.
     supabase
       .from('session_entries')
       .insert({
         session_id: chainId,
         coa_id: coa.id,
         lexicon_version: LEXICON_VERSION,
-        overall_word: rung.word,
-        overall_score: rung.score,
+        overall_word: snapshot.word,
+        overall_score: snapshot.score,
+        intent: snapshot.intent,
       })
       .abortSignal(controller.signal)
       .then(
@@ -205,6 +232,40 @@ export function SessionLadder({
         // in-flight guards always release regardless.
         () => finish(true)
       );
+  };
+
+  // Rung settle (drop or re-drag): the intent is carried forward from the
+  // last confirmed entry — a re-drag after a chip tap must not silently
+  // null it; entry 1 sends null (D48 — unanswered is not an answer).
+  const settleOnRung = (index: number) => {
+    const rung = RUNGS[index];
+    insertEntry(
+      {
+        index,
+        word: rung.word,
+        score: rung.score,
+        intent: lastConfirmed === null ? null : lastConfirmed.intent,
+      },
+      'drop'
+    );
+  };
+
+  // Chip tap (D57): a revision insert copying word + score from the last
+  // confirmed entry. Re-tapping the confirmed chip is a no-op — an
+  // identical row carries zero information.
+  const tapChip = (chip: string) => {
+    if (lastConfirmed === null || chip === lastConfirmed.intent) {
+      return;
+    }
+    insertEntry(
+      {
+        index: lastConfirmed.index,
+        word: lastConfirmed.word,
+        score: lastConfirmed.score,
+        intent: chip,
+      },
+      'chip'
+    );
   };
 
   const pan = Gesture.Pan()
@@ -238,7 +299,7 @@ export function SessionLadder({
         // drop is the save attempt (D50/D54): the insert fires now.
         ty.value = withSpring(rungOffset(activeRung.value), SPRING);
         tx.value = withSpring(0, SPRING);
-        runOnJS(insertEntry)(activeRung.value);
+        runOnJS(settleOnRung)(activeRung.value);
       } else {
         tx.value = withSpring(0, SPRING);
         ty.value = withSpring(0, SPRING);
@@ -255,6 +316,19 @@ export function SessionLadder({
     }
     return { transform: [{ translateX: tx.value }, { translateY: ty.value + pull }] };
   });
+
+  // The chip row fades in only on confirmed insert (D54) — it IS the
+  // success indicator. It stays mounted, opacity-hidden, so its
+  // appearance never reflows the rung geometry the settled card is
+  // parked against.
+  const chipRowStyle = useAnimatedStyle(() => ({
+    opacity: withTiming(lastConfirmed !== null ? 1 : 0, { duration: 200 }),
+  }));
+
+  // Single-select (D48): the pending chip while one is on the wire,
+  // the last confirmed intent otherwise — so a failed tap reverts by
+  // derivation (D55).
+  const selectedIntent = pendingIntent ?? (lastConfirmed === null ? null : lastConfirmed.intent);
 
   return (
     <ThemedView style={styles.container}>
@@ -282,10 +356,11 @@ export function SessionLadder({
               style={[
                 styles.cardChip,
                 { backgroundColor: theme.backgroundElement },
-                // Pending until confirmed (D54): translucent while the
-                // insert is on the wire, solid on confirmation. Feel is
-                // gate-tuned.
-                inFlight && styles.cardPending,
+                // Pending until confirmed (D54): translucent while a
+                // DROP insert is on the wire (a chip revision's pending
+                // visual is the chip's, not the card's), solid on
+                // confirmation. Feel is gate-tuned.
+                inFlight && pendingIntent === null && styles.cardPending,
                 cardStyle,
               ]}>
               <ThemedText type="smallBold">{coa.strain}</ThemedText>
@@ -295,6 +370,50 @@ export function SessionLadder({
             </Animated.View>
           </GestureDetector>
         </View>
+
+        {/* The intent chip row (D56): seven uniform chips, seed-list
+            order, none promoted — no default exists until onboarding
+            ships, and faking one would encode a choice the user never
+            made. A fixed layout sibling below the home zone; hidden by
+            opacity, so the ladder's geometry is identical before and
+            after it appears. */}
+        <Animated.View
+          style={[styles.chipSection, chipRowStyle]}
+          pointerEvents={lastConfirmed !== null ? 'auto' : 'none'}>
+          <ThemedText type="small" themeColor="textSecondary" style={styles.chipQuestion}>
+            What was this for?
+          </ThemedText>
+          <View style={styles.chipRow}>
+            {INTENTS.map((chip) => {
+              // Selected = full inversion (text token as fill, background
+              // token as label): the strongest contrast the existing
+              // tokens offer. backgroundSelected vs backgroundElement is
+              // imperceptible at arm's length in dark mode (gate
+              // finding). Same dimensions in every state (D56: uniform,
+              // none promoted).
+              const selected = chip === selectedIntent;
+              return (
+                <Pressable
+                  key={chip}
+                  // Disabled while any insert is on the wire (D54).
+                  disabled={inFlight}
+                  onPress={() => tapChip(chip)}
+                  style={[
+                    styles.chip,
+                    { backgroundColor: selected ? theme.text : theme.backgroundElement },
+                    // Pending-selected while this chip's revision is on
+                    // the wire (D54): the selected treatment at the
+                    // card's pending opacity; settles on confirm.
+                    chip === pendingIntent && styles.chipPending,
+                  ]}>
+                  <ThemedText type="small" style={selected ? { color: theme.background } : undefined}>
+                    {chip}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Animated.View>
 
         {/* Dismissal is disabled while an insert is in flight (D54). */}
         <Pressable
@@ -354,6 +473,26 @@ const styles = StyleSheet.create({
     minWidth: 180,
   },
   cardPending: {
+    opacity: 0.5,
+  },
+  chipSection: {
+    gap: Spacing.one,
+  },
+  chipQuestion: {
+    textAlign: 'center',
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: Spacing.one,
+  },
+  chip: {
+    paddingHorizontal: Spacing.two,
+    paddingVertical: Spacing.one,
+    borderRadius: Spacing.four,
+  },
+  chipPending: {
     opacity: 0.5,
   },
   button: {

@@ -16,3 +16,17 @@ export const RUNGS = [
   { word: 'No', score: 2 },
   { word: 'I hated it', score: 1 },
 ] as const;
+
+// The intent vocabulary, v1 seed list in authored order (scoring-lexicon
+// doc; D56): rendered as seven uniform chips until onboarding ships a
+// default. Aimless-on-purpose is a first-class answer, never a skip; an
+// unanswered chip row stores intent as null (D48).
+export const INTENTS = [
+  'sleep',
+  'exercise',
+  'study/work',
+  'create',
+  'sex',
+  'socialize',
+  'just because',
+] as const;
