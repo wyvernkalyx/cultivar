@@ -2,8 +2,8 @@
 
 Status: mechanic ratified (D49–D51) and device-gated — the drag beat
 tap-and-settle at the spike gate (`97b1b45`). Persistence contract
-ratified as leans (D54–D55, 2026-07-15), chip-row rendering and tap
-semantics ratified (D56–D57, 2026-07-15), and the answer echo ratified
+ratified as leans (D54–D55, 2026-07-16), chip-row rendering and tap
+semantics ratified (D56–D57, 2026-07-16), and the answer echo ratified
 (D58, 2026-07-16); the physical-iPhone gate refines feel values, not
 the shape. North stars:
 `documentation/design/scoring-lexicon.md` (the skeleton this mechanic
@@ -58,7 +58,7 @@ no "done" button and no confirm dialog, ever.
 Grounds:
 - Skeleton item 2 made physical: the mandatory field and the save are the
   same muscle motion. An impaired user who drops the card is done.
-- Crash-safety — **corrected 2026-07-15.** The v1 sentence here claimed
+- Crash-safety — **corrected 2026-07-16.** The v1 sentence here claimed
   "no window exists between the drop and the save." False: the save is a
   network insert, and a window exists between release and the server's
   confirmation. The v1 grounds were written as if the save were local
@@ -171,7 +171,7 @@ detail edit) is banked until the mechanic survives the gate.
 
 ## Persistence contract (D54–D55) — the wiring slice
 
-Ratified 2026-07-15. Inserts are direct client writes via `supabase-js`
+Ratified 2026-07-16. Inserts are direct client writes via `supabase-js`
 against the RLS surface designed in
 `documentation/design/session-entries-schema.md` — no Edge Function.
 Ingestion needed one because parsing runs server-side; this is a plain

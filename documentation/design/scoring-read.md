@@ -1,7 +1,8 @@
 # Scoring Read — Views, Bands, and the Shelf's First Consumption of Sessions
 
-Status: design ratified as leans (D59–D62) on 2026-07-16; no implementation
-exists. The operator ratified with an explicit revision expectation ("I
+Status: design ratified as leans (D59–D63) on 2026-07-16; the view
+migration is implemented, applied, and gated on observed catalog state;
+the shelf wiring is not yet implemented. The operator ratified with an explicit revision expectation ("I
 really need to see what gets made and then edit") — every display decision
 below is v1 and gate-revisable; the view *semantics* (D59's latest-then-
 filter order, D61's absence-not-value) are the durable part, because
@@ -136,6 +137,26 @@ word is a stand-in until the art pass replaces it with the mood visual
 (five moods + neutral, metaphor doc). `session_count` is computed and
 exposed by the view but **not rendered** in v1 — whether the card shows
 "n sessions" is an art-pass question, banked.
+
+## D63 — The shelf wiring contract
+
+- **Two queries, merged client-side by a `coa_id` Map.** The existing
+  `coas` select is unchanged; a second select reads `coa_id, band` from
+  `coa_session_stats`. Not an embedded join: PostgREST relationship
+  inference across a two-level view is not a guarantee worth betting the
+  shelf on, and absence-of-key IS the untried state — the merge carries
+  D61 by shape. Only `band` is consumed; `session_count` and
+  `average_score` stay in the view for future consumers, unrendered
+  (D62).
+- **The shelf refetches when the ladder closes.** Found by blob read
+  during this pass: ladder close today only nulls the modal state —
+  harmless while nothing session-shaped renders on the shelf, a stale
+  band beside a fresh entry once it does.
+- **Placement, v1:** one `smallBold` band-word line on the card, above
+  the totals row. Gate-settles-it; the art pass owns the real treatment.
+- **shelf.md's "neutral by construction" is superseded for scored cards
+  only.** Untried cards keep it whole — that is D61 rendering, not a
+  leftover (D61).
 
 ## The truncate ruling (operational; no D-number)
 

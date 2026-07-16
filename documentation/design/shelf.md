@@ -40,6 +40,9 @@ landing surface.
 - Neutral by construction: zero sessions exist, so no mood, no color coding,
   no per-card visual variance (discipline 2: untried is neutral, never
   negative).
+  (Superseded for scored cards in the scoring slice, D62–D63 — see
+  documentation/design/scoring-read.md. Untried cards remain neutral by
+  construction: that is D61 rendering, not a leftover.)
 - Order: `created_at` descending ONLY. Chemistry never orders the shelf
   (discipline 1, extended from coloring to ordering).
 - Cards are non-interactive this slice. (Superseded in slice 8: cards gain
@@ -68,6 +71,9 @@ landing surface.
 ## Non-goals
 
 - Mood, books, bands, Never Again — blocked on the scoring lexicon.
+  (Bands unblocked and landing in the scoring slice — see
+  documentation/design/scoring-read.md. Mood visuals and Never Again
+  remain banked.)
 - In stock — blocked on schema (no possession state).
 - Card detail view (slice 9 — renumbered; slice 8 is delete-from-shelf,
   designed below).
