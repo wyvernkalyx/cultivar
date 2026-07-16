@@ -2,7 +2,8 @@
 
 Status: mechanic ratified (D49–D51) and device-gated — the drag beat
 tap-and-settle at the spike gate (`97b1b45`). Persistence contract
-ratified as leans (D54–D55, 2026-07-15); the physical-iPhone gate
+ratified as leans (D54–D55, 2026-07-15) and chip-row rendering and tap
+semantics ratified (D56–D57, 2026-07-15); the physical-iPhone gate
 refines feel values, not the shape. North stars:
 `documentation/design/scoring-lexicon.md` (the skeleton this mechanic
 serves), `documentation/design/product-metaphor.md`, and
@@ -103,14 +104,39 @@ Mechanics (provisional; the gate refines feel values, not the shape):
   swell scale, spring constants, and haptics are gate-tuned, not
   designed here.
 
-## The chip row (placement; content is D48's)
+## The chip row (D48 content; D56–D57 rendering and semantics)
 
 After the drop is **confirmed** (D54), the intent chip row fades in
-beneath the landed card: "What was this for?" Single-select; the
-onboarding default chip renders first and biggest (D48); there is no skip
-affordance; dismissing without a tap stores intent as null (D48 —
+beneath the landed card: "What was this for?" Single-select; there is no
+skip affordance; dismissing without a tap stores intent as null (D48 —
 unanswered is not an answer). A chip tap is a revision of the saved
 session, not part of the save.
+
+### D56 — Rendering absent onboarding
+
+Onboarding is banked and no default chip exists, so "the onboarding
+default renders first and biggest" (D48) is unimplementable today and
+must not be faked — promoting any chip encodes a choice the user never
+made, against D48's own spirit. Until onboarding ships: **seven uniform
+chips in the seed-list order as authored** — sleep, exercise,
+study/work, create, sex, socialize, just because (the
+scoring-lexicon.md v1 seed list). The chip strings live in
+`src/lib/lexicon.ts` as an `INTENTS` array beside `RUNGS` — one source,
+never two. The first-and-biggest rule activates when onboarding ships.
+User-extensibility of the intent vocabulary is not this slice (it needs
+per-user storage that does not exist); banked.
+
+### D57 — Tap semantics
+
+- Tapping a chip when none is confirmed: a revision insert — word +
+  score carried from the last confirmed entry, `intent` = the chip.
+- Tapping a **different** chip after one is confirmed: another revision
+  insert, same carry rule — append-only, exactly like re-drags.
+- Re-tapping the **already-confirmed** chip: a no-op. An identical row
+  carries zero information.
+- Deselecting back to null is **not designed** and is not improvised
+  here; banked. If lived use wants "never mind, no intent," that is its
+  own pass.
 
 Rich-path questions (fit, context, co-consumption) are **not placed in
 this pass** — their surface (same screen below the chips vs. a later
@@ -158,9 +184,12 @@ not observed.
 ### D55 — Revision failures revert to last confirmed truth
 
 - Chip tap: the chip renders pending-selected; settles on confirm; on
-  failure reverts to unselected plus the inline error. The session
-  stays saved with `intent = null` throughout — honest, valid data
-  (D48); a failed chip tap loses nothing that was ever claimed.
+  failure reverts to the **last confirmed intent**, plus the inline
+  error — unselected when no chip was ever confirmed (the first-tap
+  case, where the chain's confirmed intent is null), the prior chip
+  otherwise. That is D55's own rule applied, not a new one. The session
+  stays saved with its last confirmed intent throughout; a failed chip
+  tap loses nothing that was ever claimed.
 - Re-drag: same pending pattern; on failure the card returns to its
   **prior confirmed rung**, never the home zone — the last confirmed
   entry is the truth, and the UI lands on it.
