@@ -76,6 +76,11 @@ export function ShelfList() {
   // dismissal completes. The pending row holds the handoff in between.
   const [pendingLogCoa, setPendingLogCoa] = useState<ShelfCoa | null>(null);
   const [loggingCoa, setLoggingCoa] = useState<ShelfCoa | null>(null);
+  // Reported by the ladder while a session-entry insert is in flight
+  // (D54): the modal's onRequestClose is inert until the insert resolves.
+  // The ladder owns the in-flight lifecycle; this is the guard's line of
+  // sight into it.
+  const [logBusy, setLogBusy] = useState(false);
 
   // Promise-callback form, not an async body: setState stays out of the
   // synchronous effect path (react-hooks/set-state-in-effect), matching the
@@ -191,18 +196,27 @@ export function ShelfList() {
           />
         )}
       </Modal>
-      {/* The ladder spike (D50/D51): full-screen sibling modal; gestures
-          inside an RN Modal are inert without their own root view. Closing
-          returns to the shelf, not the detail sheet — accepted spike
-          behavior. */}
+      {/* The ladder (D50/D51): full-screen sibling modal; gestures inside
+          an RN Modal are inert without their own root view. Closing
+          returns to the shelf, not the detail sheet — accepted behavior
+          from the spike gate. */}
       <Modal
         visible={loggingCoa !== null}
         animationType="slide"
         presentationStyle="fullScreen"
-        onRequestClose={() => setLoggingCoa(null)}>
+        onRequestClose={() => {
+          // Inert while an insert is in flight (D54).
+          if (!logBusy) {
+            setLoggingCoa(null);
+          }
+        }}>
         {loggingCoa !== null && (
           <GestureHandlerRootView style={styles.gestureRoot}>
-            <SessionLadder coa={loggingCoa} onClose={() => setLoggingCoa(null)} />
+            <SessionLadder
+              coa={loggingCoa}
+              onClose={() => setLoggingCoa(null)}
+              onBusyChange={setLogBusy}
+            />
           </GestureHandlerRootView>
         )}
       </Modal>

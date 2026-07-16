@@ -1,3 +1,4 @@
+import { uuid } from 'expo-modules-core';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -14,12 +15,13 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { LEXICON_VERSION, RUNGS } from '@/lib/lexicon';
+import { supabase } from '@/lib/supabase';
 
-// The overall scale, exact strings from the scoring lexicon (D46). Rung
-// order is fixed by the metaphor (D51): up = better, the shelf rehearsed —
-// best word at the top, "Meh" at dead center.
-const RUNG_WORDS = ['I loved it', 'Yes', 'Meh', 'No', 'I hated it'] as const;
-const RUNG_COUNT = RUNG_WORDS.length;
+// Rung order is the lexicon's (D51): up = better, best word at the top,
+// "Meh" at dead center. Words and scores resolve through the one source.
+const RUNG_WORDS = RUNGS.map((rung) => rung.word);
+const RUNG_COUNT = RUNGS.length;
 
 // Feel values (provisional by design — the physical-iPhone gate tunes
 // these, not this file): how hard the card magnetizes toward the active
@@ -28,8 +30,13 @@ const MAGNET_PULL = 0.35;
 const SWELL_SCALE = 1.4;
 const SPRING = { damping: 18, stiffness: 180 };
 
-// The chip renders the row it logs against; the spike needs identity only.
+// ~10s client abort (D54): a hung insert fails visibly instead of holding
+// the surface's dismissal guard forever.
+const INSERT_TIMEOUT_MS = 10000;
+
+// The card chip renders identity; the insert needs the id (coa_id).
 type LadderCoa = {
+  id: string;
   strain: string | null;
   brand: string | null;
 };
@@ -61,16 +68,48 @@ function Rung({
 }
 
 /**
- * The session-logging spike (slice 1 of the session-logging doc, D50/D51):
- * the vertical ladder, live for the drag-vs-tap gate. Persists nothing by
- * design — there is no save path, absent, not stubbed — and the surface
- * says so plainly on every settle. No chip row, no intent: later slices.
+ * The session-logging surface (D49-D51 mechanic, D54-D55 persistence): the
+ * vertical ladder. A drop on a rung is the save attempt — it inserts a
+ * session entry immediately and the card renders pending until the insert
+ * confirms (D54). A re-drag inserts a revision row into the same chain
+ * (D52); a failed revision reverts to the last confirmed rung (D55). No
+ * chip row yet — that slice follows this one.
  */
-export function SessionLadder({ coa, onClose }: { coa: LadderCoa; onClose: () => void }) {
+export function SessionLadder({
+  coa,
+  onClose,
+  onBusyChange,
+}: {
+  coa: LadderCoa;
+  onClose: () => void;
+  onBusyChange: (busy: boolean) => void;
+}) {
   const theme = useTheme();
-  // The honesty label, not a success toast: shown on settle, cleared when
-  // the card returns home.
-  const [settled, setSettled] = useState(false);
+  // One in-flight insert at a time (D54): drives the pending visual and
+  // disables new drags and both dismissal paths — the Close button here,
+  // onRequestClose in the owner via onBusyChange.
+  const [inFlight, setInFlight] = useState(false);
+  // Plain inline error (D54), rendered in the home-zone slot the spike's
+  // honesty label occupied; cleared on the next drag start.
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // The chain key (D52): minted lazily at the first drop of this
+  // presentation and held for its lifetime. A failed insert does NOT
+  // discard it — a retry lands in the same chain, which is what makes
+  // D54's duplicate-on-retry absorption true. A home-zone cancel before
+  // any drop mints nothing. State, not a ref: the gesture closures that
+  // reach it are recreated every render, and react-hooks/refs bars ref
+  // reads inside them; one-in-flight (D54) guarantees a re-render between
+  // inserts, so the captured value is never stale.
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  // Last confirmed entry (D55): the revert target when a revision fails,
+  // and the snapshot source for the chip-row slice. State for the same
+  // reason as sessionId.
+  const [lastConfirmed, setLastConfirmed] = useState<{
+    index: number;
+    word: string;
+    score: number;
+  } | null>(null);
 
   // Card offset from its home-zone resting position.
   const tx = useSharedValue(0);
@@ -97,15 +136,86 @@ export function SessionLadder({ coa, onClose }: { coa: LadderCoa; onClose: () =>
     restCenterY.value = event.nativeEvent.layout.y + event.nativeEvent.layout.height / 2;
   };
 
-  const showNotice = () => setSettled(true);
-  const clearNotice = () => setSettled(false);
+  // Rung index -> card translation offset, shared by the worklet settle
+  // path and the JS-side failure revert (same math, one source).
+  const rungOffset = (index: number) => {
+    'worklet';
+    const rungHeight = rungRegionHeight.value / RUNG_COUNT;
+    return rungTop.value + (index + 0.5) * rungHeight - restCenterY.value;
+  };
+
+  const clearSaveError = () => setSaveError(null);
+
+  // The save attempt (D54): fired on every rung settle. Entry 1 and
+  // revisions are the same insert — same chain, full snapshot (D52).
+  const insertEntry = (index: number) => {
+    const rung = RUNGS[index];
+    const chainId = sessionId ?? uuid.v4();
+    if (sessionId === null) {
+      setSessionId(chainId);
+    }
+    setSaveError(null);
+    setInFlight(true);
+    onBusyChange(true);
+
+    // Hermes has no AbortSignal.timeout; compose abort from a timer.
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), INSERT_TIMEOUT_MS);
+
+    const finish = (failed: boolean) => {
+      clearTimeout(timer);
+      setInFlight(false);
+      onBusyChange(false);
+      if (!failed) {
+        setLastConfirmed({ index, word: rung.word, score: rung.score });
+        return;
+      }
+      setSaveError("Couldn't save — check your connection.");
+      if (lastConfirmed !== null) {
+        // D55: back to the last CONFIRMED rung, never the home zone —
+        // the last confirmed entry is the truth, and the card lands on it.
+        activeRung.value = lastConfirmed.index;
+        tx.value = withSpring(0, SPRING);
+        ty.value = withSpring(rungOffset(lastConfirmed.index), SPRING);
+      } else {
+        // Nothing confirmed yet: back to the home zone (D54). Retry is
+        // simply re-dropping.
+        activeRung.value = -1;
+        tx.value = withSpring(0, SPRING);
+        ty.value = withSpring(0, SPRING);
+      }
+    };
+
+    // created_by and deleted are server defaults, never sent; the
+    // fact-class fields stay unsent (null, D48) until the chip row lands.
+    supabase
+      .from('session_entries')
+      .insert({
+        session_id: chainId,
+        coa_id: coa.id,
+        lexicon_version: LEXICON_VERSION,
+        overall_word: rung.word,
+        overall_score: rung.score,
+      })
+      .abortSignal(controller.signal)
+      .then(
+        ({ error: insertError }) => finish(insertError !== null),
+        // postgrest-js reports fetch failures (abort included) as
+        // { error }; this rejection arm is the guarantee that the
+        // in-flight guards always release regardless.
+        () => finish(true)
+      );
+  };
 
   const pan = Gesture.Pan()
+    // No new drag while an insert is on the wire (D54).
+    .enabled(!inFlight)
     .onStart(() => {
       // Re-dragging works indefinitely (D50): each drag starts from
       // wherever the card currently sits, home or rung.
       startX.value = tx.value;
       startY.value = ty.value;
+      runOnJS(clearSaveError)();
     })
     .onUpdate((event) => {
       tx.value = startX.value + event.translationX;
@@ -124,19 +234,14 @@ export function SessionLadder({ coa, onClose }: { coa: LadderCoa; onClose: () =>
     })
     .onEnd(() => {
       if (activeRung.value >= 0) {
-        // Release anywhere above home = snap to nearest rung. In the
-        // shipped mechanic this drop is the save (D50); the spike has no
-        // save path, and the notice says so.
-        const rungHeight = rungRegionHeight.value / RUNG_COUNT;
-        const target =
-          rungTop.value + (activeRung.value + 0.5) * rungHeight - restCenterY.value;
-        ty.value = withSpring(target, SPRING);
+        // Release anywhere above home = snap to nearest rung, and the
+        // drop is the save attempt (D50/D54): the insert fires now.
+        ty.value = withSpring(rungOffset(activeRung.value), SPRING);
         tx.value = withSpring(0, SPRING);
-        runOnJS(showNotice)();
+        runOnJS(insertEntry)(activeRung.value);
       } else {
         tx.value = withSpring(0, SPRING);
         ty.value = withSpring(0, SPRING);
-        runOnJS(clearNotice)();
       }
     });
 
@@ -146,9 +251,7 @@ export function SessionLadder({ coa, onClose }: { coa: LadderCoa; onClose: () =>
     // answer is unmissable before release.
     let pull = 0;
     if (activeRung.value >= 0 && rungRegionHeight.value > 0) {
-      const rungHeight = rungRegionHeight.value / RUNG_COUNT;
-      const target = rungTop.value + (activeRung.value + 0.5) * rungHeight - restCenterY.value;
-      pull = (target - ty.value) * MAGNET_PULL;
+      pull = (rungOffset(activeRung.value) - ty.value) * MAGNET_PULL;
     }
     return { transform: [{ translateX: tx.value }, { translateY: ty.value + pull }] };
   });
@@ -164,19 +267,27 @@ export function SessionLadder({ coa, onClose }: { coa: LadderCoa; onClose: () =>
 
         {/* The home zone: the card's resting shelf and the cancel — the
             card renders above the rungs because this zone is the later
-            sibling. When the card has settled on a rung, the vacated slot
-            shows the honesty label. */}
+            sibling. The vacated slot carries the inline save error when
+            an insert fails (D54). */}
         <View
           style={[styles.homeZone, { backgroundColor: theme.backgroundSelected }]}
           onLayout={onHomeLayout}>
-          {settled && (
+          {saveError !== null && (
             <View style={styles.notice} pointerEvents="none">
-              <ThemedText type="small">Spike build — nothing was saved.</ThemedText>
+              <ThemedText type="small">{saveError}</ThemedText>
             </View>
           )}
           <GestureDetector gesture={pan}>
             <Animated.View
-              style={[styles.cardChip, { backgroundColor: theme.backgroundElement }, cardStyle]}>
+              style={[
+                styles.cardChip,
+                { backgroundColor: theme.backgroundElement },
+                // Pending until confirmed (D54): translucent while the
+                // insert is on the wire, solid on confirmation. Feel is
+                // gate-tuned.
+                inFlight && styles.cardPending,
+                cardStyle,
+              ]}>
               <ThemedText type="smallBold">{coa.strain}</ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
                 {coa.brand}
@@ -185,7 +296,9 @@ export function SessionLadder({ coa, onClose }: { coa: LadderCoa; onClose: () =>
           </GestureDetector>
         </View>
 
+        {/* Dismissal is disabled while an insert is in flight (D54). */}
         <Pressable
+          disabled={inFlight}
           onPress={onClose}
           style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
           <ThemedText type="smallBold">Close</ThemedText>
@@ -239,6 +352,9 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     borderRadius: Spacing.four,
     minWidth: 180,
+  },
+  cardPending: {
+    opacity: 0.5,
   },
   button: {
     alignSelf: 'stretch',
