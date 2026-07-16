@@ -2,9 +2,10 @@
 
 Status: mechanic ratified (D49–D51) and device-gated — the drag beat
 tap-and-settle at the spike gate (`97b1b45`). Persistence contract
-ratified as leans (D54–D55, 2026-07-15) and chip-row rendering and tap
-semantics ratified (D56–D57, 2026-07-15); the physical-iPhone gate
-refines feel values, not the shape. North stars:
+ratified as leans (D54–D55, 2026-07-15), chip-row rendering and tap
+semantics ratified (D56–D57, 2026-07-15), and the answer echo ratified
+(D58, 2026-07-16); the physical-iPhone gate refines feel values, not
+the shape. North stars:
 `documentation/design/scoring-lexicon.md` (the skeleton this mechanic
 serves), `documentation/design/product-metaphor.md`, and
 `documentation/design/session-entries-schema.md` (the table the wiring
@@ -103,6 +104,32 @@ Mechanics (provisional; the gate refines feel values, not the shape):
 - Rung order is fixed by the metaphor (up = better). Exact type sizes,
   swell scale, spring constants, and haptics are gate-tuned, not
   designed here.
+
+## D58 — The answer echo
+
+When the card is settled on a rung, the home-zone box — vacated and
+otherwise empty — displays the settled answer word in large type. The
+card covering the rung's word is thereby acceptable by design: the box
+is the answer's legibility guarantee at couch distance, using space
+that sits idle whenever the card is away.
+
+- The echo is the settled rung's word, whenever the card is settled on
+  a rung. It mirrors the card's pending translucency until the insert
+  confirms (D54), clears whenever the card returns home (cancel, or a
+  failed first drop), and after a failed revision shows the last
+  confirmed word — because that is where the card lands (D55).
+- **No live tracking during the drag** (ratified: bare minimum now; the
+  swell is the mid-drag signal). If the art pass later wants the box to
+  track the magnetized rung live, nothing here forecloses it.
+- The inline error and the echo share the box; when both are visible,
+  both must be legible — layout is the implementer's, gate-tuned.
+- Type size and treatment are feel values, gate-tuned.
+
+Refutation, recorded: the first fix attempt (2026-07-16) raised the
+active rung's word above the settled card ("word-rise"). The gate
+refused it — it read as an error state and pushed the top rung's word
+off-screen. It was never ratified into this doc; the echo, proposed by
+the operator at that gate, replaces it.
 
 ## The chip row (D48 content; D56–D57 rendering and semantics)
 
@@ -235,7 +262,7 @@ and does not send `deleted` on any of these paths (default false).
    chip row lands (rendering per D48); the spike's honesty label is
    removed; the COA delete-dialog copy grows "...and its logged
    sessions" (D53 consequence); the settled-card-covers-rung-word
-   spike defect is fixed in passing. **The detail-view sessions read
+   spike defect is resolved by the answer echo (D58). **The detail-view sessions read
    is not in this slice** — moved to the scoring slice (amended
    2026-07-15), where the latest-entry-per-chain view lives; nothing
    in wiring needs a read, and the chip row's appearance is the
