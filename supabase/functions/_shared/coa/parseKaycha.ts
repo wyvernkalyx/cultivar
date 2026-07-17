@@ -185,11 +185,10 @@ export function parseKaycha(text: string): CoaResult {
     '';
   const batch =
     firstMatch(text, /Batch\s*#\s*:?\s*([A-Za-z0-9][A-Za-z0-9\-]*)/) ?? '';
-  const brand =
-    firstMatch(
-      text,
-      /([A-Z0-9][A-Za-z0-9 .,&'\-]*?\bdba\b[A-Za-z0-9 .,&'\-]+?)\s+License/i,
-    ) ?? '';
+  // Both edges anchored on structural tokens ("dba" ... "License #") so the
+  // engine cannot walk left into header sludge (D67). No dba token -> no
+  // match -> '' (D68).
+  const brand = firstMatch(text, /\bdba\b\s+(.+?)\s+License\s*#/i) ?? '';
 
   return {
     lab: 'Kaycha Labs',

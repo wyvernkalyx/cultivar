@@ -74,9 +74,10 @@ export function parseDrsConfident(text: string): CoaResult {
 
   const strain = firstMatch(text, /Strain:\s*(.+?)\s+Batch#/) ?? '';
   const batch = firstMatch(text, /Batch#:\s*([^;]+?);/) ?? '';
-  const brand =
-    firstMatch(text, /([A-Z][A-Za-z0-9 &,.'\-]+?,?\s*LLC)\s+Contact Person/) ??
-    '';
+  // Both edges anchored on structural tokens: the page counter ("1 of 8")
+  // on the left, the template's "Contact Person" label on the right (D69).
+  // No LLC requirement -- the capture is whatever sits between the anchors.
+  const brand = firstMatch(text, /\b\d+ of \d+\s+(.+?)\s+Contact Person/) ?? '';
 
   return {
     lab: 'DRS Testing',

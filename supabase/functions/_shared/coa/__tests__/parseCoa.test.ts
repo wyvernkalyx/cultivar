@@ -28,6 +28,7 @@ interface FixtureCase {
   myrcene: number;
   limonene: number | null; // null => reported ND by the lab
   batch: string;
+  brand: string;
 }
 
 const CASES: FixtureCase[] = [
@@ -41,6 +42,7 @@ const CASES: FixtureCase[] = [
     myrcene: 0.55,
     limonene: null,
     batch: 'ANFA-003-FL8',
+    brand: 'Moby & Zeke, LLC',
   },
   {
     strain: 'Rainbow Runtz',
@@ -52,6 +54,7 @@ const CASES: FixtureCase[] = [
     myrcene: 0.19,
     limonene: 0.31,
     batch: 'S01-RARU',
+    brand: 'Animal House',
   },
   {
     strain: 'Cosmic Cereal',
@@ -63,6 +66,7 @@ const CASES: FixtureCase[] = [
     myrcene: 0.11,
     limonene: 0.55,
     batch: 'CMC-0601-AL-0126-D-E',
+    brand: '',
   },
   {
     strain: 'Permanent Shade',
@@ -74,6 +78,7 @@ const CASES: FixtureCase[] = [
     myrcene: 0.04,
     limonene: 0.65,
     batch: 'PMMS-0601-AL-0126-D-E',
+    brand: '',
   },
 ];
 
@@ -100,6 +105,10 @@ describe('parseCoa on real COA fixtures', () => {
 
       it(`batch is ${c.batch}`, () => {
         expect(coa.batch).toBe(c.batch);
+      });
+
+      it(`brand is ${JSON.stringify(c.brand)}`, () => {
+        expect(coa.brand).toBe(c.brand);
       });
 
       it(`dominant terpene is ${c.dominant}`, () => {
