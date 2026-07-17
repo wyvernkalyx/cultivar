@@ -30,3 +30,14 @@ export const INTENTS = [
   'socialize',
   'just because',
 ] as const;
+
+// Aimless-on-purpose is the one intent under which fit is unaskable —
+// "did it do what you wanted" has no referent (scoring-lexicon rule,
+// inherited hard by rich-path.md). Typed against INTENTS so the spelling
+// cannot drift from the chip that writes it.
+export const AIMLESS_INTENT: (typeof INTENTS)[number] = 'just because';
+
+// The fit vocabulary (rich-path.md, D64): three uniform chips answering
+// "Did it do what you wanted?". Fit is intent-relative (D66) and never
+// touches the score or the books. One source, never two.
+export const FITS = ['No', 'Sort of', 'Yes'] as const;
