@@ -168,6 +168,8 @@ per-user storage that does not exist); banked.
 Rich-path questions (fit, context, co-consumption) are **not placed in
 this pass** — their surface (same screen below the chips vs. a later
 detail edit) is banked until the mechanic survives the gate.
+(Unbanked 2026-07-16: placed by `documentation/design/rich-path.md`,
+D64–D66 — a second phase of this same surface.)
 
 ## Persistence contract (D54–D55) — the wiring slice
 
