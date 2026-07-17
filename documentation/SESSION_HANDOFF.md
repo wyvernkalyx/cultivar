@@ -1,125 +1,94 @@
-# SESSION_HANDOFF — written 2026-07-17 against pushed HEAD `084542a`
+# SESSION_HANDOFF — written 2026-07-17 against pushed HEAD `a182117`
 
 The repo is authoritative over this document. Begin with a read-only
 Phase A audit (`scripts/session-audit.sh`, Git Bash only) and try to
 break every claim below before doing anything else.
 
-This file supersedes the handoff committed at `7ff2593`, whose full
+This file supersedes the handoff committed at `a182117`, whose full
 record remains retrievable:
-`git show 7ff2593:documentation/SESSION_HANDOFF.md`.
+`git show a182117:documentation/SESSION_HANDOFF.md`.
 
 ## Preamble — carried context was wrong this session; assume this doc is too
 
-Concrete refutations from the session this file covers:
+This was a verification-only session: zero code commits, one entry
+point closed. Even so:
 
-1. **The prior handoff's entry point misattributed the brand sludge.**
-   The named string ("Adult Use Powered by Condent LIMS 1 of 8"
-   prefixing "Moby & Zeke, LLC") is produced by `parseDrsConfident`,
-   not the Kaycha parser. "Condent LIMS" is Confident LIMS after the
-   documented ligature strip — a string that cannot occur in a Kaycha
-   document. A read-only Phase A pass over the fixtures falsified the
-   premise before any code was written.
-2. **One named defect was actually three.** The Kaycha brand path was
-   defective too, twice over and differently: rainbow-runtz prefixed
-   the brand with the laboratory sample ID, and the two no-dba
-   fixtures emitted empty by accident rather than by contract.
-3. **The architect's first fix idea was wrong.** Excluding digits from
-   the DRS left character class would have broken any digit-containing
-   brand. Structural anchoring on both edges (D69) retired it before
-   it shipped.
-4. **Audit script item [14]'s annotation is stale by two lines**: it
-   predicts the jest/@types/jest pair; four drift lines were observed
-   (expo-router and expo-splash-screen added). Known, tolerated,
-   re-annotation still banked.
+1. **The architect's own paste block carried a defective criterion.**
+   A missing colon (`git show HEADsupabase/...`) made `git show` fail —
+   and `grep -Fc` on the resulting empty stdin printed a well-formed
+   `0`. The expected value here was 1, so the failure was visible; had
+   the criterion expected 0, it would have false-passed on a command
+   that never read the blob. Blob-grep criteria are only sound when
+   the revision demonstrably resolved (see Working rhythm, new item).
+2. **The project-knowledge "PDFs" are not PDFs.** All four COA files
+   in project knowledge are zip containers (per-page extracted text +
+   page JPEGs + a manifest); poppler rejects them. They are sufficient
+   for token-presence claims (dba present/absent) and were used for
+   exactly that; they are not the bytes the app ingested, and any
+   byte-sensitive claim about a source document must not treat them
+   as such.
+3. **Not verified this session:** the Supabase pg_tables / pg_policies
+   block was never re-observed (no SQL paste of it). The structural
+   row below is carried from the prior session's close, same calendar
+   day, believed but unconfirmed here.
 
 ## Start here (Phase A, read-only) — every line is a falsifiable prediction
 
 | check | expected |
 |---|---|
 | branch | `main` |
-| HEAD | a `docs:` commit, subject `docs: session handoff at 084542a`, parent `084542a`; its own sha unknowable here. Below it, newest first: `084542a`, `7ff2593`, `be880b2`, `acaad8c`, `d5eaec7`. |
+| HEAD | a `docs:` commit, subject `docs: session handoff at a182117`, parent `a182117`; its own sha unknowable here. Below it, newest first: `a182117`, `084542a`, `7ff2593`, `be880b2`, `acaad8c`. |
 | `git rev-list --count origin/main..HEAD` | **0** after the operator pushes the handoff commit; **1** means the push has not run — a finding, not an error. |
 | `git status --short` | `?? audit.txt` only (gitignore fix still banked) |
-| `ls supabase/migrations/` | exactly four files; newest `20260716162520_create_scoring_views.sql` (the brand slice added zero schema) |
-| Jest | **40 passed, 40 total** (was 36; four brand assertions landed at `084542a`, two of which are deliberate no-dba controls) |
-| Deno | 5 passed (observed this session at the brand-slice gate) |
+| `ls supabase/migrations/` | exactly four files; newest `20260716162520_create_scoring_views.sql` |
+| Jest | 40 passed, 40 total |
+| Deno | 5 passed |
 | `npx tsc --noEmit` | exit 0 |
 | `npx expo lint` | 1 error, 0 warnings (template `use-color-scheme.web.ts`) |
-| `git show HEAD:supabase/functions/_shared/coa/parseKaycha.ts \| grep -Fc '/\bdba\b\s+(.+?)\s+License\s*#/i'` | 1 |
+| `git show HEAD:supabase/functions/_shared/coa/parseKaycha.ts \| grep -Fc '/\bdba\b\s+(.+?)\s+License\s*#/i'` | 1 — note the colon after HEAD; a typo there fails `git show` and grep prints a spurious 0 |
 | `git show HEAD:supabase/functions/_shared/coa/parseDrsConfident.ts \| grep -Fc '/\b\d+ of \d+\s+(.+?)\s+Contact Person/'` | 1 |
-| Supabase (SQL editor, privileged) | pg_tables: 6 tables, all `rowsecurity = true`. pg_policies: 9 rows; `session_entries` exactly INSERT + SELECT. All observed 2026-07-17. Data is **post-wipe** (D70): `coas` holds only rows ingested after the wipe (one observed at close: Animal Face, brand `Moby & Zeke, LLC`, clean); `session_entries` restarts from zero. Counts will drift with normal use — the structure is the prediction, not the counts. |
+| Supabase (SQL editor, privileged) | pg_tables: 6 tables, all `rowsecurity = true`. pg_policies: 9 rows; `session_entries` exactly INSERT + SELECT. Last observed prior session close 2026-07-17; NOT re-observed this session (preamble item 3). `coas` holds at least three rows: Animal Face / `Moby & Zeke, LLC`, Cosmic Cereal / empty brand, RAINBOW RUNTZ / `Animal House`. Counts drift with normal use — the structure and those three brand values are the prediction. |
 
 If any of these don't match, the repo wins — re-baseline before proceeding.
 
 ## What shipped (newest first)
 
 - (this handoff commit)
-- `084542a` — feat: anchor brand capture on structural tokens in both
-  parsers (D67–D69; full grounds in the commit body)
+- nothing else — verification-only session; `a182117` was already HEAD
+  at open and remains the parent of this commit.
 
-## The arc — the brand slice (D67–D70)
+## The arc — D67/D68 production verification (entry point closed)
 
-The prior entry point sent this session at "Kaycha brand sludge"; Phase
-A falsified the attribution (preamble item 1) and widened the surface
-to both parsers. The slice ran fixture-driven and strictly red-first:
-four brand assertions landed in the parseCoa fixture table and were
-observed red at 38/40 with received values matching the Phase A
-extraction byte-for-byte, then both-edge structural anchors
-(dba…License # for Kaycha; the N-of-M page counter…Contact Person for
-DRS, LLC requirement dropped) turned the suite green at 40/40 with the
-two no-dba controls guarding against over-match. The existing database
-rows were resolved by wipe, not data-fix (D70): full test-data delete
-with `profiles` deliberately survived, operator deploy of `ingest-coa`,
-re-ingest through the app. The single strongest observation of the
-session closed it: the re-ingested Animal Face row reads brand
-`Moby & Zeke, LLC` clean, which simultaneously proves the wipe landed
-and that the **deployed** bundle carries the fix — the old bundle would
-have reproduced the sludge. The deploy output itself was never pasted;
-the clean row is the stronger evidence and supersedes it.
-
-Also settled in-session, banked not built: the generalization story for
-unseen brands is (a) structural anchors, never brand-content patterns
-(D69); (b) the confirm/edit screen as the guarantee; (c) a future
-licensees table keyed on the license number — the one identifier that
-survives extraction rigidly — so a brand confirmed once prefills
-forever (open item 13).
+The prior handoff's entry point ran to completion and both predictions
+held. Evidence chain, strongest form available: the source documents
+themselves were checked before prediction — Cosmic Cereal is Kaycha
+with no `dba` token anywhere (licensee `Etain- Buffalo`, plain);
+RAINBOW RUNTZ is Kaycha with `5 PC LLC dba Animal House`, the
+laboratory sample ID on the line directly above and the `Pages 1 of 2`
+counter directly after `License #` — the exact geometry of both
+historical brand defects at once. The operator ingested both through
+the app with the brand field untouched (stated explicitly, both
+times), then pasted the `coas` select: Cosmic Cereal stored an empty
+brand (D68 contract, deployed-parser emission), RAINBOW RUNTZ stored
+`Animal House` exactly — no dba prefix, no sample-ID prefix, no
+trailing counter. D67 and D68 now hold production evidence, not just
+Jest. The brand slice has no open edges.
 
 ## Refuted hypotheses / memory corrections
 
-- All four preamble items. The five-surfaces framing of the sludge
-  survives; only its producer was misattributed.
-- "Existing rows need a data-fix UPDATE" — mooted by the operator's
-  disposability ruling; the wipe was simpler and gated more (D70).
+- Preamble items 1 and 2. No repo-state claim from the prior handoff
+  broke; all thirteen Phase A predictions that were tested confirmed
+  (the Supabase block was the one untested).
 
 ## Ratified decisions
 
-- **D67** — for Kaycha licensees of the form `X LLC dba Y`, the brand
-  is the dba tail (`Y`). Grounds: consumer-facing name; a verbatim
-  substring of the document, not a fabrication; confirm/edit absorbs
-  residual ambiguity.
-- **D68** — Kaycha documents with no dba token emit an empty brand.
-  Grounds: empty is honest; confirm/edit fills it; two fixture tests
-  pin it as a deliberate contract and double as over-match controls.
-- **D69** — brand captures anchor both edges on document-structural
-  tokens, never brand content, across all parsers. Grounds: the
-  observed defects were earliest-start walks into header text from
-  unanchored left edges; structural anchors generalize to unseen
-  brands including digit-containing ones. Named residual risk,
-  accepted under lived-demand: a brand containing the literal anchor
-  text (" License #" / " Contact Person") truncates at the collision;
-  no such fixture exists.
-- **D70** — existing sludge rows: wipe the test data whole rather than
-  data-fix or re-ingest-in-place; `profiles` survives (auth identity,
-  not test data). Grounds: test-phase data is disposable by standing
-  operator ruling, and the wipe + deploy + re-ingest path exercises
-  the full pipeline end-to-end, gating the deployed parser — which a
-  data-fix could not.
+- None new. D67/D68 evidence upgraded from Jest-only to
+  production-observed; grounds unchanged from the prior handoff.
 
 ## Open items
 
 **Runnable now**
-- Kaycha production verification (the entry point below). Operator-run,
-  no prompt needed.
+- None drafted.
 
 **Blocked**
 - Reanimated strict-mode warning: one Metro stack-trace capture.
@@ -135,8 +104,11 @@ forever (open item 13).
 4. Home-zone parking after a confirmed entry + on-device verification
    of soft-delete-returns-to-untried (needs the delete gesture).
 5. Shelf sort-by-band — a product decision, undecided.
-6. Audit chore bundle: gitignore `audit.txt`, re-annotate [14] (four
-   drift lines now observed), add the handoff-table print.
+6. Audit chore bundle (grew this session): gitignore `audit.txt`;
+   re-annotate [14] (four drift lines observed); add the
+   handoff-table print; add lines for `ls supabase/migrations/`,
+   ancestry depth (`git log --oneline -6`), and the two anchor greps
+   with resolution-checked `git show`.
 7. Doc micro-amendments: entry-1 intent note; scoring-read status-line
    rewrap.
 8. tsconfig/Metro sticky-resolver landmine → `CLAUDE.md` on second
@@ -149,10 +121,9 @@ forever (open item 13).
 13. License-number extraction as a first-class parsed field + a
     `licensees` table keyed on license number, populated by
     confirm/edit — wrong-once-never-again brand prefill. Behind it,
-    the NY "Current OCM Licenses" open dataset import; concrete
-    trigger is multi-state onboarding or entity-name prefill demand.
-    Registries resolve legal entities, not brands — confirm/edit
-    stays the brand source of truth.
+    the NY "Current OCM Licenses" open dataset import. Registries
+    resolve legal entities, not brands — confirm/edit stays the brand
+    source of truth.
 14. Anchor-collision residual risk (D69) — revisit only on a real COA
     exhibiting it.
 
@@ -165,25 +136,30 @@ insert/action source, every existing pending-state condition is
 audited against it; (c) handoff commit prompts always carry a status
 precondition and placement instructions name one literal path;
 (d) plain operator language in gates, numbers stated where arithmetic
-is the target; (e) NEW — the operator's independent paste of
-`git log -1 --format=%B | cat -A` before push authorization ran its
-first full cycle this session and matched the implementer's report
-byte-for-byte; keep both channels — the gate's value is its
-existence; (f) NEW — an evidence-form substitution is acceptable when
-argued equivalent (a `jest -t` filtered run stood in for absent
-per-test verbose lines; sound because the assertions are byte-exact).
+is the target; (e) the operator's independent paste of
+`git log -1 --format=%B | cat -A` before push authorization — keep
+both channels; (f) evidence-form substitution is acceptable when
+argued equivalent; (g) NEW — a blob-grep criterion is sound only if
+the `git show` demonstrably resolved: a failed revision feeds grep
+empty input, which prints a well-formed `0`. Expected-nonzero
+criteria fail visibly by accident; expected-zero criteria false-pass
+silently. Either require the fatal line to be absent from the paste,
+or gate as `git show <rev>:<path> >/dev/null && git show ... | grep -Fc ...`;
+(h) NEW — source-document claims verified against project-knowledge
+copies must name the container format; those copies are extracted
+text, not the ingested bytes.
 
 ## Entry point
 
-**Kaycha production verification.** D67 (dba tail) and D68 (empty on
-no-dba) hold Jest evidence only; the deployed function has been
-observed end-to-end solely on the DRS path (Animal Face). The move:
-the operator re-ingests the remaining real COAs through the app — at
-least one Kaycha document with a dba licensee and, if on hand, one
-without — then pastes one SQL-editor select over `coas`
-(`select id, strain, brand from coas order by created_at;`) to the
-architect. Predictions, falsifiable: dba documents show the tail only;
-no-dba documents show an empty brand awaiting confirm/edit; no row
-shows a sample-ID or header prefix. Cheap, operator-only, and it
-closes the slice's last open edge. Not a menu: absent an operator
-redirect, this is the move.
+**Chip deselection-to-null (banked item 2).** Highest-priority banked
+item not operator-deferred, and its cost is live: a chip tapped in
+error is currently stuck true, which silently corrupts logged
+sessions — the one data source scoring is allowed to read.
+Document-before-implement: the move is a design pass in chat, reading
+`documentation/design/` (session-logging and the D56/D57 chip
+semantics) plus `documentation/SESSION_HANDOFF.md`'s D55 revision
+rule, ratifying the deselection semantics (tap-again-to-null vs.
+explicit clear affordance, and how a deselection interacts with the
+append-only revision chain), landing a `docs:` commit, and only then
+a build prompt. Not a menu: absent an operator redirect, this is the
+move.
