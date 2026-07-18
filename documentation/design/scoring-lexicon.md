@@ -1,6 +1,6 @@
 # Scoring Lexicon
 
-Status: design ratified (D46); amended (D47–D48); no implementation exists. The skeleton below is
+Status: design ratified (D46); amended (D47–D48); substantially revised for the survey vocabulary and structure (D70-D76, 2026-07-18; see Amendment at end); implemented through D66. The skeleton below is
 durable; every vocabulary is v1 and provisional. Refinement from live use is
 the designed path, not a failure of the design — the operator cannot know how
 to improve the survey until real sessions are logged against it, and the
@@ -43,7 +43,7 @@ corrupts or re-interprets recorded history.
    survives, marked. Nothing recorded is ever silently destroyed. Hard
    erasure is an account-level privacy feature, banked, never a per-session
    gesture.
-4. **Fact classes stay distinct fields, even where v1 leaves them thin:**
+4. **Fact classes stay distinct fields, even where v1 leaves them thin:** _(amended by D76, 2026-07-18: physical-state added; context removed -- see Amendment)_
    - **intent** — what was this for (purpose, chosen before/at the session)
    - **fit** — did it do what you wanted (intent-relative outcome)
    - **context** — what were you doing (activity)
@@ -83,6 +83,8 @@ unrecoverable forever"), not ride in on it.
 
 ## The overall scale (v1 vocabulary, provisional)
 
+> Superseded by D70 (2026-07-18): Elite / Solid / Mid / Miss / Trash. The v1 strings below are retained as the pre-amendment record. See Amendment at end.
+
 Five fully-labeled points, symmetric bipolar, operator-authored. The user
 picks a word and never sees a number; hidden values are 1–5, evenly spaced.
 
@@ -105,6 +107,8 @@ five-mood shelf reads at a glance. The exact strings are v1; the count,
 labeling-completeness, symmetry, and hidden 1–5 mapping are skeleton.
 
 ## Question two: intent (ratified over effect)
+
+> Superseded by D71-D73 (2026-07-18): intent is now three orthogonal single-select axes (Energy, Environment, Spark), Spark the anchor. The single-chip model below is retained as the pre-amendment record. See Amendment at end.
 
 - **Single primary intent, forced choice** — not multi-select. A
   multi-tagged session dilutes every correlation it touches; one forced
@@ -130,6 +134,8 @@ labeling-completeness, symmetry, and hidden 1–5 mapping are skeleton.
   unanswered is a gap). Recorded = chosen, no exceptions.
 
 ## Rich-path questions (v1 forms, provisional)
+
+> Superseded by D73-D75 (2026-07-18): fit gates on Spark; context free-text is deleted (D74); co-consumption is a multi-select panel (D75). Retained below as the pre-amendment record. See Amendment at end.
 
 - **Fit** — "Did it do what you wanted?": No / Sort of / Yes (3-point,
   provisional). Fit is intent-relative and stored as its own fact; it
@@ -219,3 +225,34 @@ proves wrong in use, wiping test sessions and re-baselining is explicitly
 available. The append-only dread protects real users' histories, and none
 exist yet. Vocabularies revise freely under `lexicon_version`; the six
 skeleton items above do not revise without their own ratification pass.
+
+## Amendment (D70-D76) -- survey vocabulary and structure, 2026-07-18
+
+Operator-ratified in chat. Zero session rows exist; test data is disposable (refinement doctrine), so every change below is free today and supersedes prior ratified vocabulary without corrupting history. The pre-amendment text above is retained as the record of what was superseded. The interaction mechanic (the wheel) is a separate pass against session-logging.md and rich-path.md and is NOT decided here.
+
+### D70 -- Overall scale: new vocabulary, symmetry preserved
+Five overall words become Elite / Solid / Mid / Miss / Trash, mapping +2/+1/0/-1/-2 (hidden 5/4/3/2/1). Supersedes the v1 strings only (D46). Skeleton unchanged: five points, symmetric bipolar, fully labeled, odd count for a genuine midpoint, hidden 1-5. "Mid" is the true neutral (the unremarkable-outcome slot), not a mild positive.
+
+### D71 -- Intent: three orthogonal single-select axes
+Skeleton reversal. "Single primary intent, forced choice" is replaced by three orthogonal axes, each its own forced single pick, each independently nullable: Energy (Chill / Active / Buzzing), Environment (Solo / Social), Spark (Relief / Flow / Munchies). Grounds (recorded, because this reverses a skeleton item): these are three orthogonal questions, not one multi-tagged question. The dilution the old rule guarded against comes from tagging one question with many values; it does not arise when each axis is a clean single pick in its own field. Recover-later asymmetry decides the count: capturing three dimensions while free is reversible (collapse to one in analysis anytime); capturing one is not. All three are feeling-words -- a stated felt state, never a symptom claim. Supersedes D48's single chip, D56 (seven uniform chips), D57 (single-intent chip semantics). Storage: three nullable text columns, never one concatenated tag (schema pass derives them).
+
+### D72 -- Spark is the intent anchor
+Spark is the intent for every consumer needing a single referent. Fit is Spark-relative. The quadrant and the intent lens read Spark; Energy and Environment are secondary lenses (filterable, never the fit referent). Amends D66: an intent change nulls fit only when the changed axis is Spark; Energy/Environment changes never touch fit.
+
+### D73 -- Fit render condition; aimless is null
+Fit asks whenever Spark is answered; no Spark, no fit question. Retires the "not just-because" gate -- "just because" no longer exists in the vocabulary. Aimless is Spark-at-center (null): logging no Spark IS the "no particular reason" session; there is no explicit aimless answer, per D48's null-is-first-class rule.
+
+### D74 -- Context free-text deleted
+The "What were you doing?" free-text question is removed. Supersedes the context question (D65 context); the context column becomes unused/removable (schema pass decides). Its confound role is better served by D75/D76.
+
+### D75 -- Co-consumption: a multi-select confound panel
+The single alcohol chip becomes a multi-select panel: Alcohol, Caffeine, Nicotine, Fatty food, Terpene-rich food. Presence-only, multi-select by nature. Does NOT violate D71's single-pick rule: co-consumption is its own fact class, and confounds are what you discount against, never what you correlate intent on. Supersedes the single alcohol chip (D65); the "false reserved for a future explicit-no" note is moot.
+
+### D76 -- Physical state: a new fact class
+A fifth fact class is added: Dehydrated, Fatigued, Stressed (multi-select, presence-only). Amends skeleton item 4: intent (now three axes), fit, co-consumption (expanded), physical-state (new); context removed. Grounds: baseline physiology swings a session's outcome; capturing it lets the engine see the confound. Health-data line (carried from the medications-exclusion posture): these are felt transient states going in, not diagnoses. Dehydrated and Fatigued are light bodily-state. Stressed sits closest to the line -- a felt state is defensible where a mental-health diagnosis is not, but its glossary entry must hold the felt-state reading and never drift to "anxiety." If lived use pushes it toward a clinical frame, the medications-exclusion revisit bar applies.
+
+### Hand-offs (not in this amendment)
+Glossary: the cross-fade / physiology material is population-level pharmacology (mechanism, causation, general case) -- forbidden in user-facing copy by discipline 1 and CLAUDE.md. It enters via a personal-empirical rewrite (what the app tracks and why it might matter for you, never what a substance does in general). Its own docs pass; definitions must be the operator's own words. Schema: this amendment voids rich-path.md's "the columns exist -- zero schema." session-entries-schema.md needs a revision pass deriving three axis columns, a five-substance structure, a physical-state structure, and the context-column removal. Free today (zero rows); a real migration. Sequenced after this amendment, before any wheel build.
+
+### Supersession scope
+This pass retires or amends, wholesale, most of the survey's ratified vocabulary and interaction history: D46-D48 (scale strings, single intent), D56-D57 (chip rendering/semantics), D64-D66 (rich-path placement, per-answer inserts, intent->fit null now Spark-scoped). The refinement doctrine permits this ("vocabularies revise freely"); zero rows make it safe.
