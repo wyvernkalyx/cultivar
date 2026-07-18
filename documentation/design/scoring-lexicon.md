@@ -256,3 +256,26 @@ Glossary: the cross-fade / physiology material is population-level pharmacology 
 
 ### Supersession scope
 This pass retires or amends, wholesale, most of the survey's ratified vocabulary and interaction history: D46-D48 (scale strings, single intent), D56-D57 (chip rendering/semantics), D64-D66 (rich-path placement, per-answer inserts, intent->fit null now Spark-scoped). The refinement doctrine permits this ("vocabularies revise freely"); zero rows make it safe.
+
+## Amendment (D78) -- multi-select panel deselection, 2026-07-18
+
+Operator-ratified in chat. The two multi-select panels (co-consumption,
+D75; physical-state, D76) are toggles: tapping an unselected value
+inserts a revision with the value added; tapping a selected value
+inserts a revision with it removed. Grounds: the boolean-era blocker
+(false indistinguishable from unanswered) dissolved with the text[]
+shape -- D75/D77 ratified the checked-none = unanswered collapse, so
+removal is a plain revision insert and the prior answer survives
+beneath in the append-only chain. A mis-tap is user-fixable; shipping a
+known stuck state out of consistency with a dissolved blocker would be
+process over product.
+
+Normalization rule: removing the last selected value stores null, never
+an empty array -- checked-none and unanswered are one ratified state
+(D75) and the client keeps one representation for it.
+
+Scope: panels only. The single-select axes (D71) correct by picking
+another value; axis deselection-to-null stays banked, its blocker not
+dissolved. The fit vocabulary (No / Sort of / Yes, D64) survives the
+D70-D76 supersession: the scope retired fit's placement and nulling
+rule, never its strings.
