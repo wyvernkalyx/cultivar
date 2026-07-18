@@ -1,6 +1,6 @@
 import { uuid } from 'expo-modules-core';
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View, type LayoutChangeEvent } from 'react-native';
+import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -15,11 +15,20 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { AIMLESS_INTENT, FITS, INTENTS, LEXICON_VERSION, RUNGS } from '@/lib/lexicon';
+import {
+  CO_CONSUMPTION,
+  ENERGY,
+  ENVIRONMENT,
+  FITS,
+  LEXICON_VERSION,
+  PHYSICAL_STATE,
+  RUNGS,
+  SPARK,
+} from '@/lib/lexicon';
 import { supabase } from '@/lib/supabase';
 
 // Rung order is the lexicon's (D51): up = better, best word at the top,
-// "Meh" at dead center. Words and scores resolve through the one source.
+// "Mid" at dead center. Words and scores resolve through the one source.
 const RUNG_WORDS = RUNGS.map((rung) => rung.word);
 const RUNG_COUNT = RUNGS.length;
 
@@ -34,6 +43,22 @@ const SPRING = { damping: 18, stiffness: 180 };
 // the surface's dismissal guard forever.
 const INSERT_TIMEOUT_MS = 10000;
 
+// The three intent axes (D71) as single-select chip rows, and the two
+// multi-select panels (D75/D76) as toggle rows: `key` indexes the Snapshot
+// field; `values` come from the one lexicon source. Labels are transitional
+// copy — the wheel pass supersedes this surface (session-logging, banked).
+type AxisKey = 'energy' | 'environment' | 'spark';
+type PanelKey = 'co_consumption' | 'physical_state';
+const AXES: { key: AxisKey; label: string; values: readonly string[] }[] = [
+  { key: 'energy', label: 'Energy', values: ENERGY },
+  { key: 'environment', label: 'Environment', values: ENVIRONMENT },
+  { key: 'spark', label: 'Spark', values: SPARK },
+];
+const PANELS: { key: PanelKey; label: string; values: readonly string[] }[] = [
+  { key: 'co_consumption', label: 'Anything else?', values: CO_CONSUMPTION },
+  { key: 'physical_state', label: 'How were you starting out?', values: PHYSICAL_STATE },
+];
+
 // The card chip renders identity; the insert needs the id (coa_id).
 type LadderCoa = {
   id: string;
@@ -42,23 +67,25 @@ type LadderCoa = {
 };
 
 // One entry's writable fields (D52 full snapshot): the rung answer plus
-// every fact-class field. lastConfirmed holds exactly this shape, and
-// every insert sends one — the rich fields ride along at their snapshot
-// values (D65).
+// every fact-class field. lastConfirmed holds exactly this shape, and every
+// insert sends one — the fact fields ride along at their snapshot values.
+// The two panels are string[] (D75/D76): presence-only, null when
+// unanswered, never [] (D78).
 type Snapshot = {
   index: number;
   word: string;
   score: number;
-  intent: string | null;
+  energy: string | null;
+  environment: string | null;
+  spark: string | null;
   fit: string | null;
-  context: string | null;
-  co_alcohol: boolean | null;
+  co_consumption: string[] | null;
+  physical_state: string[] | null;
 };
 
-// Which control fired the insert. Only a failed DROP moves the card
-// (D55); every other source reverts by derivation when its pending
-// state clears.
-type InsertSource = 'drop' | 'chip' | 'fit' | 'context' | 'alcohol';
+// Which control fired the insert. Only a failed DROP moves the card (D55);
+// every other source reverts by derivation when its pending state clears.
+type InsertSource = 'drop' | 'axis' | 'fit' | 'panel';
 
 // One rung: the word swells while it is the pending answer. Emphasis is
 // scale only — typographic, never color; the mood visual language belongs
@@ -87,21 +114,19 @@ function Rung({
 }
 
 /**
- * The session-logging surface (D49-D51 mechanic, D54-D57 persistence and
- * chip row, D64-D66 rich path): the vertical ladder. A drop on a rung is
- * the save attempt — it inserts a session entry immediately and the card
- * renders pending until the insert confirms (D54). A re-drag inserts a
- * revision row into the same chain (D52); a failed revision reverts to
- * the last confirmed truth (D55). The intent chip row fades in only on
- * confirmed insert — it IS the success indicator (D54): seven uniform
- * chips (D56); a different chip revises with word + score carried
- * forward and fit nulled (D66 — fit is intent-relative), re-tapping the
- * confirmed chip is a no-op (D57). The vacated home-zone box echoes the
- * settled answer word in large type (D58) — echo on settle only, never
- * live tracking during the drag. A More affordance appears with the
- * chip row and swaps the surface to its rich phase (D64): fit, context,
- * co-alcohol replacing the ladder render whole, each answer its own
- * revision insert under the same persistence grammar (D65).
+ * The session-logging surface (D49-D51 mechanic, D54-D55 persistence, D70-D78
+ * survey): the vertical ladder. A drop on a rung is the save attempt — it
+ * inserts a session entry immediately and the card renders pending until the
+ * insert confirms (D54). A re-drag inserts a revision row into the same chain
+ * (D52); a failed revision reverts to the last confirmed truth (D55). On
+ * confirmed insert the survey fades in — it IS the success indicator (D54):
+ * three single-select intent axes (Energy/Environment/Spark, D71), each a
+ * revision insert carrying the snapshot forward, and changing Spark nulls fit
+ * (D72). The vacated home-zone box echoes the settled word (D58). A More
+ * affordance opens the rich phase (D64): the fit question (asked when Spark
+ * is set, D73) and the two multi-select confound panels (co-consumption D75,
+ * physical-state D76), each a toggle (D78), each its own revision insert
+ * under the same persistence grammar.
  */
 export function SessionLadder({
   coa,
@@ -136,38 +161,41 @@ export function SessionLadder({
   const [sessionId, setSessionId] = useState<string | null>(null);
   // Last confirmed entry (D55): the revert target when a revision fails,
   // and the snapshot every revision copies its carried fields from (D57,
-  // D65). Its fact-class fields are null until their answers confirm
-  // (entry 1 sends all null, D48). State for the same reason as
-  // sessionId.
+  // D65, D78). Its fact-class fields are null until their answers confirm
+  // (entry 1 sends all null). State for the same reason as sessionId.
   const [lastConfirmed, setLastConfirmed] = useState<Snapshot | null>(null);
-  // The chip whose revision insert is on the wire (D54): renders
+  // The axis + value whose revision insert is on the wire (D54): renders
   // pending-selected. Cleared on resolution either way — on failure the
-  // selection falls back to lastConfirmed.intent by derivation, which is
-  // exactly D55's revert.
-  const [pendingIntent, setPendingIntent] = useState<string | null>(null);
-  // The fit chip whose revision insert is on the wire (D65): the intent
-  // chips' pending grammar reused wholesale — cleared on resolution
-  // either way; on failure the selection falls back to lastConfirmed.fit
-  // by derivation, which is exactly D55's revert.
+  // selection falls back to the last confirmed axis value by derivation,
+  // which is exactly D55's revert.
+  const [pendingAxis, setPendingAxis] = useState<{ axis: AxisKey; value: string } | null>(null);
+  // The fit chip whose revision insert is on the wire (D65): the axis
+  // chips' pending grammar reused wholesale — cleared on resolution either
+  // way; on failure the selection falls back to lastConfirmed.fit by
+  // derivation, which is exactly D55's revert.
   const [pendingFit, setPendingFit] = useState<string | null>(null);
+  // The panel field + toggled value whose revision insert is on the wire,
+  // plus the optimistic array it would store (D78): the toggled chip
+  // renders pending and the panel shows the would-be selection. Cleared on
+  // resolution either way; on failure the panel reverts to the last
+  // confirmed array by derivation (D55).
+  const [pendingPanel, setPendingPanel] = useState<{
+    field: PanelKey;
+    value: string;
+    values: string[] | null;
+  } | null>(null);
   // The answer echo (D58): the settled rung's word, displayed large in
   // the vacated home-zone box. Set on every rung settle; cleared when
   // the card returns home (cancel, or a failed FIRST drop); set to the
   // last confirmed word on a failed revision, because that is where the
-  // card lands (D55). Chip taps never touch it, and it never tracks the
+  // card lands (D55). Survey taps never touch it, and it never tracks the
   // drag live — the swell is the mid-drag signal (D58, ratified).
   const [echoWord, setEchoWord] = useState<string | null>(null);
   // The surface's phase (D64): 'rich' replaces the ladder render whole
-  // — no overlay, no squeeze, no rung compression, no keyboard over the
-  // drag surface. Back swaps back with the card still on its rung: the
-  // ladder's state (shared values included) lives up here and survives
-  // the swap.
+  // — no overlay, no squeeze, no rung compression. Back swaps back with
+  // the card still on its rung: the ladder's state (shared values
+  // included) lives up here and survives the swap.
   const [phase, setPhase] = useState<'ladder' | 'rich'>('ladder');
-  // The context input's draft (D65): free text needs local state the
-  // way chips do not. Set to the trimmed text on submit, so on confirm
-  // it equals lastConfirmed.context; a failed submit restores the last
-  // confirmed text (D55, for a value that cannot revert by derivation).
-  const [contextDraft, setContextDraft] = useState('');
 
   // Card offset from its home-zone resting position.
   const tx = useSharedValue(0);
@@ -209,11 +237,11 @@ export function SessionLadder({
 
   // The save attempt (D54): every path is the same insert — same chain,
   // full snapshot (D52). A drop sends its rung with every fact-class
-  // answer carried forward; a chip tap sends the confirmed word + score
-  // with the tapped chip and fit nulled (D57, D66); each rich answer
-  // sends the confirmed snapshot with its one field changed (D65). Only
-  // a failed DROP moves the card (D55) — every other failure reverts
-  // its own control's rendered state only.
+  // answer carried forward; an axis tap sends the confirmed word + score
+  // with the one axis set (fit nulled iff Spark, D72); a fit tap or panel
+  // toggle sends the confirmed snapshot with its one field changed
+  // (D65/D78). Only a failed DROP moves the card (D55) — every other
+  // failure reverts its own control's rendered state only.
   const insertEntry = (snapshot: Snapshot, source: InsertSource) => {
     const chainId = sessionId ?? uuid.v4();
     if (sessionId === null) {
@@ -221,9 +249,6 @@ export function SessionLadder({
     }
     setSaveError(null);
     setInFlightSource(source);
-    if (source === 'chip') {
-      setPendingIntent(snapshot.intent);
-    }
     if (source === 'fit') {
       setPendingFit(snapshot.fit);
     }
@@ -236,25 +261,18 @@ export function SessionLadder({
     const finish = (failed: boolean) => {
       clearTimeout(timer);
       setInFlightSource(null);
-      setPendingIntent(null);
+      setPendingAxis(null);
       setPendingFit(null);
+      setPendingPanel(null);
       onBusyChange(false);
       if (!failed) {
         setLastConfirmed(snapshot);
         return;
       }
       setSaveError("Couldn't save — check your connection.");
-      if (source === 'context') {
-        // D55 for the text field: a TextInput's value cannot revert by
-        // derivation alone, so the draft is restored to the last
-        // confirmed context explicitly.
-        setContextDraft(
-          lastConfirmed === null || lastConfirmed.context === null ? '' : lastConfirmed.context
-        );
-      }
       if (source !== 'drop') {
-        // A failed chip or rich insert never moves the card or touches
-        // the echo (D55, D65): clearing its pending state already
+        // A failed axis, fit, or panel insert never moves the card or
+        // touches the echo (D55): clearing its pending state already
         // reverted the rendered answer to the last confirmed value.
         return;
       }
@@ -279,10 +297,10 @@ export function SessionLadder({
     };
 
     // created_by and deleted are server defaults, never sent. Full
-    // snapshot (D52/D65): the rich fields ride every insert at their
-    // snapshot values — the wiring slice's rule that intent was the only
-    // fact-class field this surface writes ended when D64-D66 placed the
-    // rich path here. On the lazy path all three stay null (D48).
+    // snapshot (D52): every fact-class field rides every insert at its
+    // snapshot value — axes and panels carried forward on a rung drop, one
+    // field changed on a revision (D57/D65/D78). On the lazy path every
+    // fact field stays null (the overall word is the only mandatory field).
     supabase
       .from('session_entries')
       .insert({
@@ -291,10 +309,12 @@ export function SessionLadder({
         lexicon_version: LEXICON_VERSION,
         overall_word: snapshot.word,
         overall_score: snapshot.score,
-        intent: snapshot.intent,
+        energy: snapshot.energy,
+        environment: snapshot.environment,
+        spark: snapshot.spark,
         fit: snapshot.fit,
-        context: snapshot.context,
-        co_alcohol: snapshot.co_alcohol,
+        co_consumption: snapshot.co_consumption,
+        physical_state: snapshot.physical_state,
       })
       .abortSignal(controller.signal)
       .then(
@@ -308,9 +328,9 @@ export function SessionLadder({
 
   // Rung settle (drop or re-drag): every fact-class answer is carried
   // forward from the last confirmed entry — a re-drag changes the word,
-  // not the questions: the intent stands, so fit stands too (D66's
-  // nulling is for intent CHANGES only). Entry 1 sends all null (D48 —
-  // unanswered is not an answer).
+  // not the questions: the axes stand, so fit stands too (D72's nulling is
+  // for Spark CHANGES only). Entry 1 sends all fact fields null (the
+  // overall word is the only mandatory field).
   const settleOnRung = (index: number) => {
     const rung = RUNGS[index];
     // Echo on settle (D58): the box shows the settling word at once,
@@ -323,33 +343,40 @@ export function SessionLadder({
             index,
             word: rung.word,
             score: rung.score,
-            intent: null,
+            energy: null,
+            environment: null,
+            spark: null,
             fit: null,
-            context: null,
-            co_alcohol: null,
+            co_consumption: null,
+            physical_state: null,
           }
         : { ...lastConfirmed, index, word: rung.word, score: rung.score },
       'drop'
     );
   };
 
-  // Chip tap (D57): a revision insert copying word + score from the last
-  // confirmed entry. Re-tapping the confirmed chip is a no-op — an
-  // identical row carries zero information. An intent change sends fit
-  // null (D66): fit is intent-relative, and full-snapshot carry must not
-  // attach an old answer to a question never asked — the old fit
-  // survives beneath in the chain. Context and co-alcohol carry forward
-  // untouched.
-  const tapChip = (chip: string) => {
-    if (lastConfirmed === null || chip === lastConfirmed.intent) {
+  // Axis tap (D71/D57): a single-select revision insert copying the
+  // confirmed snapshot with the one axis set. Re-tapping the confirmed
+  // value is a no-op — an identical row carries zero information; a
+  // different value corrects it (append-only, the prior survives beneath).
+  // Spark is the fit referent (D72): changing Spark nulls fit; Energy and
+  // Environment never touch fit. Axis deselection-to-null is banked (D78).
+  const tapAxis = (axis: AxisKey, value: string) => {
+    if (lastConfirmed === null || value === lastConfirmed[axis]) {
       return;
     }
-    insertEntry({ ...lastConfirmed, intent: chip, fit: null }, 'chip');
+    setPendingAxis({ axis, value });
+    const revised: Snapshot = { ...lastConfirmed };
+    revised[axis] = value;
+    if (axis === 'spark') {
+      revised.fit = null;
+    }
+    insertEntry(revised, 'axis');
   };
 
-  // Fit tap (D65): the intent-chip grammar reused wholesale — a revision
-  // insert with everything else carried forward; re-tapping the
-  // confirmed fit is a no-op (D57's rule).
+  // Fit tap (D65): the axis-chip grammar reused wholesale — a revision
+  // insert with everything else carried forward; re-tapping the confirmed
+  // fit is a no-op (D57's rule).
   const tapFit = (fit: string) => {
     if (lastConfirmed === null || fit === lastConfirmed.fit) {
       return;
@@ -357,32 +384,24 @@ export function SessionLadder({
     insertEntry({ ...lastConfirmed, fit }, 'fit');
   };
 
-  // Context submit (D65): commits on keyboard submit. A trimmed-empty
-  // submit is a no-op — an empty string is never recorded, and null
-  // stays null (recorded = chosen). Resubmitting the confirmed text is
-  // likewise a no-op (an identical row carries zero information);
-  // different text is a revision.
-  const submitContext = () => {
+  // Panel toggle (D78): the two multi-select panels. Tapping an unselected
+  // value adds it; tapping a selected value removes it; either way a
+  // revision insert carrying everything else forward. Removing the last
+  // value normalizes to null, never [] — checked-none and unanswered are
+  // one ratified state (D75). Presence-only; panels never touch fit.
+  const togglePanel = (field: PanelKey, value: string) => {
     if (lastConfirmed === null) {
       return;
     }
-    const trimmed = contextDraft.trim();
-    if (trimmed === '' || trimmed === lastConfirmed.context) {
-      return;
-    }
-    setContextDraft(trimmed);
-    insertEntry({ ...lastConfirmed, context: trimmed }, 'context');
-  };
-
-  // Alcohol tap (D65): inserts true; re-tapping when confirmed true is a
-  // no-op. Deselection stays banked with its cost named — a mis-tap is
-  // stuck true until deselection is designed; this surface writes null
-  // or true only, never false.
-  const tapAlcohol = () => {
-    if (lastConfirmed === null || lastConfirmed.co_alcohol === true) {
-      return;
-    }
-    insertEntry({ ...lastConfirmed, co_alcohol: true }, 'alcohol');
+    const current = lastConfirmed[field] ?? [];
+    const next = current.includes(value)
+      ? current.filter((entry) => entry !== value)
+      : [...current, value];
+    const normalized = next.length === 0 ? null : next;
+    setPendingPanel({ field, value, values: normalized });
+    const revised: Snapshot = { ...lastConfirmed };
+    revised[field] = normalized;
+    insertEntry(revised, 'panel');
   };
 
   const pan = Gesture.Pan()
@@ -437,7 +456,7 @@ export function SessionLadder({
     return { transform: [{ translateX: tx.value }, { translateY: ty.value + pull }] };
   });
 
-  // The chip row fades in only on confirmed insert (D54) — it IS the
+  // The survey fades in only on confirmed insert (D54) — it IS the
   // success indicator. It stays mounted, opacity-hidden, so its
   // appearance never reflows the rung geometry the settled card is
   // parked against.
@@ -445,25 +464,30 @@ export function SessionLadder({
     opacity: withTiming(lastConfirmed !== null ? 1 : 0, { duration: 200 }),
   }));
 
-  // Single-select (D48): the pending chip while one is on the wire,
-  // the last confirmed intent otherwise — so a failed tap reverts by
-  // derivation (D55).
-  const selectedIntent = pendingIntent ?? (lastConfirmed === null ? null : lastConfirmed.intent);
-  // Fit's selection mirrors the intent row's (D65): pending while its
-  // insert is on the wire, the last confirmed fit otherwise.
+  // The confirmed (or pending) value of a single-select axis (D71): the
+  // pending value while that axis's insert is on the wire, the last
+  // confirmed value otherwise — so a failed tap reverts by derivation
+  // (D55).
+  const selectedAxis = (axis: AxisKey): string | null => {
+    if (pendingAxis !== null && pendingAxis.axis === axis) {
+      return pendingAxis.value;
+    }
+    return lastConfirmed === null ? null : lastConfirmed[axis];
+  };
+  // Fit's selection mirrors the axis rows' (D65): pending while its insert
+  // is on the wire, the last confirmed fit otherwise.
   const selectedFit = pendingFit ?? (lastConfirmed === null ? null : lastConfirmed.fit);
-  // Fit renders only when the chain's confirmed intent is non-null and
-  // not aimless (lexicon rule, inherited hard by rich-path.md): "did it
-  // do what you wanted" has no referent without a wanted. An intent
-  // change re-opens the question (D66 consequence — correct, not a bug).
-  const fitAskable =
-    lastConfirmed !== null &&
-    lastConfirmed.intent !== null &&
-    lastConfirmed.intent !== AIMLESS_INTENT;
-  // The alcohol chip's selection (D65): pending while its insert is on
-  // the wire, the confirmed value otherwise.
-  const alcoholSelected =
-    inFlightSource === 'alcohol' || (lastConfirmed !== null && lastConfirmed.co_alcohol === true);
+  // Fit asks whenever Spark is answered (D73): no Spark, no referent for
+  // "did it do what you wanted". A Spark change re-opens it (D72).
+  const fitAskable = lastConfirmed !== null && lastConfirmed.spark !== null;
+  // A panel's selected set (D78): the optimistic array while its toggle is
+  // on the wire, the last confirmed array otherwise (null -> empty).
+  const panelValues = (field: PanelKey): readonly string[] => {
+    if (pendingPanel !== null && pendingPanel.field === field) {
+      return pendingPanel.values ?? [];
+    }
+    return lastConfirmed === null ? [] : lastConfirmed[field] ?? [];
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -510,7 +534,7 @@ export function SessionLadder({
                     styles.cardChip,
                     { backgroundColor: theme.backgroundElement },
                     // Pending until confirmed (D54): translucent while a
-                    // DROP insert is on the wire (a chip or rich
+                    // DROP insert is on the wire (an axis, fit, or panel
                     // revision's pending visual belongs to its own
                     // control, not the card), solid on confirmation.
                     // Feel is gate-tuned.
@@ -525,54 +549,66 @@ export function SessionLadder({
               </GestureDetector>
             </View>
 
-            {/* The intent chip row (D56): seven uniform chips, seed-list
-                order, none promoted — no default exists until onboarding
-                ships, and faking one would encode a choice the user
-                never made. A fixed layout sibling below the home zone;
-                hidden by opacity, so the ladder's geometry is identical
-                before and after it appears. */}
+            {/* The intent axes (D71): three single-select chip rows —
+                Energy, Environment, Spark — each in D57's chip grammar
+                (selected inverts, re-tap is a no-op). A fixed layout
+                sibling below the home zone; hidden by opacity, so the
+                ladder geometry is identical before and after it appears. */}
             <Animated.View
               style={[styles.chipSection, chipRowStyle]}
               pointerEvents={lastConfirmed !== null ? 'auto' : 'none'}>
-              <ThemedText type="small" themeColor="textSecondary" style={styles.chipQuestion}>
-                What was this for?
-              </ThemedText>
-              <View style={styles.chipRow}>
-                {INTENTS.map((chip) => {
-                  // Selected = full inversion (text token as fill,
-                  // background token as label): the strongest contrast
-                  // the existing tokens offer. backgroundSelected vs
-                  // backgroundElement is imperceptible at arm's length
-                  // in dark mode (gate finding). Same dimensions in
-                  // every state (D56: uniform, none promoted).
-                  const selected = chip === selectedIntent;
-                  return (
-                    <Pressable
-                      key={chip}
-                      // Disabled while any insert is on the wire (D54).
-                      disabled={inFlight}
-                      onPress={() => tapChip(chip)}
-                      style={[
-                        styles.chip,
-                        { backgroundColor: selected ? theme.text : theme.backgroundElement },
-                        // Pending-selected while this chip's revision is
-                        // on the wire (D54): the selected treatment at
-                        // the card's pending opacity; settles on confirm.
-                        chip === pendingIntent && styles.chipPending,
-                      ]}>
-                      <ThemedText
-                        type="small"
-                        style={selected ? { color: theme.background } : undefined}>
-                        {chip}
-                      </ThemedText>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              {AXES.map((axis) => {
+                const selected = selectedAxis(axis.key);
+                return (
+                  <View key={axis.key} style={styles.axisRow}>
+                    <ThemedText type="small" themeColor="textSecondary" style={styles.chipQuestion}>
+                      {axis.label}
+                    </ThemedText>
+                    <View style={styles.chipRow}>
+                      {axis.values.map((value) => {
+                        // Selected = full inversion (text token as fill,
+                        // background token as label): the strongest
+                        // contrast the existing tokens offer. Same
+                        // dimensions in every state (D57 grammar).
+                        const isSelected = value === selected;
+                        const isPending =
+                          pendingAxis !== null &&
+                          pendingAxis.axis === axis.key &&
+                          pendingAxis.value === value;
+                        return (
+                          <Pressable
+                            key={value}
+                            // Disabled while any insert is on the wire (D54).
+                            disabled={inFlight}
+                            onPress={() => tapAxis(axis.key, value)}
+                            style={[
+                              styles.chip,
+                              {
+                                backgroundColor: isSelected
+                                  ? theme.text
+                                  : theme.backgroundElement,
+                              },
+                              // Pending-selected while this value's revision
+                              // is on the wire (D54): the selected treatment
+                              // at the card's pending opacity.
+                              isPending && styles.chipPending,
+                            ]}>
+                            <ThemedText
+                              type="small"
+                              style={isSelected ? { color: theme.background } : undefined}>
+                              {value}
+                            </ThemedText>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+                );
+              })}
               {/* The More affordance (D64): the door to the rich phase.
-                  Mounted with the chip row so it shares the
-                  confirmed-only visibility (and never reflows the rung
-                  geometry); small on purpose — form is gate-tuned. */}
+                  Mounted with the axes so it shares the confirmed-only
+                  visibility (and never reflows the rung geometry); small
+                  on purpose — form is gate-tuned. */}
               <Pressable disabled={inFlight} onPress={() => setPhase('rich')} style={styles.more}>
                 <ThemedText type="small" themeColor="textSecondary">
                   More
@@ -581,12 +617,13 @@ export function SessionLadder({
             </Animated.View>
           </>
         ) : (
-          /* The rich phase (D64): the optional now-facts — fit, context,
-             co-alcohol — replacing the ladder render whole. Conditional
-             rendering is allowed in here: the mounting rule defended the
-             rung geometry, and there are no rungs on this screen. Every
-             answer is its own revision insert (D65) through the same
-             pipeline, same one-in-flight rule, same inline error. */
+          /* The rich phase (D64): the optional now-facts — the fit
+             question (D73, asked when Spark is set) and the two
+             multi-select confound panels (D75/D76) — replacing the ladder
+             render whole. Conditional rendering is fine here: there are no
+             rungs to protect. Every answer is its own revision insert
+             (D65/D78) through the same pipeline, same one-in-flight rule,
+             same inline error. */
           <View style={styles.richRegion}>
             {fitAskable && (
               <View style={styles.richQuestion}>
@@ -595,9 +632,9 @@ export function SessionLadder({
                 </ThemedText>
                 <View style={styles.chipRow}>
                   {FITS.map((fit) => {
-                    // The intent chips' selection treatment, reused
-                    // wholesale (D65): uniform chips, full inversion
-                    // when selected, pending at the card's opacity.
+                    // The axis chips' selection treatment, reused wholesale
+                    // (D65): uniform chips, full inversion when selected,
+                    // pending at the card's opacity.
                     const selected = fit === selectedFit;
                     return (
                       <Pressable
@@ -620,46 +657,48 @@ export function SessionLadder({
                 </View>
               </View>
             )}
-            <View style={styles.richQuestion}>
-              <ThemedText type="small" themeColor="textSecondary" style={styles.chipQuestion}>
-                What were you doing?
-              </ThemedText>
-              {/* Free text, single line, deliberately unseeded — the
-                  operator's first weeks author the vocabulary. Commits
-                  on keyboard submit; pending mirrors the chips'
-                  translucency while its insert is on the wire. */}
-              <TextInput
-                value={contextDraft}
-                onChangeText={setContextDraft}
-                onSubmitEditing={submitContext}
-                editable={!inFlight}
-                returnKeyType="done"
-                style={[
-                  styles.contextInput,
-                  { backgroundColor: theme.backgroundElement, color: theme.text },
-                  inFlightSource === 'context' && styles.chipPending,
-                ]}
-              />
-            </View>
-            {/* Co-alcohol: one chip, no question line — the v1 form as
-                designed (rich-path.md). Stuck true once confirmed;
-                deselection is banked with its cost named. */}
-            <View style={styles.chipRow}>
-              <Pressable
-                disabled={inFlight}
-                onPress={tapAlcohol}
-                style={[
-                  styles.chip,
-                  { backgroundColor: alcoholSelected ? theme.text : theme.backgroundElement },
-                  inFlightSource === 'alcohol' && styles.chipPending,
-                ]}>
-                <ThemedText
-                  type="small"
-                  style={alcoholSelected ? { color: theme.background } : undefined}>
-                  alcohol
-                </ThemedText>
-              </Pressable>
-            </View>
+            {/* The two confound panels (D75/D76): multi-select toggles
+                (D78). Reuse the chip visual language wholesale — selected
+                inverts, the toggled value renders pending while its
+                revision is on the wire. */}
+            {PANELS.map((panel) => {
+              const values = panelValues(panel.key);
+              return (
+                <View key={panel.key} style={styles.richQuestion}>
+                  <ThemedText type="small" themeColor="textSecondary" style={styles.chipQuestion}>
+                    {panel.label}
+                  </ThemedText>
+                  <View style={styles.chipRow}>
+                    {panel.values.map((value) => {
+                      const isSelected = values.includes(value);
+                      const isPending =
+                        pendingPanel !== null &&
+                        pendingPanel.field === panel.key &&
+                        pendingPanel.value === value;
+                      return (
+                        <Pressable
+                          key={value}
+                          disabled={inFlight}
+                          onPress={() => togglePanel(panel.key, value)}
+                          style={[
+                            styles.chip,
+                            {
+                              backgroundColor: isSelected ? theme.text : theme.backgroundElement,
+                            },
+                            isPending && styles.chipPending,
+                          ]}>
+                          <ThemedText
+                            type="small"
+                            style={isSelected ? { color: theme.background } : undefined}>
+                            {value}
+                          </ThemedText>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              );
+            })}
             {/* The same inline error (D54/D65) — the home-zone box is
                 off-screen in this phase, so the rich phase carries its
                 own slot for it. */}
@@ -748,6 +787,9 @@ const styles = StyleSheet.create({
   chipSection: {
     gap: Spacing.one,
   },
+  axisRow: {
+    gap: Spacing.one,
+  },
   chipQuestion: {
     textAlign: 'center',
   },
@@ -777,12 +819,6 @@ const styles = StyleSheet.create({
   },
   richQuestion: {
     gap: Spacing.one,
-  },
-  contextInput: {
-    alignSelf: 'stretch',
-    borderRadius: Spacing.four,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.two,
   },
   richError: {
     textAlign: 'center',

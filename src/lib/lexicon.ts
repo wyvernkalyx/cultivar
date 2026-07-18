@@ -3,41 +3,46 @@
 // (documentation/design/session-logging.md, persistence contract). The word
 // is the raw answer as displayed; the score is that word's hidden 1-5 value
 // at this LEXICON_VERSION (session-entries-schema.md).
-export const LEXICON_VERSION = 1;
+export const LEXICON_VERSION = 2;
 
-// Ordered top rung first (D51: up = better, "Meh" at dead center) — index i
-// here IS rung index i on the ladder. The ladder and the chip row both read
-// this array; the rung index resolves to word + score through this one
-// source, never two.
+// Ordered top rung first (D51: up = better, "Mid" at dead center) — index i
+// here IS rung index i on the ladder. The ladder reads this array; the rung
+// index resolves to word + score through this one source, never two. D70
+// swapped the strings (Elite/Solid/Mid/Miss/Trash); the hidden 5/4/3/2/1
+// mapping is UNCHANGED, and that is exactly what keeps cross-version score
+// averaging (coa_session_stats) valid — averaging rides on a stable
+// hidden-value mapping (session-entries-schema.md, D77).
 export const RUNGS = [
-  { word: 'I loved it', score: 5 },
-  { word: 'Yes', score: 4 },
-  { word: 'Meh', score: 3 },
-  { word: 'No', score: 2 },
-  { word: 'I hated it', score: 1 },
+  { word: 'Elite', score: 5 },
+  { word: 'Solid', score: 4 },
+  { word: 'Mid', score: 3 },
+  { word: 'Miss', score: 2 },
+  { word: 'Trash', score: 1 },
 ] as const;
 
-// The intent vocabulary, v1 seed list in authored order (scoring-lexicon
-// doc; D56): rendered as seven uniform chips until onboarding ships a
-// default. Aimless-on-purpose is a first-class answer, never a skip; an
-// unanswered chip row stores intent as null (D48).
-export const INTENTS = [
-  'sleep',
-  'exercise',
-  'study/work',
-  'create',
-  'sex',
-  'socialize',
-  'just because',
+// The three intent axes (D71), each a forced single pick in its own field,
+// each independently nullable (null = unanswered). Authored order per the
+// D71 vocabulary. Spark is the intent anchor (D72) and the fit question's
+// referent (D73); Spark-null is the aimless session. One source, never two.
+export const ENERGY = ['Chill', 'Active', 'Buzzing'] as const;
+export const ENVIRONMENT = ['Solo', 'Social'] as const;
+export const SPARK = ['Relief', 'Flow', 'Munchies'] as const;
+
+// The two multi-select confound panels: co-consumption (D75) and
+// physical-state (D76). Presence-only, toggled by tap (D78). Authored order
+// per the D75/D76 vocabularies. One source, never two.
+export const CO_CONSUMPTION = [
+  'Alcohol',
+  'Caffeine',
+  'Nicotine',
+  'Fatty food',
+  'Terpene-rich food',
 ] as const;
+export const PHYSICAL_STATE = ['Dehydrated', 'Fatigued', 'Stressed'] as const;
 
-// Aimless-on-purpose is the one intent under which fit is unaskable —
-// "did it do what you wanted" has no referent (scoring-lexicon rule,
-// inherited hard by rich-path.md). Typed against INTENTS so the spelling
-// cannot drift from the chip that writes it.
-export const AIMLESS_INTENT: (typeof INTENTS)[number] = 'just because';
-
-// The fit vocabulary (rich-path.md, D64): three uniform chips answering
-// "Did it do what you wanted?". Fit is intent-relative (D66) and never
-// touches the score or the books. One source, never two.
+// The fit vocabulary (D64): three uniform chips answering "Did it do what
+// you wanted?". Fit is Spark-relative (D72) and never touches the score or
+// the books. It survives the D70-D76 supersession — the pass retired fit's
+// placement and nulling rule, never its strings (D78 records why). One
+// source, never two.
 export const FITS = ['No', 'Sort of', 'Yes'] as const;
