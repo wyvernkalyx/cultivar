@@ -176,3 +176,12 @@ phase and is retained as the record. The ratified rich phase is D73-D78
 (scoring-lexicon.md): fit asks whenever Spark is answered; context is
 deleted; the panels are multi-select toggles. Shipped at 5b0aec9;
 rewritten at the wheel pass, not before.
+
+## Amendment (D79 pointer) -- 2026-07-19
+
+The wheel pass occurred and refuted the wheel; the ratified interaction
+is D79 (session-logging.md). Under D79, fit is its own Spark-keyed
+screen immediately after Spark, and the panels are an optional entry on
+the closing screen, off the required path. The wholesale rewrite this
+doc's D70-D78 pointer promised is re-banked to a consolidation pass;
+grounds in the D79 block.

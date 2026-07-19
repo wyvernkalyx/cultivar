@@ -304,3 +304,42 @@ superseded. The ratified survey is D70-D78 (scoring-lexicon.md amendment
 blocks): three single-select intent axes, the fit question keyed on
 Spark, and two multi-select toggle panels; shipped at 5b0aec9. This
 doc's interaction prose is rewritten at the wheel pass, not before.
+
+## Amendment (D79) -- axis capture restructure, 2026-07-19
+
+Operator-ratified in chat. This is the wheel pass; the wheel is refuted
+as an input control. Grounds: the survey is answered during or after a
+session (impaired-use constraint); first-use predictability; and skip
+must cost less than answering (null-honesty) -- a novel radial encoding
+fails all three. The carried three-axis-wheel and marking-menu leans
+are refuted with it. Calyx-to-petal relocates to the completion
+animation (banked, art pass; an animation can never mis-select).
+
+The ratified interaction:
+
+- On confirmed drop (D54), the flow advances to the axis screens.
+- One axis per screen, three screens: Energy, Environment, Spark, in
+  that order. The screen title is the axis name.
+- Each screen: the axis's values as full-width stacked pills in thumb
+  reach. Tapping a value records it and advances immediately -- no
+  Next on axis screens.
+- Skip is first-class: a persistent Skip control on every axis screen,
+  no smaller than a pill; skipping records null and advances. Null
+  must never cost more effort than answering. Gesture refinement
+  banked.
+- Fit (D73, Spark-keyed) becomes its own screen, shown only when Spark
+  was answered, immediately after Spark, same pill-and-Skip pattern,
+  vocabulary unchanged.
+- The ladder (D50-D51) is unchanged and remains the entry gesture.
+- The two panels (D75, D78) move off the required path: a closing
+  screen carries Close and an optional panels entry, reachable but
+  never blocking Close.
+- Persistence grammar unchanged: D54-D55 pending semantics, D65
+  revision inserts, D66 fit nulling, D77 shape, D78 null-not-empty.
+  This decision moves surfaces; it does not touch writes.
+
+Doc-rewrite note: the pointer block above promised a wholesale rewrite
+at the wheel pass. Re-banked to a consolidation pass. Grounds: the
+wheel's refutation removes the replacement prose that rewrite assumed;
+the amendment-block chain is the ratified record, and rewriting
+superseded v1 prose adds no information.
