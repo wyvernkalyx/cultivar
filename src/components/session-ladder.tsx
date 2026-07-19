@@ -87,6 +87,13 @@ type Snapshot = {
 // every other source reverts by derivation when its pending state clears.
 type InsertSource = 'drop' | 'axis' | 'fit' | 'panel';
 
+// The D79 screen sequence: one screen renders at a time and the flow
+// advances on insert CONFIRM (not on tap). Order: ladder -> energy ->
+// environment -> spark -> fit (only when spark is answered, D73) ->
+// closing -> panels (optional, off the required path). Plain conditional
+// render; transition animation is banked to the art pass.
+type Phase = 'ladder' | 'energy' | 'environment' | 'spark' | 'fit' | 'closing' | 'panels';
+
 // One rung: the word swells while it is the pending answer. Emphasis is
 // scale only — typographic, never color; the mood visual language belongs
 // to the art pass (session-logging doc non-goal).
@@ -113,20 +120,106 @@ function Rung({
   );
 }
 
+// One axis or fit screen (D79): a title, the values as full-width
+// bottom-anchored pills in thumb reach, and a persistent first-class Skip
+// no smaller than a pill. Tap-advance and Skip semantics live in the owner;
+// this renders selection/pending state and the inline save error only. The
+// chip visual grammar is reused wholesale — selected inverts (text token as
+// fill), pending rides at the card's opacity (D57/D65).
+function PillScreen({
+  theme,
+  title,
+  values,
+  selected,
+  pendingValue,
+  disabled,
+  error,
+  onSelect,
+  onSkip,
+  onBack,
+}: {
+  theme: ReturnType<typeof useTheme>;
+  title: string;
+  values: readonly string[];
+  selected: string | null;
+  pendingValue: string | null;
+  disabled: boolean;
+  error: string | null;
+  onSelect: (value: string) => void;
+  onSkip: () => void;
+  onBack: () => void;
+}) {
+  return (
+    <View style={styles.sequenceScreen}>
+      <View style={styles.sequenceHeader}>
+        <Pressable disabled={disabled} onPress={onBack} style={styles.backButton}>
+          <ThemedText type="smallBold">Back</ThemedText>
+        </Pressable>
+        <ThemedText type="title" numberOfLines={1} adjustsFontSizeToFit style={styles.sequenceTitle}>
+          {title}
+        </ThemedText>
+      </View>
+      <View style={styles.pillStack}>
+        {values.map((value) => {
+          const isSelected = value === selected;
+          const isPending = value === pendingValue;
+          return (
+            <Pressable
+              key={value}
+              // Disabled while any insert is on the wire (D54).
+              disabled={disabled}
+              onPress={() => onSelect(value)}
+              style={[
+                styles.pill,
+                { backgroundColor: isSelected ? theme.text : theme.backgroundElement },
+                isPending && styles.chipPending,
+              ]}>
+              <ThemedText
+                type="default"
+                style={isSelected ? { color: theme.background } : undefined}>
+                {value}
+              </ThemedText>
+            </Pressable>
+          );
+        })}
+        {error !== null && (
+          <ThemedText type="small" style={styles.sequenceError}>
+            {error}
+          </ThemedText>
+        )}
+        {/* Skip is first-class (D79): a persistent pill, never smaller than
+            an answer, that advances and writes nothing. */}
+        <Pressable
+          disabled={disabled}
+          onPress={onSkip}
+          style={[styles.pill, styles.skipPill, { backgroundColor: theme.backgroundElement }]}>
+          <ThemedText type="default" themeColor="textSecondary">
+            Skip
+          </ThemedText>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 /**
- * The session-logging surface (D49-D51 mechanic, D54-D55 persistence, D70-D78
- * survey): the vertical ladder. A drop on a rung is the save attempt — it
- * inserts a session entry immediately and the card renders pending until the
- * insert confirms (D54). A re-drag inserts a revision row into the same chain
- * (D52); a failed revision reverts to the last confirmed truth (D55). On
- * confirmed insert the survey fades in — it IS the success indicator (D54):
- * three single-select intent axes (Energy/Environment/Spark, D71), each a
- * revision insert carrying the snapshot forward, and changing Spark nulls fit
- * (D72). The vacated home-zone box echoes the settled word (D58). A More
- * affordance opens the rich phase (D64): the fit question (asked when Spark
- * is set, D73) and the two multi-select confound panels (co-consumption D75,
- * physical-state D76), each a toggle (D78), each its own revision insert
- * under the same persistence grammar.
+ * The session-logging surface (D49-D51 mechanic, D54-D55 persistence, D70-D79
+ * survey): the vertical ladder feeding a one-axis-per-screen sequence. A drop
+ * on a rung is the save attempt — it inserts a session entry immediately and
+ * the card renders pending until the insert confirms (D54). A re-drag inserts
+ * a revision row into the same chain (D52); a failed revision reverts to the
+ * last confirmed truth (D55). The vacated home-zone box echoes the settled
+ * word (D58).
+ *
+ * On a confirmed drop the flow advances (D79) to the axis screens: Energy,
+ * Environment, Spark, one per screen, each a full-snapshot revision insert
+ * (D71) carrying the rest forward, with the advance firing on CONFIRM, not on
+ * tap. Changing Spark nulls fit (D72); a first-class Skip advances and writes
+ * nothing. Fit is its own screen shown only when Spark was answered (D73),
+ * then a closing screen (Close plus an optional panels entry, off the
+ * required path), then the two multi-select confound panels (co-consumption
+ * D75, physical-state D76) as toggles (D78) that settle in place. Every write
+ * rides the one insertEntry pipeline under the same D54/D55 grammar.
  */
 export function SessionLadder({
   coa,
@@ -191,11 +284,11 @@ export function SessionLadder({
   // card lands (D55). Survey taps never touch it, and it never tracks the
   // drag live — the swell is the mid-drag signal (D58, ratified).
   const [echoWord, setEchoWord] = useState<string | null>(null);
-  // The surface's phase (D64): 'rich' replaces the ladder render whole
-  // — no overlay, no squeeze, no rung compression. Back swaps back with
-  // the card still on its rung: the ladder's state (shared values
-  // included) lives up here and survives the swap.
-  const [phase, setPhase] = useState<'ladder' | 'rich'>('ladder');
+  // The surface's phase (D79): the current screen in the sequence. One
+  // screen renders at a time; the ladder's state (shared values included)
+  // lives up here and survives every screen change, so Back to the ladder
+  // lands on the intact card-on-rung state.
+  const [phase, setPhase] = useState<Phase>('ladder');
 
   // Card offset from its home-zone resting position.
   const tx = useSharedValue(0);
@@ -235,6 +328,60 @@ export function SessionLadder({
   // runOnJS target: the releasing path is the gesture's worklet.
   const clearEcho = () => setEchoWord(null);
 
+  // The D79 screen order. Spark decides whether fit is asked (D73): a
+  // non-null spark inserts the fit screen before closing; a null spark
+  // (the aimless session) advances straight to closing. Panels and closing
+  // are terminals of the switch — they never auto-advance.
+  const nextScreen = (current: Phase, sparkValue: string | null): Phase => {
+    switch (current) {
+      case 'ladder':
+        return 'energy';
+      case 'energy':
+        return 'environment';
+      case 'environment':
+        return 'spark';
+      case 'spark':
+        return sparkValue !== null ? 'fit' : 'closing';
+      case 'fit':
+        return 'closing';
+      default:
+        return current;
+    }
+  };
+  // Back is navigation only (D79): the linear predecessor. From closing it
+  // is fit when spark was answered, spark otherwise; from panels it is the
+  // closing screen.
+  const backTarget = (current: Phase): Phase => {
+    switch (current) {
+      case 'energy':
+        return 'ladder';
+      case 'environment':
+        return 'energy';
+      case 'spark':
+        return 'environment';
+      case 'fit':
+        return 'spark';
+      case 'closing':
+        return lastConfirmed !== null && lastConfirmed.spark !== null ? 'fit' : 'spark';
+      case 'panels':
+        return 'closing';
+      default:
+        return 'ladder';
+    }
+  };
+  // Skip and re-selecting the confirmed value both advance without a write
+  // (D79): the sequence moves on, the snapshot is untouched (Skip on an
+  // answered axis leaves the value — axis deselection-to-null is banked).
+  const advanceNoWrite = () => {
+    setSaveError(null);
+    setPhase((current) => nextScreen(current, lastConfirmed?.spark ?? null));
+  };
+  // Back affordance: navigation only, never a write, cleared error.
+  const goBack = () => {
+    setSaveError(null);
+    setPhase((current) => backTarget(current));
+  };
+
   // The save attempt (D54): every path is the same insert — same chain,
   // full snapshot (D52). A drop sends its rung with every fact-class
   // answer carried forward; an axis tap sends the confirmed word + score
@@ -267,6 +414,11 @@ export function SessionLadder({
       onBusyChange(false);
       if (!failed) {
         setLastConfirmed(snapshot);
+        // Advance on CONFIRM, not on tap (D79): the write landed, so the
+        // sequence moves forward. Spark's just-confirmed value decides the
+        // fit branch. Panel toggles settle in place — nextScreen returns
+        // the panels phase unchanged (it is a switch terminal).
+        setPhase((current) => nextScreen(current, snapshot.spark));
         return;
       }
       setSaveError("Couldn't save — check your connection.");
@@ -362,7 +514,13 @@ export function SessionLadder({
   // Spark is the fit referent (D72): changing Spark nulls fit; Energy and
   // Environment never touch fit. Axis deselection-to-null is banked (D78).
   const tapAxis = (axis: AxisKey, value: string) => {
-    if (lastConfirmed === null || value === lastConfirmed[axis]) {
+    if (lastConfirmed === null) {
+      return;
+    }
+    if (value === lastConfirmed[axis]) {
+      // Re-tapping the confirmed value writes nothing (identical row) but
+      // still advances the sequence (D79).
+      advanceNoWrite();
       return;
     }
     setPendingAxis({ axis, value });
@@ -378,7 +536,12 @@ export function SessionLadder({
   // insert with everything else carried forward; re-tapping the confirmed
   // fit is a no-op (D57's rule).
   const tapFit = (fit: string) => {
-    if (lastConfirmed === null || fit === lastConfirmed.fit) {
+    if (lastConfirmed === null) {
+      return;
+    }
+    if (fit === lastConfirmed.fit) {
+      // Re-tapping the confirmed fit is a no-op write; advance anyway (D79).
+      advanceNoWrite();
       return;
     }
     insertEntry({ ...lastConfirmed, fit }, 'fit');
@@ -456,14 +619,6 @@ export function SessionLadder({
     return { transform: [{ translateX: tx.value }, { translateY: ty.value + pull }] };
   });
 
-  // The survey fades in only on confirmed insert (D54) — it IS the
-  // success indicator. It stays mounted, opacity-hidden, so its
-  // appearance never reflows the rung geometry the settled card is
-  // parked against.
-  const chipRowStyle = useAnimatedStyle(() => ({
-    opacity: withTiming(lastConfirmed !== null ? 1 : 0, { duration: 200 }),
-  }));
-
   // The confirmed (or pending) value of a single-select axis (D71): the
   // pending value while that axis's insert is on the wire, the last
   // confirmed value otherwise — so a failed tap reverts by derivation
@@ -477,9 +632,6 @@ export function SessionLadder({
   // Fit's selection mirrors the axis rows' (D65): pending while its insert
   // is on the wire, the last confirmed fit otherwise.
   const selectedFit = pendingFit ?? (lastConfirmed === null ? null : lastConfirmed.fit);
-  // Fit asks whenever Spark is answered (D73): no Spark, no referent for
-  // "did it do what you wanted". A Spark change re-opens it (D72).
-  const fitAskable = lastConfirmed !== null && lastConfirmed.spark !== null;
   // A panel's selected set (D78): the optimistic array while its toggle is
   // on the wire, the last confirmed array otherwise (null -> empty).
   const panelValues = (field: PanelKey): readonly string[] => {
@@ -488,11 +640,17 @@ export function SessionLadder({
     }
     return lastConfirmed === null ? [] : lastConfirmed[field] ?? [];
   };
+  // The axis config for the current axis screen (D79), undefined off the
+  // axis screens — one PillScreen serves all three.
+  const currentAxis =
+    phase === 'energy' || phase === 'environment' || phase === 'spark'
+      ? AXES.find((axis) => axis.key === phase)
+      : undefined;
 
   return (
     <ThemedView style={styles.container}>
       <ThemedView style={styles.content}>
-        {phase === 'ladder' ? (
+        {phase === 'ladder' && (
           <>
             <View style={styles.rungRegion} onLayout={onRungRegionLayout}>
               {RUNG_WORDS.map((word, index) => (
@@ -549,38 +707,130 @@ export function SessionLadder({
               </GestureDetector>
             </View>
 
-            {/* The intent axes (D71): three single-select chip rows —
-                Energy, Environment, Spark — each in D57's chip grammar
-                (selected inverts, re-tap is a no-op). A fixed layout
-                sibling below the home zone; hidden by opacity, so the
-                ladder geometry is identical before and after it appears. */}
-            <Animated.View
-              style={[styles.chipSection, chipRowStyle]}
-              pointerEvents={lastConfirmed !== null ? 'auto' : 'none'}>
-              {AXES.map((axis) => {
-                const selected = selectedAxis(axis.key);
+            {/* Close is the ladder's pre-drop exit (D79): a fullScreen
+                modal has no OS dismissal gesture, so the entry screen
+                carries its own Close. Disabled while a drop is on the wire
+                (D54). Every other exit lives on the closing screen. */}
+            <Pressable
+              disabled={inFlight}
+              onPress={onClose}
+              style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+              <ThemedText type="smallBold">Close</ThemedText>
+            </Pressable>
+          </>
+        )}
+
+        {/* The three intent axis screens (D71/D79): one axis per screen,
+            title = axis name, values as full-width bottom-anchored pills,
+            tap-advance on confirm, first-class Skip. Spark's confirm nulls
+            fit (D72) and branches to the fit screen when answered. */}
+        {currentAxis !== undefined && (
+          <PillScreen
+            theme={theme}
+            title={currentAxis.label}
+            values={currentAxis.values}
+            selected={selectedAxis(currentAxis.key)}
+            pendingValue={
+              pendingAxis !== null && pendingAxis.axis === currentAxis.key
+                ? pendingAxis.value
+                : null
+            }
+            disabled={inFlight}
+            error={saveError}
+            onSelect={(value) => tapAxis(currentAxis.key, value)}
+            onSkip={advanceNoWrite}
+            onBack={goBack}
+          />
+        )}
+
+        {/* The fit screen (D73/D79): shown only when Spark was answered;
+            spark's advance goes straight to closing otherwise. Same
+            pill-and-Skip pattern, FITS vocabulary unchanged. */}
+        {phase === 'fit' && (
+          <PillScreen
+            theme={theme}
+            title="Did it do what you wanted?"
+            values={FITS}
+            selected={selectedFit}
+            pendingValue={pendingFit}
+            disabled={inFlight}
+            error={saveError}
+            onSelect={tapFit}
+            onSkip={advanceNoWrite}
+            onBack={goBack}
+          />
+        )}
+
+        {/* The closing screen (D79): Close plus an optional panels entry,
+            off the required path. Close is a sibling of the entry, never
+            blocked by it (both disable only while an insert is on the
+            wire, D54). */}
+        {phase === 'closing' && (
+          <View style={styles.sequenceScreen}>
+            <View style={styles.sequenceHeader}>
+              <Pressable disabled={inFlight} onPress={goBack} style={styles.backButton}>
+                <ThemedText type="smallBold">Back</ThemedText>
+              </Pressable>
+            </View>
+            <View style={styles.closingActions}>
+              <Pressable
+                disabled={inFlight}
+                onPress={() => setPhase('panels')}
+                style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+                <ThemedText type="smallBold">Anything else?</ThemedText>
+              </Pressable>
+              <Pressable
+                disabled={inFlight}
+                onPress={onClose}
+                style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+                <ThemedText type="smallBold">Close</ThemedText>
+              </Pressable>
+            </View>
+          </View>
+        )}
+
+        {/* The panels screen (D75/D76/D78): the two multi-select confound
+            panels, off the required path (reached only from closing). Reuse
+            the chip visual language wholesale — selected inverts, the
+            toggled value renders pending. No advance-on-confirm: toggles
+            settle in place. Back returns to closing. */}
+        {phase === 'panels' && (
+          <View style={styles.sequenceScreen}>
+            <View style={styles.sequenceHeader}>
+              <Pressable disabled={inFlight} onPress={goBack} style={styles.backButton}>
+                <ThemedText type="smallBold">Back</ThemedText>
+              </Pressable>
+              <ThemedText
+                type="title"
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                style={styles.sequenceTitle}>
+                Anything else?
+              </ThemedText>
+            </View>
+            <View style={styles.panelsBody}>
+              {PANELS.map((panel) => {
+                const values = panelValues(panel.key);
                 return (
-                  <View key={axis.key} style={styles.axisRow}>
-                    <ThemedText type="small" themeColor="textSecondary" style={styles.chipQuestion}>
-                      {axis.label}
+                  <View key={panel.key} style={styles.richQuestion}>
+                    <ThemedText
+                      type="small"
+                      themeColor="textSecondary"
+                      style={styles.chipQuestion}>
+                      {panel.label}
                     </ThemedText>
                     <View style={styles.chipRow}>
-                      {axis.values.map((value) => {
-                        // Selected = full inversion (text token as fill,
-                        // background token as label): the strongest
-                        // contrast the existing tokens offer. Same
-                        // dimensions in every state (D57 grammar).
-                        const isSelected = value === selected;
+                      {panel.values.map((value) => {
+                        const isSelected = values.includes(value);
                         const isPending =
-                          pendingAxis !== null &&
-                          pendingAxis.axis === axis.key &&
-                          pendingAxis.value === value;
+                          pendingPanel !== null &&
+                          pendingPanel.field === panel.key &&
+                          pendingPanel.value === value;
                         return (
                           <Pressable
                             key={value}
-                            // Disabled while any insert is on the wire (D54).
                             disabled={inFlight}
-                            onPress={() => tapAxis(axis.key, value)}
+                            onPress={() => togglePanel(panel.key, value)}
                             style={[
                               styles.chip,
                               {
@@ -588,9 +838,6 @@ export function SessionLadder({
                                   ? theme.text
                                   : theme.backgroundElement,
                               },
-                              // Pending-selected while this value's revision
-                              // is on the wire (D54): the selected treatment
-                              // at the card's pending opacity.
                               isPending && styles.chipPending,
                             ]}>
                             <ThemedText
@@ -605,127 +852,14 @@ export function SessionLadder({
                   </View>
                 );
               })}
-              {/* The More affordance (D64): the door to the rich phase.
-                  Mounted with the axes so it shares the confirmed-only
-                  visibility (and never reflows the rung geometry); small
-                  on purpose — form is gate-tuned. */}
-              <Pressable disabled={inFlight} onPress={() => setPhase('rich')} style={styles.more}>
-                <ThemedText type="small" themeColor="textSecondary">
-                  More
+              {saveError !== null && (
+                <ThemedText type="small" style={styles.sequenceError}>
+                  {saveError}
                 </ThemedText>
-              </Pressable>
-            </Animated.View>
-          </>
-        ) : (
-          /* The rich phase (D64): the optional now-facts — the fit
-             question (D73, asked when Spark is set) and the two
-             multi-select confound panels (D75/D76) — replacing the ladder
-             render whole. Conditional rendering is fine here: there are no
-             rungs to protect. Every answer is its own revision insert
-             (D65/D78) through the same pipeline, same one-in-flight rule,
-             same inline error. */
-          <View style={styles.richRegion}>
-            {fitAskable && (
-              <View style={styles.richQuestion}>
-                <ThemedText type="small" themeColor="textSecondary" style={styles.chipQuestion}>
-                  Did it do what you wanted?
-                </ThemedText>
-                <View style={styles.chipRow}>
-                  {FITS.map((fit) => {
-                    // The axis chips' selection treatment, reused wholesale
-                    // (D65): uniform chips, full inversion when selected,
-                    // pending at the card's opacity.
-                    const selected = fit === selectedFit;
-                    return (
-                      <Pressable
-                        key={fit}
-                        disabled={inFlight}
-                        onPress={() => tapFit(fit)}
-                        style={[
-                          styles.chip,
-                          { backgroundColor: selected ? theme.text : theme.backgroundElement },
-                          fit === pendingFit && styles.chipPending,
-                        ]}>
-                        <ThemedText
-                          type="small"
-                          style={selected ? { color: theme.background } : undefined}>
-                          {fit}
-                        </ThemedText>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-            )}
-            {/* The two confound panels (D75/D76): multi-select toggles
-                (D78). Reuse the chip visual language wholesale — selected
-                inverts, the toggled value renders pending while its
-                revision is on the wire. */}
-            {PANELS.map((panel) => {
-              const values = panelValues(panel.key);
-              return (
-                <View key={panel.key} style={styles.richQuestion}>
-                  <ThemedText type="small" themeColor="textSecondary" style={styles.chipQuestion}>
-                    {panel.label}
-                  </ThemedText>
-                  <View style={styles.chipRow}>
-                    {panel.values.map((value) => {
-                      const isSelected = values.includes(value);
-                      const isPending =
-                        pendingPanel !== null &&
-                        pendingPanel.field === panel.key &&
-                        pendingPanel.value === value;
-                      return (
-                        <Pressable
-                          key={value}
-                          disabled={inFlight}
-                          onPress={() => togglePanel(panel.key, value)}
-                          style={[
-                            styles.chip,
-                            {
-                              backgroundColor: isSelected ? theme.text : theme.backgroundElement,
-                            },
-                            isPending && styles.chipPending,
-                          ]}>
-                          <ThemedText
-                            type="small"
-                            style={isSelected ? { color: theme.background } : undefined}>
-                            {value}
-                          </ThemedText>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
-              );
-            })}
-            {/* The same inline error (D54/D65) — the home-zone box is
-                off-screen in this phase, so the rich phase carries its
-                own slot for it. */}
-            {saveError !== null && (
-              <ThemedText type="small" style={styles.richError}>
-                {saveError}
-              </ThemedText>
-            )}
-            {/* Back swaps phases again (D64): the ladder returns with
-                the card still on its rung — its state never left. */}
-            <Pressable
-              disabled={inFlight}
-              onPress={() => setPhase('ladder')}
-              style={styles.backButton}>
-              <ThemedText type="smallBold">Back</ThemedText>
-            </Pressable>
+              )}
+            </View>
           </View>
         )}
-
-        {/* Dismissal is disabled while an insert is in flight (D54);
-            Close is the only exit, from either phase. */}
-        <Pressable
-          disabled={inFlight}
-          onPress={onClose}
-          style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
-          <ThemedText type="smallBold">Close</ThemedText>
-        </Pressable>
       </ThemedView>
     </ThemedView>
   );
@@ -784,12 +918,6 @@ const styles = StyleSheet.create({
   cardPending: {
     opacity: 0.5,
   },
-  chipSection: {
-    gap: Spacing.one,
-  },
-  axisRow: {
-    gap: Spacing.one,
-  },
   chipQuestion: {
     textAlign: 'center',
   },
@@ -807,21 +935,48 @@ const styles = StyleSheet.create({
   chipPending: {
     opacity: 0.5,
   },
-  more: {
-    alignSelf: 'center',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.half,
-  },
-  richRegion: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: Spacing.four,
-  },
   richQuestion: {
     gap: Spacing.one,
   },
-  richError: {
+  // The one-screen sequence (D79): a flex column with the header at the
+  // top and the answer stack anchored to the bottom (thumb reach) via
+  // marginTop:auto.
+  sequenceScreen: {
+    flex: 1,
+  },
+  sequenceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  sequenceTitle: {
+    flex: 1,
     textAlign: 'center',
+  },
+  sequenceError: {
+    textAlign: 'center',
+  },
+  pillStack: {
+    marginTop: 'auto',
+    gap: Spacing.two,
+  },
+  pill: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    borderRadius: Spacing.four,
+    paddingVertical: Spacing.three,
+  },
+  skipPill: {
+    marginTop: Spacing.one,
+  },
+  closingActions: {
+    marginTop: 'auto',
+    gap: Spacing.two,
+  },
+  panelsBody: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: Spacing.four,
   },
   backButton: {
     alignSelf: 'center',
