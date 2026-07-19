@@ -168,3 +168,11 @@ disposable, the gate outranks every lean. If the phase swap confuses on
 the couch, the fallback is scroll-into-view *below* the chip row with
 the rung-compression cost accepted consciously — a swap of surface, not
 of the D65/D66 write semantics.
+
+## Amendment (D70-D78 pointer) -- 2026-07-18
+
+The fit/context/co-alcohol prose above describes the superseded v1 rich
+phase and is retained as the record. The ratified rich phase is D73-D78
+(scoring-lexicon.md): fit asks whenever Spark is answered; context is
+deleted; the panels are multi-select toggles. Shipped at 5b0aec9;
+rewritten at the wheel pass, not before.

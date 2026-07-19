@@ -148,7 +148,7 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
    **App-code tests are not currently possible** — React Native Testing Library,
    `jest-expo`, and `react-test-renderer` are not installed, and Jest's `roots` would
    not discover them if they were. A test file placed anywhere under `src/` is silently
-   never run: `npm test` still prints `36 passed` and exits 0, which is a green gate over
+   never run: `npm test` still prints `40 passed` and exits 0, which is a green gate over
    tests that did not execute. Wiring that up is a `chore:` of its own, undertaken when a
    slice actually needs it — not before. UI slices gate on the physical iPhone; unit tests
    are explicitly not evidence for them.

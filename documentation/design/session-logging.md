@@ -270,7 +270,9 @@ and does not send `deleted` on any of these paths (default false).
    in wiring needs a read, and the chip row's appearance is the
    in-session evidence a save happened. Gate: UI-visible — the
    physical iPhone, with persistence verified by a fresh
-   `session_entries` SELECT in the SQL editor.
+   `session_entries` SELECT in the SQL editor. **Shipped and gated
+   across four commits: `111de9c` (D54-D55 persistence), `4034ea4`
+   (chip row), `cae5258` (D53 dialog copy), `37bf9eb` (D58 echo).**
 
 ## Non-goals (this pass)
 
@@ -293,3 +295,12 @@ disposable (ratified ruling), and the gate outranks every lean above. If
 the drag loses to tap-and-settle on the couch, D50/D51 are replaced by a
 tap mechanic under the same D49 launch surface and the same chip-row
 rules — the fallback swaps the gesture, not the skeleton.
+
+## Amendment (D70-D78 pointer) -- 2026-07-18
+
+The chip-row, context free-text, and alcohol-chip prose above describes
+the superseded v1 survey and is retained as the record of what was
+superseded. The ratified survey is D70-D78 (scoring-lexicon.md amendment
+blocks): three single-select intent axes, the fit question keyed on
+Spark, and two multi-select toggle panels; shipped at 5b0aec9. This
+doc's interaction prose is rewritten at the wheel pass, not before.

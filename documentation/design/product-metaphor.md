@@ -102,9 +102,12 @@ settled schema.
 
 ## Relationship to current work
 
-Ingestion is complete (slices 1–6: parse, confirm/edit, atomic insert — see
-`confirm-edit-screen.md` and `coa-insert.md`). The active path is the shelf
-read: the compendium list (`shelf.md`, slice 7), the first UI this metaphor
-governs directly — neutral untried cards, no mood, no chemistry ordering.
-Books, moods, and sessions remain blocked on the scoring lexicon; this doc is
-still their destination, not a spec to build now.
+Ingestion is complete (parse, confirm/edit, atomic insert -- see
+`confirm-edit-screen.md` and `coa-insert.md`). The shelf list is shipped
+and governed by this metaphor directly: neutral untried cards, no mood,
+no chemistry ordering. Session logging is live end to end -- the ladder
+surface with the D70-D78 survey writes append-only chains, and the
+scoring read views (`session_current`, `coa_session_stats`) compute
+mood from logged outcomes only. Books, mood display surfaces, and the
+intent/quadrant lenses remain future work; this doc is still their
+destination, not a spec to build now.
