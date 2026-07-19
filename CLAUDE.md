@@ -54,6 +54,10 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   (see **Ingestion**) and is wired to a handler, never to a UI.
 - **Document-before-implement.** Capture the intended behavior in `documentation/`
   before writing the implementation.
+- **A doc's status line is amended by the commit that changes its truth, or the
+  doc carries no status line.** A status claim nobody re-verifies is a trusted
+  narrative waiting to be believed; five of them were found false in one sweep
+  (44872df).
 
 ---
 
@@ -116,6 +120,12 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   no popups; blockers are reported as plain numbered text and stop the run.
 - **Phase A precondition checks** wherever work depends on a prior commit: audit
   (read-only) the repo state first and confirm the premise before changing anything.
+- **Grep gates use discriminating forms.** A marker-count criterion must target a
+  form that appears only where the gated property lives -- a table-row form, an
+  exact whole line -- never a bare token that also occurs in prose, and single
+  unbroken tokens only, since a phrase can span a line-wrap. A criterion the
+  file's own prose can trip is malformed, and the implementer STOPping on it is
+  correct.
 
 ---
 
