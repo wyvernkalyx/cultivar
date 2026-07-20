@@ -9,7 +9,7 @@ the shape. North stars:
 `documentation/design/scoring-lexicon.md` (the skeleton this mechanic
 serves), `documentation/design/product-metaphor.md`, and
 `documentation/design/session-entries-schema.md` (the table the wiring
-slice writes). Amended by D80 (block at end of file, 2026-07-20): the drag mechanic (D50-D51 card and home zone) and the answer echo (D58) are superseded design-side; the score screen becomes a pill screen; implementation pending.
+slice writes). Amended by D80 and D81 (blocks at end of file, 2026-07-20), implemented and device-gated at `5318afd`; amended by D82 (block at end of file, 2026-07-20), design-only, implementation pending.
 
 ## Purpose
 
@@ -444,3 +444,71 @@ thing.
 - Type sizes and treatment are feel values, gate-tuned.
 
 Design-only; implemented in the same feat slice as D80.
+
+## Amendment (D82) -- the panels join the sequence, 2026-07-20
+
+Operator-ratified in chat, 2026-07-20. Grounds: the operator's gate
+verdict on the D80/D81 build named the panels screen as the last seam,
+and the one-grammar criterion that killed the drag applies to it with
+equal force. The open design question D80 left behind -- multi-select
+cannot use tap-advance unmodified -- is answered here.
+
+The ratified interaction:
+
+- Both panels leave the off-path panels screen and join the required
+  sequence as two separate screens, one card each: "How were you
+  starting out?" (physical_state), then "Anything else?"
+  (co_consumption). Each screen renders its full vocabulary as
+  stacked pills, authored order, D75/D76 vocabularies unchanged.
+- The full order: score, Energy, Environment, Spark, fit (still
+  conditional on Spark, D73), starting-out, anything-else, closing.
+  Grounds for the placement: the verdict screens stay a contiguous
+  block about this run; the panels are context, not verdicts, and
+  trail the block; the specific question precedes the catch-all.
+- Multi-select grammar: a tap toggles a value and saves that toggle
+  immediately -- tap-is-the-save survives per-toggle, D78 semantics
+  preserved wholesale (selected inverts, toggled value renders
+  pending, deselection writes). A full-width Done pill beneath the
+  values advances the screen. Done never writes; it only advances.
+- Done with nothing selected is the skip. There is no separate Skip
+  pill on a multi-select screen: null costs one tap, the same as
+  answering, so the null-must-never-cost-more principle is satisfied
+  by Done itself. Rejected alternative, recorded: holding toggles in
+  local state and saving the set at Done -- it breaks tap-is-the-save
+  and introduces a batched save that can partially fail.
+- The survey's one grammar split is now explicit and visible:
+  single-select screens advance on the answer tap; multi-select
+  screens toggle in place and advance on Done. The split is carried
+  by what the eye can see -- pills staying lit -- not by hidden state.
+  The score screen's missing Skip (D80) remains the one semantic
+  non-uniformity.
+- The closing screen loses the panels entry. It becomes: the product
+  line alone in the header (D81, no title), a single Close button,
+  and Back returning to the anything-else screen. Rejected
+  alternative, recorded: deleting the closing screen and ending the
+  survey on the anything-else Done -- rejected because the survey
+  would terminate on a data-writing screen with no terminus, and the
+  banked completion moment (art pass, calyx-to-petal) needs a screen
+  to live on.
+- Done pill treatment is visually distinct from the value pills;
+  exact treatment is a feel value, gate-tuned, final styling owned by
+  the banked art pass.
+- Persistence grammar unchanged: D54-D55 pending semantics, D65
+  revision inserts, D66 fit nulling, D77 shape, D78 null-not-empty.
+  No schema change: both columns stay `string[] | null`,
+  presence-only. This decision moves surfaces; it does not touch
+  writes.
+
+Superseded, per decision:
+
+- The D79 closing-screen panels entry and the combined off-path
+  panels screen are superseded as surfaces. D75/D76 vocabularies and
+  D78 toggle semantics are preserved wholesale on the new screens.
+
+Gate: couch gate on the physical iPhone. Criterion: seam-absence --
+the full flow, start to finish, feels like one application, panels
+included. Same criterion that gated D80; this pass exists because
+that gate named the residue.
+
+This amendment is design-only. Implementation is a follow-on feat
+slice, device-gated per the criterion above.
