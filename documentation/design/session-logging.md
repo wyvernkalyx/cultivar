@@ -9,7 +9,7 @@ the shape. North stars:
 `documentation/design/scoring-lexicon.md` (the skeleton this mechanic
 serves), `documentation/design/product-metaphor.md`, and
 `documentation/design/session-entries-schema.md` (the table the wiring
-slice writes). Amended by D80 and D81 (blocks at end of file, 2026-07-20), implemented and device-gated at `5318afd`; amended by D82 (block at end of file, 2026-07-20), design-only, implementation pending.
+slice writes). Amended by D80 and D81 (blocks at end of file, 2026-07-20), implemented and device-gated at `5318afd`; amended by D82 and D82.1 (blocks at end of file, 2026-07-20), design-only, implementation pending.
 
 ## Purpose
 
@@ -512,3 +512,34 @@ that gate named the residue.
 
 This amendment is design-only. Implementation is a follow-on feat
 slice, device-gated per the criterion above.
+
+## Amendment (D82.1) -- multi-select announces itself, 2026-07-20
+
+Operator-ratified in chat, 2026-07-20, at the D82 device gate. The gate
+FAILED on its seam criterion, informatively: the D82 block claimed the
+grammar split was "carried by what the eye can see -- pills staying
+lit." Refuted by lived use. Operator verbatim: "it presents exactly the
+same as the other screens even though it is different." A lit pill is
+legible only after the first tap; a multi-select screen must announce
+itself before it.
+
+The ratified fix:
+
+- Every multi-select pill carries a leading checkbox: an empty square
+  when the value is off, a checked square when it is on. The square's
+  presence is the pre-tap cue that this screen is pick-any and needs
+  Done, where a bare pill is pick-one and advances on tap.
+- Single-select pills are unchanged -- no indicator. Considered and
+  rejected: indicators on both grammars (circle vs square), rejected
+  because the operator's ratified cue is the asymmetry itself; the
+  bare pill is already the established single-select shape.
+- No new dependencies; the checkbox is drawn with existing primitives.
+  Final visual treatment is art-pass scope.
+
+Everything else in the D82 block stands as gated: the sequence order,
+the Done grammar, the per-toggle writes, the closing screen, and the
+persistence conformance (observed row-by-row at this gate, including a
+live null-normalization on deselect).
+
+Gate: the same seam-absence couch gate, re-run on the two panel
+screens after the checkbox lands in the same feat slice.
