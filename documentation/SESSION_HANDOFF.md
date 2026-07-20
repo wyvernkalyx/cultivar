@@ -1,256 +1,210 @@
-# SESSION_HANDOFF -- written 2026-07-18 against pushed HEAD `a22f74f`
+# SESSION_HANDOFF -- written 2026-07-19 against pushed HEAD `8513c86`
 
 The repo is authoritative over this document. Begin with a read-only
-Phase A audit (`bash scripts/session-audit.sh`, Git Bash only -- the
-script was rewritten this session; see What shipped) and try to break
-every claim below before doing anything else.
+Phase A audit (`bash scripts/session-audit.sh`, Git Bash only) and try
+to break every claim below before doing anything else.
 
-This file supersedes the handoff committed at `3497b6b`, whose full
-record remains retrievable:
-`git show 3497b6b:documentation/SESSION_HANDOFF.md`.
+This file supersedes the handoff committed at `5ee49a9`, retrievable:
+`git show 5ee49a9:documentation/SESSION_HANDOFF.md`.
 
-## Preamble -- carried context lost again; assume this doc is fallible too
+## Preamble -- carried context broke again; assume this doc is fallible
 
-This session's Phase A matched its handoff on every repo claim -- the
-first clean open in three sessions -- and the carried context still
-broke three times the moment it was tested against text instead of
-state:
+Phase A opened clean for the second consecutive session (all fourteen
+prior-handoff predictions confirmed, three closed only by manual
+paste). Then the session's own predictions and premises broke four
+times:
 
-1. **"no implementation exists" was a phantom quote.** The prior
-   handoff listed it as a stale line in `scoring-lexicon.md` and
-   `rich-path.md`. The string exists in neither file and never did at
-   any greppable form. Dropped from the sweep; recorded here so it is
-   never hunted again.
-2. **product-metaphor's "five tables" detail was fabricated.** The
-   section WAS false (it claimed sessions blocked on the lexicon after
-   session logging shipped), but the remembered specifics were not in
-   the file. The lesson compounds: a carried claim can be right in
-   verdict and wrong in every particular.
-3. **The D76 `Amends skeleton` line-split was a non-issue.** Both
-   `Amends` hits on the HEAD blob are whole lines. Closed, no edit.
+1. **The device-gate row prediction was refuted: +13, not +8.** Benign
+   -- a force-closed first walk deviated from the script (the operator
+   answered two steps the script skipped) and wrote a complete 5-row
+   chain. The lesson is not "predict better": a gate prediction
+   assumes script compliance, and a red prediction plus a row-by-row
+   read is exactly the audit working. The chain survived a force-close
+   with every row a one-field delta.
+2. **The recon prompt located pointer blocks "near the top" of two
+   docs; they sit at the end.** Only scoring-lexicon.md points near
+   the top. Corrected by the implementer's report.
+3. **The recon prompt assumed four survey component files; there are
+   two.** The whole survey is src/components/session-ladder.tsx; the
+   owner is src/components/shelf-list.tsx.
+4. **The freeze hypothesis "Metro dev-server artifact" was refuted by
+   discrimination** (buttons ignored taps while the phone worked; the
+   freeze arrived without a tap; no Metro output). It is app-layer.
+   See Known open defect.
 
-Also this session, four corrections landed against the architect's own
-output: gate predictions quoted absolute `entry_no` values (it is a
-table identity surviving old deletions, not a per-chain counter -- all
-row predictions are now relative: counts and transitions, never
-absolutes); body-line-count predictions missed three pushes running and
-are retired (the `cat -A` character check is the whole verification);
-a prompt carved an inline exception to CLAUDE.md's check-ignore ban and
-the implementer correctly refused it (see Banked item 4); and one
-authored insertion contained em-dashes under its own ASCII-only rule
-(the implementer's `--` reconciliation was correct).
+Also: D79 as ratified in chat was silent on fit placement; the
+architect filled it (own screen, post-Spark, Spark-gated) and flagged
+the fill before the docs commit. Ratified-by-silence after an explicit
+flag, recorded here so it is not later mistaken for an unratified
+drift.
 
 ## Start here (Phase A, read-only) -- every line is a falsifiable prediction
 
 | check | expected |
 |---|---|
 | branch | `main` |
-| HEAD | a `docs:` commit, subject `docs: session handoff at a22f74f`, parent `a22f74f`; its own sha unknowable here. Below it, newest first: `a22f74f`, `109f6ed`, `44872df`, `5b0aec9`, `b7c5f3c`, `1a04651`, `3497b6b` (prior handoff). |
-| `git rev-list --left-right --count origin/main...HEAD` | `0	0` **after** the operator pushes this handoff commit; a nonzero right count means the push has not run -- a finding, not an error. |
-| `git status --short` | clean. `audit.txt` is gitignored as of `109f6ed`; it appears only as `!! audit.txt` under `git status --ignored --short`. |
-| `ls supabase/migrations/` | exactly five; newest `20260718185916_alter_session_entries_d77.sql` |
-| Jest | 40 passed (last literal run: the Build B acceptance audit at `109f6ed`'s tree; unchanged by construction through `a22f74f` -- three docs/script-only commits) |
-| Deno | 5 passed (same run, same caveat) |
-| `npx tsc --noEmit` | exit 0 (same run; the audit script now guards against the absent-tsc false gate) |
+| HEAD | a `docs:` commit, subject `docs: session handoff at 8513c86`, parent `8513c86`; its own sha unknowable here. Below it, newest first: `8513c86`, `dbc5426`, `5ee49a9`, `a22f74f`, `109f6ed`, `44872df`, `5b0aec9`, `b7c5f3c`, `1a04651`, `3497b6b`. |
+| `git rev-list --left-right --count origin/main...HEAD` | `0	0` after the operator pushes this handoff commit; a nonzero right count means the push has not run -- a finding, not an error. |
+| `git status --short` | clean; `audit.txt` only under `--ignored` as `!!`. |
+| `ls supabase/migrations/` | exactly five; newest `20260718185916_alter_session_entries_d77.sql` (untouched this session) |
+| Jest | 40 passed (last literal run: the D79 build report at `8513c86`'s tree) |
+| Deno | 5 passed (last literal run: the `5ee49a9` audit; unchanged by construction through `8513c86` -- no supabase/functions changes in either commit) |
+| `npx tsc --noEmit` | exit 0 |
 | `npx expo lint` | 1 error, 0 warnings (template `use-color-scheme.web.ts`) |
-| `npx expo install --check` | jest/@types/jest misaligned PLUS expo patch drift (constants, dev-client, router, splash-screen at last look). Expected, growing, do not fix. |
-| Supabase (SQL editor, privileged; audit [16] has all three queries) | six tables `rowsecurity = t`; 9 policies, `session_entries` exactly INSERT + SELECT; both views `session_current` and `coa_session_stats` show `security_invoker=true` via the unnest/coalesce query -- a `(none)` row means the flag is LOST and the RLS bypass is live. All re-observed this session post-migration. |
-| `session_entries` rows | 10 rows, `entry_no` 72-81, one chain, all `lexicon_version = 2`, top row spark `Flow` / fit NULL. Predict by count and transitions, never absolute entry_no (this session's lesson). Disposable test data; a wipe before real use is fine and would zero this. |
+| `npx expo install --check` | jest/@types/jest PLUS expo patch drift (constants, dev-client, router, splash-screen at last look). Expected, growing, do not fix. |
+| Supabase (SQL editor; audit [16] has the three queries) | six tables `rowsecurity = t`; 9 policies, `session_entries` exactly INSERT + SELECT; both views `security_invoker=true`; a `(none)` row in query three means the flag is LOST. All re-observed this session pre-build. |
+| `session_entries` | 23 rows, four chains (sizes 10, 5, 6, 2 in chain-start order), all `lexicon_version = 2`; top row: energy set, environment/spark/fit all null. Counts and transitions only, never absolute entry_no. Disposable test data; a wipe would zero this. |
 | client constant | `src/lib/lexicon.ts:6` `LEXICON_VERSION = 2` |
 
-If any of these don't match, the repo wins -- re-baseline before proceeding.
+If any of these don't match, the repo wins -- re-baseline before
+proceeding.
 
 ## What shipped (newest first)
 
 - (this handoff commit) -- the write-last close, no code.
-- `a22f74f` -- **docs:** two rule promotions into CLAUDE.md (status-line
-  rule; grep-gate discriminating-form rule). Sweep 3 of 3.
-- `109f6ed` -- **chore:** session-audit.sh rewritten under the argv
-  invariant (the displayed `$` line IS the executed argv or a named
-  function); two-sided sync check; tsc absent-binary guard; expo check
-  de-interactived via /dev/null stdin; grep exit statuses printed;
-  MANUAL block carries all three schema-gate queries with a coalesce
-  that renders a missing invoker flag as a visible `(none)` row.
-  `audit.txt` gitignored. Sweep 2 of 3.
-- `44872df` -- **docs:** false-status-line sweep across four docs:
-  CLAUDE.md test count 36->40; session-logging slice 3 gains its
-  four-sha shipped annotation (`111de9c`, `4034ea4`, `cae5258`,
-  `37bf9eb` -- ratified after an implementer STOP; the honesty label
-  died in `111de9c`, confirmed by deletion hunk); D70-D78 pointer
-  amendments appended to session-logging.md and rich-path.md;
-  product-metaphor's relationship section rewritten true. Sweep 1 of 3.
-- `5b0aec9` -- **feat:** the session survey client reconciled to
-  D70-D78. LEXICON_VERSION 2; Elite/Solid/Mid/Miss/Trash; three axis
-  rows; Spark-keyed fit; context surface deleted; two toggle panels
-  with null normalization. Device-gated end to end (see The arc).
-- `b7c5f3c` -- **docs: D78** panel toggle deselection, appended to
-  scoring-lexicon.md.
-- `1a04651` -- **feat:** the D77 migration
-  (`20260718185916_alter_session_entries_d77.sql`). Applied via
-  operator `db push` and gated on observed state BEFORE commit: new
-  column set, RLS on, 9 policies, both views' reloptions observed
-  `security_invoker=true`, dropped-column count observed 0.
+- `8513c86` -- **feat:** D79 implemented in session-ladder.tsx: the
+  two-phase model becomes the screen sequence ladder -> energy ->
+  environment -> spark -> fit (Spark-gated) -> closing -> panels
+  (optional). One PillScreen serves axis and fit screens. Write
+  machinery untouched. Device-gated (see The arc). Ships one tracked
+  open defect (see Known open defect).
+- `dbc5426` -- **docs:** D79 ratified: axis capture restructure, wheel
+  refuted as input control. Full block in session-logging.md, pointer
+  in rich-path.md. The wholesale-rewrite promise both docs carried is
+  re-banked to a consolidation pass.
 
-## The arc -- D77 made real, D78 ratified, the client caught up, the docs told the truth
+## The arc -- the wheel pass ran and killed the wheel
 
-Entry point executed as written: the D77 migration was authored by the
-implementer from the committed design, reviewed whole, operator-applied,
-and gated on observed state -- the invoker flag survived the forced view
-recreate (the one live risk, and it came back clean twice: reloptions
-after apply, then again with the coalesce control). The known
-insert-breakage window (client sending the retired shape) was accepted
-into the migration's non-goals and closed the same day by `5b0aec9`.
+The banked entry point executed, but the design conversation refuted
+the design it was banked for. Operator's stated product goal:
+predictable and understandable on first use. Against that criterion
+the three-axis radial wheel lost on the evidence (no mobile
+convention, composite novel encoding, thumb-reach, center-is-null
+invisible to a novice), and one constraint dominated everything: the
+survey is answered during or after a session -- the user is sometimes
+impaired. That selects big targets, zero reading, no precision, skip
+cheaper than answering (or users fabricate to dismiss screens, which
+poisons the empirical layer the product runs on). D79's shape follows:
+one axis per screen, full-width pills, tap-advance, first-class Skip;
+calyx-to-petal relocates to the completion animation (banked, art
+pass) where it can never mis-select. Two semantics were ratified in
+chat on top: advance on insert CONFIRM, never on tap (the write path
+is blocked-not-queued, so advance-on-tap would land on inert
+controls); Skip never writes (the drop insert already records all
+axes null, so null is free by construction).
 
-**D78** arose from the client design pass: the array shape dissolved the
-boolean-era deselection blocker, so panels became toggles rather than
-shipping a known stuck-state out of consistency ("not process over
-product" -- operator's words, the ratification grounds). Sub-rule folded
-in: removing the last value stores null, never `[]` (one representation
-for the ratified checked-none = unanswered collapse). Scope: panels
-only; axis deselection-to-null stays banked with its blocker intact.
-**FITS survives** the D70-D76 supersession -- the scope retired fit's
-placement and nulling rule, never its strings (recorded in D78's block).
+The gate closed on 14 per-step verdicts including the airplane-mode
+failure path (inline error on the failing screen, revert by
+derivation, no stale error after recovery -- the fire-side
+setSaveError(null) was verified in source before the gate) and the
+null-spark branch (fit never shown). The DB read that refuted the +8
+prediction closed benign (Preamble 1) and doubled as the strongest
+evidence of the session: chain integrity held through a force-close
+and through both freezes.
 
-The device gate closed on database transitions, not tap narration: entry
-1 all-null at version 2; axis carry; Spark change nulling fit with the
-prior fit intact beneath (row 80->81); Environment change leaving fit
-untouched; last-value removal producing the null-not-empty transition
-(row 77->78, single-cause, only the toggle path can produce it); the
-failure path erroring inline with revert-by-derivation and the card
-parked. Two prediction-form lessons came out of that gate (Preamble).
+## Known open defect (shipped tracked, recorded in 8513c86's body)
 
-The chore bundle then cleared in three commits (What shipped). Both
-`session-logging.md` and `rich-path.md` now open their superseded prose
-with pointer amendments; their wholesale rewrite belongs to the wheel
-pass and nothing before it.
+Intermittent UI freeze after a confirmed insert: controls ignore taps,
+phone otherwise fine, the confirming row lands in Postgres, the
+10-second abort timer does not fire, one occurrence self-recovered
+after minutes, one was force-closed. Three directed repro walks (Metro
+visible) did not reproduce. Discriminated to the app layer;
+UI-layer only -- no data loss or corruption in any occurrence.
+Suspected neighborhood: the Reanimated strict-mode warning (carried
+blocked item, same neighborhood, plausibly same root). Capture
+protocol if it recurs: note wall-clock time, watch the 10-second mark,
+paste the full Metro window including warnings.
 
 ## Refuted hypotheses / memory corrections
 
-- The three Preamble text-refutations (phantom quote; fabricated detail;
-  line-split non-issue).
-- The prior session's audit ran the one-sided rev-list where the
-  handoff demanded two-sided -- an instance of the echo-drift class the
-  script rewrite killed.
-- Absolute entry_no predictions; line-count predictions (retired).
-- The architect's check-ignore carve-out (implementer right, prompt
-  wrong; see Banked 4).
-- The implementer's report assembly dropped its largest artifacts twice
-  while asserting "pasted whole above" -- a named failure pattern now,
-  not an incident. Protocol change (holds until revisited): build-prompt
-  diffs are delivered via the operator's channel by default, and the
-  implementer's report states the diff awaits operator paste rather
-  than claiming delivery. First use executed cleanly (Build C).
+- The four Preamble items.
+- The carried three-axis-wheel and marking-menu leans: refuted by D79
+  with grounds. Do not re-derive them.
+- Axis deselection-to-null's hoped resolution ("dissolves inside the
+  wheel's center-is-null") died with the wheel; the blocker is intact
+  and the item stays banked.
 
 ## Ratified decisions
 
-- **D78** with the null-normalization sub-rule and FITS survival, as
-  above; committed at `b7c5f3c`.
-- **Slice-3 annotation = four shas**, per the paragraph's own clause
-  enumeration; a two-sha annotation would have contradicted the body it
-  sits under (implementer STOP upheld).
-- **Two CLAUDE.md promotions** (`a22f74f`): the status-line rule and the
-  grep-gate discriminating-form rule. Grounds in the commit body.
-- **Rule-3 banking** (see Banked 4): promotion declined on the
-  operator's explicit uncertainty; tested once, below the
-  corrected-twice bar.
-
-## Landmines (new this session; carried ones live in CLAUDE.md and prior handoffs)
-
-- **Implementer-shell grep SIGABRT (exit 134).** The system grep in the
-  implementer's shell reproducibly aborts, even on plain files; its
-  Grep tool works. Consequence: an absence gate (`grep -c -> 0`) in
-  that environment is vacuous unless the exit status is stated -- a
-  dead grep and a clean zero-hit both print nothing. Every grep
-  criterion now requires the exit code alongside the result; the audit
-  script prints it natively. Operator Git Bash grep is unaffected.
-- **GCM cold-credential prompt at audit [3].** `git fetch origin` can
-  raise the credential-manager GUI on a machine without cached
-  credentials. Untested live (creds were cached); known, not yet felt.
-- **Verbatim text vs ASCII-only.** An authored insertion containing
-  em-dashes under an ASCII-only instruction forces the implementer to
-  reconcile; the instruction wins and `--` is the rendering. Author
-  ASCII in the first place.
+- **D79** (dbc5426): axis capture restructure; grounds impaired-use,
+  first-use predictability, null-honesty. Refutes the wheel.
+- **Advance-on-confirm and Skip-never-writes** (chat, pre-build):
+  grounds in The arc.
+- **Three implementer judgment calls accepted** (8513c86's body):
+  Close stays on the ladder screen; Skip/Back disable in flight;
+  setPhase lives in finish()'s success branch.
+- **Ship-with-tracked-defect** (operator-confirmed): grounds -- the
+  data layer is provably intact through every occurrence, the defect
+  is unreproducible on demand, and holding a gated diff hostage to an
+  unsummonable bug buys nothing.
+- **Ladder-unification banked as the next design pass**
+  (operator-confirmed): see Open items.
 
 ## Open items
 
 **Runnable now (the entry point)**
-- **The wheel mechanic** -- the survey's interaction redesign, first in
-  the bank for two sessions and now unblocked: the survey it replaces
-  is live, gated, and truthfully documented with pointer amendments
-  marking exactly the prose it will rewrite (`session-logging.md`,
-  `rich-path.md`). Operator's unratified leans, carried: three-axis
-  wheel (calyx-to-petal, center = null); marking-menu drill for
-  families if kept; overall stays the ladder; fit ladders (ordinal);
-  one-question-per-screen rhythm with Close/Next replacing More. Open
-  sub-problems: thumb-reach on a 360 wheel; families-as-colour vs
-  families-as-structure; the kaleidoscope easter egg (art pass; a spin
-  must never select). Gate on the couch -- completion is the metric.
-  Design pass first, its own `docs:`, before any build.
+- **Ladder-unification design pass.** Operator's lived-use
+  observation after the D79 gate: two input grammars in one flow
+  (drag-and-drop ladder, then pill taps) is inconvenient and
+  confusing; every screen should behave the same way. This refutes
+  D50/D51 territory ("drop is the save"; the vertical ladder is the
+  founding mechanic) and D79's "ladder unchanged" clause, so it is a
+  ratification pass of its own, not an amendment: the drop gesture IS
+  the save semantics, the ladder carries D51's up-is-better ordinal
+  geometry, and the D54/D58 pending-card/echo grammar assumes a
+  draggable card. Questions the pass must answer: does the ladder
+  become pills (and what carries the ordinal geometry), do pills
+  become a drag (refuted by D79's grounds), or does a third form
+  unify them. Design-only, its own docs: commit, couch-gated.
 
 **Blocked**
+- The freeze (capture protocol above; fix path needs a capture).
 - Reanimated strict-mode warning: one Metro stack-trace capture
-  (carried).
+  (carried; now doubly motivated).
 
 **Banked (prioritized)**
-1. **Glossary pass** -- personal-empirical rewrite of the operator's
-   cross-fade/physiology material; definitions in the operator's own
-   words. Population pharmacology cannot ship as written (discipline 1,
-   CLAUDE.md).
-2. **Transitional survey copy review** -- the axis labels and panel
-   questions ("Anything else?", "How were you starting out?") are
-   implementer-authored, clean of pharmacology and clinical framing,
-   flagged transitional in a code comment. Reviewed at the wheel pass;
-   sooner only if lived use grates.
-3. **Pending-state relocation into the design doc** -- the D54 pending
-   grammar's implementation moved axis/panel pending-set into the tap
-   handlers (the snapshot alone cannot disambiguate which axis/value is
-   pending). Accepted in review; the design doc should record it at the
-   wheel pass so the doc and the code do not drift.
-4. **check-ignore qualification** -- banked, not promoted; operator's
-   grounds: "I honestly don't know." Promote only on a second live
-   occurrence of the worktree-ignore question. Drafted text, verbatim,
-   per `a22f74f`'s pointer: `git check-ignore` remains banned for
-   verifying committed state. For the one question it answers correctly
-   -- is this untracked working file ignored right now -- prefer the
-   same evidence without it: the file absent from `git status --short`
-   and present as `!!` under `git status --ignored --short`.
-5. **Axis deselection-to-null** -- blocker intact (a single-select
-   corrects by picking another value; null needs a distinct gesture);
-   likely dissolves or resolves inside the wheel's center-is-null
-   design.
-6. Carried, untouched: detail-view session read/edit surface; home-zone
-   parking after a confirmed entry; shelf sort-by-band; UI/art pass
-   (dark default); license-number extraction + `licensees` + NY OCM
-   import; haptics; gear-icon confirmation on non-dev builds; Resend
-   domain verification; quadrant / intent lens / confound discounting
-   (capturable now, build on lived demand); anchor-collision residual
-   (D69); COA PDF persistence (Storage still has zero buckets);
-   `auth-resp.json` at the repo parent possibly holding token material
+1. Glossary pass (carried; personal-empirical rewrite, discipline 1).
+2. Art/polish pass additions from this session: screen-title/gear-icon
+   collision on every sequence screen (visible in all gate
+   screenshots); screen transition animation; the completion
+   calyx-to-petal bloom (D79); general sequence-screen formatting
+   (operator: "really terrible, fix later").
+3. Transitional survey copy review (carried; the fit question text and
+   panel labels survived D79 unchanged).
+4. Pending-state relocation into the design doc (carried; target is
+   now the consolidation pass, since the wheel pass is spent).
+5. Doc consolidation pass (new home of the wholesale-rewrite promise
+   both docs carried; grounds in dbc5426).
+6. check-ignore qualification (carried, promotion bar unchanged).
+7. Axis deselection-to-null (blocker intact; wheel resolution dead).
+8. Carried, untouched: detail-view session read/edit; home-zone
+   parking; shelf sort-by-band; license extraction + NY OCM import;
+   haptics; gear-icon confirmation on non-dev builds; Resend domain
+   verification; quadrant/intent-lens/confound discounting;
+   anchor-collision residual (D69); COA PDF persistence (Storage
+   still has zero buckets); `auth-resp.json` at the repo parent
    (flagged, still unconfirmed deleted).
 
 ## Working rhythm
 
-Stable method lives in `CLAUDE.md` (now including the two promoted
-rules) and `documentation/process/handoff-specs.md`. In flux this
-session: (a) the diff-via-operator-channel protocol (Refuted, last
-bullet) -- default until the implementer's report assembly is trusted
-with large artifacts again; (b) grep criteria carry exit codes,
-everywhere, both shells; (c) row-state predictions are relative
-(counts, transitions), never absolute identities; (d) the architect's
-channel check is character-identity via `cat -A` only -- no line-count
-predictions; (e) an aggregate operator verdict was accepted once for a
-schema gate whose residuals closed on single-value SQL results --
-explicitly not precedent for device gates, which keep per-step verdict
-lines.
+Stable method lives in CLAUDE.md and handoff-specs.md. In flux, all
+carried from last session and holding: diff-via-operator-channel;
+grep criteria carry exit codes in both shells; row predictions are
+relative only; commit verification is cat -A character identity;
+device gates keep per-step verdict lines (reaffirmed this session --
+the aggregate "everything worked" initially offered would have buried
+the freeze and the +13). New this session: a gate prediction is
+conditioned on script compliance -- when a walk deviates, re-derive
+the expected rows from what was actually done before calling the
+refutation a defect.
 
 ## Entry point
 
-**The wheel mechanic, design pass.** It has been the bank's top item
-for two sessions; everything it depends on is now true: the survey it
-supersedes is live end to end, the docs it rewrites carry pointer
-amendments marking the superseded prose, and the chore debt that would
-have polluted its diffs is cleared. The pass is design-only -- a
-`docs:` against `session-logging.md`/`rich-path.md` territory ratifying
-the wheel's skeleton (or refuting it on the couch) before any build
-prompt exists. Not a menu: absent an operator redirect, the wheel
-design pass is the move.
+**The ladder-unification design pass.** It exists because lived use on
+the gated D79 build produced a direct operator observation against the
+founding input mechanic, and the refinement doctrine ranks lived use
+above design intent. Everything it needs is true: D79 is live and
+gated, the freeze is tracked with a capture protocol, and the docs
+carry the D79 record it will argue against. Design-only, its own
+docs: commit, couch-gated on completion feel. Not a menu: absent an
+operator redirect, this is the move.
