@@ -1,14 +1,17 @@
 # Rich Path — Fit, Context, and Co-Alcohol on the Logging Surface
 
-Status: design ratified as leans (D64–D66) on 2026-07-16; no
-implementation exists. Display decisions are gate-revisable per the
+Status: design ratified as leans (D64–D66) on 2026-07-16. Fit is
+implemented inside the D79 sequence at `8513c86` as its own Spark-keyed
+screen (see the D79 pointer below). Context and co-alcohol were retired
+by the D77 schema; their prose here is superseded-and-pointed (see the
+D70–D78 pointer below). Display decisions are gate-revisable per the
 operator's standing revision expectation; the revision-insert semantics
 (D65) and the fit-nulling rule (D66) are the durable part. North stars:
 `documentation/design/scoring-lexicon.md` (the rich path's content and
 fit's render condition), `documentation/design/session-logging.md` (the
-mechanic and the D54–D55 persistence contract this pass extends),
-`documentation/design/session-entries-schema.md` (the columns, which
-already exist — this pass adds zero schema).
+mechanic and the D54–D55 persistence contract), and
+`documentation/design/session-entries-schema.md` (the schema as amended
+by D77).
 
 ## Purpose
 
