@@ -9,7 +9,7 @@ the shape. North stars:
 `documentation/design/scoring-lexicon.md` (the skeleton this mechanic
 serves), `documentation/design/product-metaphor.md`, and
 `documentation/design/session-entries-schema.md` (the table the wiring
-slice writes).
+slice writes). Amended by D80 (block at end of file, 2026-07-20): the drag mechanic (D50-D51 card and home zone) and the answer echo (D58) are superseded design-side; the score screen becomes a pill screen; implementation pending.
 
 ## Purpose
 
@@ -343,3 +343,80 @@ at the wheel pass. Re-banked to a consolidation pass. Grounds: the
 wheel's refutation removes the replacement prose that rewrite assumed;
 the amendment-block chain is the ratified record, and rewriting
 superseded v1 prose adds no information.
+
+## Amendment (D80) -- ladder unification: score becomes a pill screen, 2026-07-20
+
+Operator-ratified in chat, 2026-07-20. Grounds: lived use on the gated
+D79 build. Operator verbatim: "It felt like I was using multiple
+applications. The drag and drop tree for the first question and then
+just pill taps for the other questions." The refinement doctrine ranks
+lived use above design intent. The design test this pass answers to:
+one coherent application -- no point in the flow where the interaction
+model changes.
+
+The ratified interaction:
+
+- The score screen becomes a pill screen: the five RUNGS as full-width
+  stacked pills, Elite at top, Trash at bottom. The vertical order
+  carries D51's up-is-better geometry as visual order rather than drag
+  distance.
+- Tap is the save. D50's contract survives with the motion changed:
+  the mandatory field and the save are one muscle motion; there is no
+  done button and no confirm dialog, ever. Target size improves over
+  the ladder (full width x screen height / 5).
+- Tap fires the insert through the existing single writer. The tapped
+  pill renders pending until the insert confirms (the D54 contract is
+  preserved wholesale: never claim an unobserved success, one in-flight
+  insert, controls disabled in flight, inline error on failure, ~10s
+  client timeout, duplicate-on-retry absorbed by the schema). Advance
+  on confirmed insert, never on tap (D79 semantics).
+- No Skip on the score screen: score is the skeleton's mandatory
+  field. Every other sequence screen keeps first-class Skip. This is
+  the one intentional non-uniformity, and it is semantic, not
+  gestural.
+- Cancel is the Close control already on this screen. The card and the
+  home zone are removed; the home-zone-is-cancel mechanic (D51) is
+  superseded.
+- The answer echo (D58) is superseded entirely: with no card, nothing
+  is covered, and the selected pill's own state carries legibility.
+- Revision: Back to the score screen and tapping a different pill is a
+  revision insert -- the same grammar the axis screens already use.
+- Persistence grammar unchanged: D54-D55 pending semantics, revision
+  inserts, D66 fit nulling, D77 shape, D78 null-not-empty. This
+  decision moves the surface; it does not touch writes.
+
+Superseded and preserved, per decision:
+
+- D50: superseded in gesture, preserved in contract (tap-is-the-save).
+- D51: superseded as mechanic; the up-is-better vertical geometry is
+  preserved as visual order. Named cost, operator-accepted: the
+  shelf-rehearsal metaphor ("placing the product where it belongs")
+  dies with the drag. Ceremony defers to the banked calyx-to-petal
+  completion animation (art pass).
+- D54: contract preserved; the card-specific failure mechanics are
+  replaced by the pill screen's error grammar, already device-gated
+  under D79.
+- D58: superseded entirely.
+
+Sequence-screen scaffold (part of this pass; exact values gate-tuned):
+
+- One shared screen container for every sequence screen: safe-area top
+  inset plus breathing room above the header. The current header sits
+  at the raw top of a flex column with no inset.
+- The title is truly centered: the Back control is balanced by an
+  equal-width trailing spacer, so the title no longer offsets.
+- Applies to all sequence screens: score, Energy, Environment, Spark,
+  fit, closing, panels.
+- Recon finding, recorded: the "gear icon" in the D79 gate screenshots
+  is the Expo dev-client overlay, not app code; no gear is rendered
+  anywhere in src/. The only in-app half of that collision is the
+  header layout above.
+
+Gate: couch gate on the physical iPhone. Criterion: seam-absence --
+the full flow, start to finish, feels like one application. Completion
+feel is observed secondarily at the same gate and feeds the banked art
+pass; it is not pass/fail. (This amends the prior handoff's
+"couch-gated on completion feel"; operator-confirmed 2026-07-20.)
+
+This amendment is design-only. Implementation is a follow-on feat
+slice, device-gated per the criterion above.
