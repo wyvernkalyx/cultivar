@@ -420,3 +420,27 @@ pass; it is not pass/fail. (This amends the prior handoff's
 
 This amendment is design-only. Implementation is a follow-on feat
 slice, device-gated per the criterion above.
+
+## Amendment (D81) -- every survey screen names the product, 2026-07-20
+
+Operator-ratified in chat, 2026-07-20, on reviewing the D80
+implementation diff. The retired card was also the survey's only
+product identification; D80 recorded its gesture role and missed its
+information role. The operator's ratified fix goes further than
+restoring it in one place: every survey screen leads with the product
+-- brand and strain together -- so the user is never rating an unnamed
+thing.
+
+- The header of every sequence screen shows the product identification
+  as the top line -- the brand and the strain, rendered "Brand - Strain"
+  -- with the screen's question beneath it as a subheading: score
+  "Overall", the axis names, the fit question, the panels screen's
+  "Anything else?". The closing screen, which asks nothing, shows the
+  product identification alone.
+- The balanced-spacer centering of the D80 scaffold applies to the
+  name-plus-subheading unit as it did to the single title.
+- Question wording itself is unchanged; the banked survey copy review
+  still owns it.
+- Type sizes and treatment are feel values, gate-tuned.
+
+Design-only; implemented in the same feat slice as D80.
