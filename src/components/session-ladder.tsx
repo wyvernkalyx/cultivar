@@ -39,9 +39,12 @@ const AXES: { key: AxisKey; label: string; values: readonly string[] }[] = [
   { key: 'environment', label: 'Environment', values: ENVIRONMENT },
   { key: 'spark', label: 'Spark', values: SPARK },
 ];
+// D82: order matches the survey sequence — physical_state (starting out)
+// precedes co_consumption (anything else), the specific question before the
+// catch-all.
 const PANELS: { key: PanelKey; label: string; values: readonly string[] }[] = [
-  { key: 'co_consumption', label: 'Anything else?', values: CO_CONSUMPTION },
   { key: 'physical_state', label: 'How were you starting out?', values: PHYSICAL_STATE },
+  { key: 'co_consumption', label: 'Anything else?', values: CO_CONSUMPTION },
 ];
 
 // The card chip renders identity; the insert needs the id (coa_id).
@@ -73,12 +76,23 @@ type Snapshot = {
 // render its own pending visual (D80: the tapped pill, D65: the fit chip).
 type InsertSource = 'drop' | 'axis' | 'fit' | 'panel';
 
-// The D79/D80 screen sequence: one screen renders at a time and the flow
-// advances on insert CONFIRM (not on tap). Order: ladder (the score pill
-// screen) -> energy -> environment -> spark -> fit (only when spark is
-// answered, D73) -> closing -> panels (optional, off the required path).
-// Plain conditional render; transition animation is banked to the art pass.
-type Phase = 'ladder' | 'energy' | 'environment' | 'spark' | 'fit' | 'closing' | 'panels';
+// The D82 screen sequence: one screen renders at a time. Single-select
+// screens advance on insert CONFIRM (not on tap); the two multi-select
+// panels toggle in place and advance on a Done pill (D82). Order: ladder
+// (the score pill screen) -> energy -> environment -> spark -> fit (only
+// when spark is answered, D73) -> physical_state -> co_consumption ->
+// closing (D82: the panels join the required sequence). Field keys double
+// as phase names so currentPanel/currentAxis derive config straight from
+// phase. Plain conditional render; transition animation banked to the art pass.
+type Phase =
+  | 'ladder'
+  | 'energy'
+  | 'environment'
+  | 'spark'
+  | 'fit'
+  | 'physical_state'
+  | 'co_consumption'
+  | 'closing';
 
 // The shared sequence-screen header (D80 scaffold, D81 product line): a
 // leading control, a truly-centered two-line unit — the product
@@ -135,27 +149,33 @@ function SequenceHeader({
   );
 }
 
-// One sequence screen (D79 axis/fit, D80 score): a header, the values as
-// full-width bottom-anchored pills in thumb reach, and — unless the screen is
-// the mandatory score screen — a persistent first-class Skip no smaller than a
-// pill. Tap-advance and Skip semantics live in the owner; this renders
-// selection/pending state and the inline save error only. The chip visual
-// grammar is reused wholesale — selected inverts (text token as fill), pending
-// rides at half opacity (D57/D65/D80). Omitting onSkip omits the Skip pill —
-// the one intentional non-uniformity (D80): score is the skeleton's mandatory
-// field, so it has no Skip.
+// One sequence screen (D79 axis/fit, D80 score, D82 panels): a header, the
+// values as full-width bottom-anchored pills in thumb reach, and a trailing
+// action pill. Two grammars share this one screen (D82). A single-select
+// screen advances on the answer tap and carries an optional first-class Skip
+// (omit onSkip on the mandatory score screen — the skeleton's one required
+// field, D80). A multi-select panel passes selectedValues (a pill is lit iff
+// the set includes it, the single-select equality path unused) and onDone (a
+// Done pill that writes nothing and advances — the toggles themselves saved
+// per tap, D78). onSkip and onDone are mutually exclusive and never both
+// passed. Tap, Skip, Done, and toggle semantics live in the owner; this
+// renders selection/pending state and the inline save error only. The chip
+// visual grammar is reused wholesale — selected inverts (text token as fill),
+// pending rides at half opacity (D57/D65/D78/D80).
 function PillScreen({
   theme,
   product,
   title,
   values,
   selected,
+  selectedValues,
   pendingValue,
   disabled,
   error,
   onSelect,
   onLeading,
   onSkip,
+  onDone,
   leadingLabel = 'Back',
 }: {
   theme: ReturnType<typeof useTheme>;
@@ -163,12 +183,18 @@ function PillScreen({
   title: string;
   values: readonly string[];
   selected: string | null;
+  // Multi-select (D82): when present, a pill is lit iff this set includes it,
+  // and `selected` is unused (call sites pass selected={null}).
+  selectedValues?: readonly string[];
   pendingValue: string | null;
   disabled: boolean;
   error: string | null;
   onSelect: (value: string) => void;
   onLeading: () => void;
+  // Mutually exclusive with onDone (D82): a screen is single-select (Skip) or
+  // multi-select (Done), never both.
   onSkip?: () => void;
+  onDone?: () => void;
   leadingLabel?: string;
 }) {
   return (
@@ -182,7 +208,10 @@ function PillScreen({
       />
       <View style={styles.pillStack}>
         {values.map((value) => {
-          const isSelected = value === selected;
+          // Multi-select lights every value in the set (D82); single-select
+          // lights the one equal to `selected`.
+          const isMulti = selectedValues !== undefined;
+          const isSelected = isMulti ? selectedValues.includes(value) : value === selected;
           const isPending = value === pendingValue;
           return (
             <Pressable
@@ -192,9 +221,29 @@ function PillScreen({
               onPress={() => onSelect(value)}
               style={[
                 styles.pill,
+                // Multi-select pills lay label beside the checkbox (D82.1);
+                // single-select pills are unchanged.
+                isMulti && styles.pillMulti,
                 { backgroundColor: isSelected ? theme.text : theme.backgroundElement },
                 isPending && styles.chipPending,
               ]}>
+              {/* The leading checkbox is the pre-tap cue (D82.1) that this
+                  screen is pick-any and needs Done — a bare pill is pick-one
+                  and advances on tap. Empty square off, checked square on;
+                  final treatment is art-pass scope. */}
+              {isMulti && (
+                <View
+                  style={[
+                    styles.checkbox,
+                    { borderColor: isSelected ? theme.background : theme.textSecondary },
+                  ]}>
+                  {isSelected && (
+                    <ThemedText type="small" style={{ color: theme.background }}>
+                      ✓
+                    </ThemedText>
+                  )}
+                </View>
+              )}
               <ThemedText
                 type="default"
                 style={isSelected ? { color: theme.background } : undefined}>
@@ -221,6 +270,20 @@ function PillScreen({
             </ThemedText>
           </Pressable>
         )}
+        {/* Done advances a multi-select panel (D82): the toggles already saved
+            per tap, so Done writes nothing — it only moves on, and Done with
+            nothing selected is the skip by construction. Same geometry as Skip
+            but the primary text color (not Skip's secondary), so the two
+            grammars' trailing pills read as distinct. Mutually exclusive with
+            onSkip. Final treatment is art-pass scope. */}
+        {onDone !== undefined && (
+          <Pressable
+            disabled={disabled}
+            onPress={onDone}
+            style={[styles.pill, styles.skipPill, { backgroundColor: theme.backgroundElement }]}>
+            <ThemedText type="default">Done</ThemedText>
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -244,10 +307,11 @@ function PillScreen({
  * (D71) carrying the rest forward, with the advance firing on CONFIRM, not on
  * tap. Changing Spark nulls fit (D72); a first-class Skip advances and writes
  * nothing. Fit is its own screen shown only when Spark was answered (D73),
- * then a closing screen (Close plus an optional panels entry, off the
- * required path), then the two multi-select confound panels (co-consumption
- * D75, physical-state D76) as toggles (D78) that settle in place. Every write
- * rides the one insertEntry pipeline under the same D54/D55 grammar.
+ * then the two multi-select confound panels join the sequence in order (D82):
+ * physical-state (D76) then co-consumption (D75), each a toggle-and-save
+ * screen (D78) that advances on a Done pill, not on tap. A closing screen (a
+ * single Close) terminates the survey. Every write rides the one insertEntry
+ * pipeline under the same D54/D55 grammar.
  */
 export function SessionLadder({
   coa,
@@ -318,10 +382,11 @@ export function SessionLadder({
   // confirmed selection.
   const [phase, setPhase] = useState<Phase>('ladder');
 
-  // The D79 screen order. Spark decides whether fit is asked (D73): a
-  // non-null spark inserts the fit screen before closing; a null spark
-  // (the aimless session) advances straight to closing. Panels and closing
-  // are terminals of the switch — they never auto-advance.
+  // The D82 screen order. Spark decides whether fit is asked (D73): a
+  // non-null spark inserts the fit screen before the panels; a null spark
+  // (the aimless session) skips fit straight to the first panel. The two
+  // panels (physical_state then co_consumption) trail the verdict block and
+  // lead into closing, the one switch terminal (D82).
   const nextScreen = (current: Phase, sparkValue: string | null): Phase => {
     switch (current) {
       case 'ladder':
@@ -331,16 +396,21 @@ export function SessionLadder({
       case 'environment':
         return 'spark';
       case 'spark':
-        return sparkValue !== null ? 'fit' : 'closing';
+        return sparkValue !== null ? 'fit' : 'physical_state';
       case 'fit':
+        return 'physical_state';
+      case 'physical_state':
+        return 'co_consumption';
+      case 'co_consumption':
         return 'closing';
       default:
         return current;
     }
   };
-  // Back is navigation only (D79): the linear predecessor. From closing it
-  // is fit when spark was answered, spark otherwise; from panels it is the
-  // closing screen.
+  // Back is navigation only (D79): the linear predecessor. From the first
+  // panel (physical_state) it is fit when spark was answered, spark otherwise
+  // (the derivation that used to live on closing); co_consumption goes back
+  // to physical_state; closing goes back to co_consumption (D82).
   const backTarget = (current: Phase): Phase => {
     switch (current) {
       case 'energy':
@@ -351,10 +421,12 @@ export function SessionLadder({
         return 'environment';
       case 'fit':
         return 'spark';
-      case 'closing':
+      case 'physical_state':
         return lastConfirmed !== null && lastConfirmed.spark !== null ? 'fit' : 'spark';
-      case 'panels':
-        return 'closing';
+      case 'co_consumption':
+        return 'physical_state';
+      case 'closing':
+        return 'co_consumption';
       default:
         return 'ladder';
     }
@@ -405,11 +477,15 @@ export function SessionLadder({
       onBusyChange(false);
       if (!failed) {
         setLastConfirmed(snapshot);
-        // Advance on CONFIRM, not on tap (D79): the write landed, so the
-        // sequence moves forward. Spark's just-confirmed value decides the
-        // fit branch. Panel toggles settle in place — nextScreen returns
-        // the panels phase unchanged (it is a switch terminal).
-        setPhase((current) => nextScreen(current, snapshot.spark));
+        // Advance on CONFIRM, not on tap (D79), for single-select screens
+        // only. A panel toggle's confirm must NOT advance (D82): the
+        // multi-select grammar settles in place and moves on only when the
+        // Done pill fires, so the panel source is gated out of the advance
+        // by rule now — not by a terminal phase. Spark's just-confirmed
+        // value decides the fit branch.
+        if (source !== 'panel') {
+          setPhase((current) => nextScreen(current, snapshot.spark));
+        }
         return;
       }
       // A failed insert never advances and touches no snapshot (D55):
@@ -570,6 +646,12 @@ export function SessionLadder({
     phase === 'energy' || phase === 'environment' || phase === 'spark'
       ? AXES.find((axis) => axis.key === phase)
       : undefined;
+  // The panel config for the current multi-select screen (D82), undefined off
+  // the two panel screens — one PillScreen serves both, mirroring currentAxis.
+  const currentPanel =
+    phase === 'physical_state' || phase === 'co_consumption'
+      ? PANELS.find((panel) => panel.key === phase)
+      : undefined;
 
   return (
     <ThemedView style={styles.container}>
@@ -643,11 +725,39 @@ export function SessionLadder({
           />
         )}
 
-        {/* The closing screen (D79): Close plus an optional panels entry,
-            off the required path. Close is a sibling of the entry, never
-            blocked by it (both disable only while an insert is on the
-            wire, D54). It asks nothing, so its header shows the product
-            line alone (D81: no title passed). */}
+        {/* The two multi-select panel screens (D75/D76/D78/D82): one panel
+            per screen, now in the required sequence (physical_state then
+            co_consumption). PillScreen in multi mode — a tap toggles and
+            saves per toggle (D78), the toggled value renders pending, and the
+            Done pill advances without writing (Done with nothing selected is
+            the skip). Back is the linear predecessor. */}
+        {currentPanel !== undefined && (
+          <PillScreen
+            theme={theme}
+            product={product}
+            title={currentPanel.label}
+            values={currentPanel.values}
+            selected={null}
+            selectedValues={panelValues(currentPanel.key)}
+            pendingValue={
+              pendingPanel !== null && pendingPanel.field === currentPanel.key
+                ? pendingPanel.value
+                : null
+            }
+            disabled={inFlight}
+            error={saveError}
+            onSelect={(value) => togglePanel(currentPanel.key, value)}
+            onDone={advanceNoWrite}
+            onLeading={goBack}
+          />
+        )}
+
+        {/* The closing screen (D82): the survey's terminus. The panels now
+            live in the required sequence, so closing loses its "Anything
+            else?" entry — a single Close remains, disabled only while an
+            insert is on the wire (D54). It asks nothing, so its header shows
+            the product line alone (D81: no title passed). Back returns to the
+            co-consumption screen (D82). */}
         {phase === 'closing' && (
           <View style={styles.sequenceScreen}>
             <SequenceHeader
@@ -659,83 +769,10 @@ export function SessionLadder({
             <View style={styles.closingActions}>
               <Pressable
                 disabled={inFlight}
-                onPress={() => setPhase('panels')}
-                style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
-                <ThemedText type="smallBold">Anything else?</ThemedText>
-              </Pressable>
-              <Pressable
-                disabled={inFlight}
                 onPress={onClose}
                 style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
                 <ThemedText type="smallBold">Close</ThemedText>
               </Pressable>
-            </View>
-          </View>
-        )}
-
-        {/* The panels screen (D75/D76/D78): the two multi-select confound
-            panels, off the required path (reached only from closing). Reuse
-            the chip visual language wholesale — selected inverts, the
-            toggled value renders pending. No advance-on-confirm: toggles
-            settle in place. Back returns to closing. */}
-        {phase === 'panels' && (
-          <View style={styles.sequenceScreen}>
-            <SequenceHeader
-              leadingLabel="Back"
-              onLeading={goBack}
-              disabled={inFlight}
-              product={product}
-              title="Anything else?"
-            />
-            <View style={styles.panelsBody}>
-              {PANELS.map((panel) => {
-                const values = panelValues(panel.key);
-                return (
-                  <View key={panel.key} style={styles.richQuestion}>
-                    <ThemedText
-                      type="small"
-                      themeColor="textSecondary"
-                      style={styles.chipQuestion}>
-                      {panel.label}
-                    </ThemedText>
-                    <View style={styles.chipRow}>
-                      {panel.values.map((value) => {
-                        const isSelected = values.includes(value);
-                        const isPending =
-                          pendingPanel !== null &&
-                          pendingPanel.field === panel.key &&
-                          pendingPanel.value === value;
-                        return (
-                          <Pressable
-                            key={value}
-                            disabled={inFlight}
-                            onPress={() => togglePanel(panel.key, value)}
-                            style={[
-                              styles.chip,
-                              {
-                                backgroundColor: isSelected
-                                  ? theme.text
-                                  : theme.backgroundElement,
-                              },
-                              isPending && styles.chipPending,
-                            ]}>
-                            <ThemedText
-                              type="small"
-                              style={isSelected ? { color: theme.background } : undefined}>
-                              {value}
-                            </ThemedText>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  </View>
-                );
-              })}
-              {saveError !== null && (
-                <ThemedText type="small" style={styles.sequenceError}>
-                  {saveError}
-                </ThemedText>
-              )}
             </View>
           </View>
         )}
@@ -757,25 +794,8 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     maxWidth: MaxContentWidth,
   },
-  chipQuestion: {
-    textAlign: 'center',
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: Spacing.one,
-  },
-  chip: {
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.one,
-    borderRadius: Spacing.four,
-  },
   chipPending: {
     opacity: 0.5,
-  },
-  richQuestion: {
-    gap: Spacing.one,
   },
   // The one-screen sequence (D79/D80): a flex column with the header at the
   // top and the answer stack anchored to the bottom (thumb reach) via
@@ -820,17 +840,28 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.four,
     paddingVertical: Spacing.three,
   },
+  // Multi-select pills (D82.1): the checkbox and label sit in a centered row.
+  pillMulti: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: Spacing.one,
+  },
+  // The leading checkbox square (D82.1): border color and check glyph are set
+  // inline by selection state.
+  checkbox: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   skipPill: {
     marginTop: Spacing.one,
   },
   closingActions: {
     marginTop: 'auto',
     gap: Spacing.two,
-  },
-  panelsBody: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: Spacing.four,
   },
   button: {
     alignSelf: 'stretch',
