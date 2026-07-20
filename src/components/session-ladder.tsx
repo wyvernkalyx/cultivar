@@ -1,15 +1,7 @@
 import { uuid } from 'expo-modules-core';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  withTiming,
-  type SharedValue,
-} from 'react-native-reanimated';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -27,17 +19,10 @@ import {
 } from '@/lib/lexicon';
 import { supabase } from '@/lib/supabase';
 
-// Rung order is the lexicon's (D51): up = better, best word at the top,
-// "Mid" at dead center. Words and scores resolve through the one source.
+// Rung order is the lexicon's (D51, preserved as visual order by D80): up =
+// better, best word at the top, "Mid" at dead center, worst at the bottom.
+// Words and scores resolve through the one source.
 const RUNG_WORDS = RUNGS.map((rung) => rung.word);
-const RUNG_COUNT = RUNGS.length;
-
-// Feel values (provisional by design — the physical-iPhone gate tunes
-// these, not this file): how hard the card magnetizes toward the active
-// rung, how far the active word swells, and the settle spring.
-const MAGNET_PULL = 0.35;
-const SWELL_SCALE = 1.4;
-const SPRING = { damping: 18, stiffness: 180 };
 
 // ~10s client abort (D54): a hung insert fails visibly instead of holding
 // the surface's dismissal guard forever.
@@ -83,51 +68,85 @@ type Snapshot = {
   physical_state: string[] | null;
 };
 
-// Which control fired the insert. Only a failed DROP moves the card (D55);
-// every other source reverts by derivation when its pending state clears.
+// Which control fired the insert. Every source reverts by derivation when its
+// pending state clears (D55); the source is still tracked so a screen can
+// render its own pending visual (D80: the tapped pill, D65: the fit chip).
 type InsertSource = 'drop' | 'axis' | 'fit' | 'panel';
 
-// The D79 screen sequence: one screen renders at a time and the flow
-// advances on insert CONFIRM (not on tap). Order: ladder -> energy ->
-// environment -> spark -> fit (only when spark is answered, D73) ->
-// closing -> panels (optional, off the required path). Plain conditional
-// render; transition animation is banked to the art pass.
+// The D79/D80 screen sequence: one screen renders at a time and the flow
+// advances on insert CONFIRM (not on tap). Order: ladder (the score pill
+// screen) -> energy -> environment -> spark -> fit (only when spark is
+// answered, D73) -> closing -> panels (optional, off the required path).
+// Plain conditional render; transition animation is banked to the art pass.
 type Phase = 'ladder' | 'energy' | 'environment' | 'spark' | 'fit' | 'closing' | 'panels';
 
-// One rung: the word swells while it is the pending answer. Emphasis is
-// scale only — typographic, never color; the mood visual language belongs
-// to the art pass (session-logging doc non-goal).
-function Rung({
-  word,
-  index,
-  activeRung,
+// The shared sequence-screen header (D80 scaffold, D81 product line): a
+// leading control, a truly-centered two-line unit — the product
+// identification on top (D81: every screen names the product, so the user
+// never rates an unnamed thing) with the screen's question beneath it as a
+// subordinate subheading — and an equal-width trailing spacer that balances
+// the leading control so the unit sits at the true center regardless of the
+// control's label. A screen that asks nothing (the closing screen) passes no
+// title and shows the product line alone.
+function SequenceHeader({
+  leadingLabel,
+  onLeading,
+  disabled,
+  product,
+  title,
 }: {
-  word: string;
-  index: number;
-  activeRung: SharedValue<number>;
+  leadingLabel: string;
+  onLeading: () => void;
+  disabled: boolean;
+  product: string;
+  title?: string;
 }) {
-  const swell = useAnimatedStyle(() => ({
-    transform: [
-      { scale: withTiming(activeRung.value === index ? SWELL_SCALE : 1, { duration: 120 }) },
-    ],
-  }));
   return (
-    <View style={styles.rung}>
-      <Animated.View style={swell}>
-        <ThemedText>{word}</ThemedText>
-      </Animated.View>
+    <View style={styles.sequenceHeader}>
+      <Pressable disabled={disabled} onPress={onLeading} style={styles.headerSide}>
+        <ThemedText type="smallBold">{leadingLabel}</ThemedText>
+      </Pressable>
+      <View style={styles.headerCenter}>
+        {/* The product line is the prominent line (D81), gate-tuned larger
+            than the pill labels (type "default"); the question subheading
+            scales up with it but stays subordinate — one size step down and
+            in the secondary color. */}
+        <ThemedText
+          type="title"
+          numberOfLines={2}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
+          style={styles.productLine}>
+          {product}
+        </ThemedText>
+        {title !== undefined && (
+          <ThemedText
+            type="subtitle"
+            themeColor="textSecondary"
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            style={styles.headerSubtitle}>
+            {title}
+          </ThemedText>
+        )}
+      </View>
+      <View style={styles.headerSide} />
     </View>
   );
 }
 
-// One axis or fit screen (D79): a title, the values as full-width
-// bottom-anchored pills in thumb reach, and a persistent first-class Skip
-// no smaller than a pill. Tap-advance and Skip semantics live in the owner;
-// this renders selection/pending state and the inline save error only. The
-// chip visual grammar is reused wholesale — selected inverts (text token as
-// fill), pending rides at the card's opacity (D57/D65).
+// One sequence screen (D79 axis/fit, D80 score): a header, the values as
+// full-width bottom-anchored pills in thumb reach, and — unless the screen is
+// the mandatory score screen — a persistent first-class Skip no smaller than a
+// pill. Tap-advance and Skip semantics live in the owner; this renders
+// selection/pending state and the inline save error only. The chip visual
+// grammar is reused wholesale — selected inverts (text token as fill), pending
+// rides at half opacity (D57/D65/D80). Omitting onSkip omits the Skip pill —
+// the one intentional non-uniformity (D80): score is the skeleton's mandatory
+// field, so it has no Skip.
 function PillScreen({
   theme,
+  product,
   title,
   values,
   selected,
@@ -135,10 +154,12 @@ function PillScreen({
   disabled,
   error,
   onSelect,
+  onLeading,
   onSkip,
-  onBack,
+  leadingLabel = 'Back',
 }: {
   theme: ReturnType<typeof useTheme>;
+  product: string;
   title: string;
   values: readonly string[];
   selected: string | null;
@@ -146,19 +167,19 @@ function PillScreen({
   disabled: boolean;
   error: string | null;
   onSelect: (value: string) => void;
-  onSkip: () => void;
-  onBack: () => void;
+  onLeading: () => void;
+  onSkip?: () => void;
+  leadingLabel?: string;
 }) {
   return (
     <View style={styles.sequenceScreen}>
-      <View style={styles.sequenceHeader}>
-        <Pressable disabled={disabled} onPress={onBack} style={styles.backButton}>
-          <ThemedText type="smallBold">Back</ThemedText>
-        </Pressable>
-        <ThemedText type="title" numberOfLines={1} adjustsFontSizeToFit style={styles.sequenceTitle}>
-          {title}
-        </ThemedText>
-      </View>
+      <SequenceHeader
+        leadingLabel={leadingLabel}
+        onLeading={onLeading}
+        disabled={disabled}
+        product={product}
+        title={title}
+      />
       <View style={styles.pillStack}>
         {values.map((value) => {
           const isSelected = value === selected;
@@ -188,30 +209,37 @@ function PillScreen({
           </ThemedText>
         )}
         {/* Skip is first-class (D79): a persistent pill, never smaller than
-            an answer, that advances and writes nothing. */}
-        <Pressable
-          disabled={disabled}
-          onPress={onSkip}
-          style={[styles.pill, styles.skipPill, { backgroundColor: theme.backgroundElement }]}>
-          <ThemedText type="default" themeColor="textSecondary">
-            Skip
-          </ThemedText>
-        </Pressable>
+            an answer, that advances and writes nothing. Absent on the score
+            screen (D80): the overall word is the only mandatory field. */}
+        {onSkip !== undefined && (
+          <Pressable
+            disabled={disabled}
+            onPress={onSkip}
+            style={[styles.pill, styles.skipPill, { backgroundColor: theme.backgroundElement }]}>
+            <ThemedText type="default" themeColor="textSecondary">
+              Skip
+            </ThemedText>
+          </Pressable>
+        )}
       </View>
     </View>
   );
 }
 
 /**
- * The session-logging surface (D49-D51 mechanic, D54-D55 persistence, D70-D79
- * survey): the vertical ladder feeding a one-axis-per-screen sequence. A drop
- * on a rung is the save attempt — it inserts a session entry immediately and
- * the card renders pending until the insert confirms (D54). A re-drag inserts
- * a revision row into the same chain (D52); a failed revision reverts to the
- * last confirmed truth (D55). The vacated home-zone box echoes the settled
- * word (D58).
+ * The session-logging surface (D80 unified pill sequence, D54-D55 persistence,
+ * D70-D79 survey): one pill screen per question, advancing on insert CONFIRM.
+ * The score screen (D80) leads — the five RUNGS as full-width stacked pills,
+ * Elite at top, Trash at bottom, carrying D51's up-is-better geometry as visual
+ * order. A score tap is the save attempt: it inserts a session entry
+ * immediately (the D50 tap-is-the-save contract, motion changed from the
+ * retired drag) and the tapped pill renders pending until the insert confirms
+ * (D54). Back to the score screen and tapping a different pill inserts a
+ * revision row into the same chain (D52) under the same grammar the axis
+ * screens use; a failed revision reverts to the last confirmed truth by
+ * derivation (D55).
  *
- * On a confirmed drop the flow advances (D79) to the axis screens: Energy,
+ * On a confirmed score the flow advances (D79) to the axis screens: Energy,
  * Environment, Spark, one per screen, each a full-snapshot revision insert
  * (D71) carrying the rest forward, with the advance firing on CONFIRM, not on
  * tap. Changing Spark nulls fit (D72); a first-class Skip advances and writes
@@ -231,32 +259,39 @@ export function SessionLadder({
   onBusyChange: (busy: boolean) => void;
 }) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  // The product identification (D81): every survey screen leads with it, so
+  // the user never rates an unnamed thing. "Brand - Strain" when the COA
+  // carries both; whichever part is present otherwise — never fabricated.
+  const product = [coa.brand, coa.strain].filter(Boolean).join(' - ');
   // One in-flight insert at a time (D54): the source whose insert is on
-  // the wire, null when idle. Drives the pending visuals (the card and
-  // echo go translucent only for a DROP — every other source's pending
-  // visual belongs to its own control) and disables new drags, every
-  // tap, and both dismissal paths — the Close button here,
-  // onRequestClose in the owner via onBusyChange.
+  // the wire, null when idle. Drives the pending visuals (each source's
+  // pending visual belongs to its own control) and disables every tap and
+  // both dismissal paths — the Close control here, onRequestClose in the
+  // owner via onBusyChange.
   const [inFlightSource, setInFlightSource] = useState<InsertSource | null>(null);
   const inFlight = inFlightSource !== null;
-  // Plain inline error (D54), rendered in the home-zone slot the spike's
-  // honesty label occupied; cleared on the next drag start.
+  // Plain inline error (D54), rendered beneath the pills; cleared when the
+  // next insert fires.
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  // The chain key (D52): minted lazily at the first drop of this
+  // The chain key (D52): minted lazily at the first score tap of this
   // presentation and held for its lifetime. A failed insert does NOT
   // discard it — a retry lands in the same chain, which is what makes
-  // D54's duplicate-on-retry absorption true. A home-zone cancel before
-  // any drop mints nothing. State, not a ref: the gesture closures that
-  // reach it are recreated every render, and react-hooks/refs bars ref
-  // reads inside them; one-in-flight (D54) guarantees a re-render between
-  // inserts, so the captured value is never stale.
+  // D54's duplicate-on-retry absorption true. A Close before any save mints
+  // nothing. State, not a ref: one-in-flight (D54) guarantees a re-render
+  // between inserts, so the captured value is never stale.
   const [sessionId, setSessionId] = useState<string | null>(null);
   // Last confirmed entry (D55): the revert target when a revision fails,
   // and the snapshot every revision copies its carried fields from (D57,
   // D65, D78). Its fact-class fields are null until their answers confirm
   // (entry 1 sends all null). State for the same reason as sessionId.
   const [lastConfirmed, setLastConfirmed] = useState<Snapshot | null>(null);
+  // The score word whose insert is on the wire (D80): renders pending on its
+  // pill. Cleared on resolution either way — on failure the selection falls
+  // back to the last confirmed word by derivation, which is exactly D55's
+  // revert.
+  const [pendingScore, setPendingScore] = useState<string | null>(null);
   // The axis + value whose revision insert is on the wire (D54): renders
   // pending-selected. Cleared on resolution either way — on failure the
   // selection falls back to the last confirmed axis value by derivation,
@@ -277,56 +312,11 @@ export function SessionLadder({
     value: string;
     values: string[] | null;
   } | null>(null);
-  // The answer echo (D58): the settled rung's word, displayed large in
-  // the vacated home-zone box. Set on every rung settle; cleared when
-  // the card returns home (cancel, or a failed FIRST drop); set to the
-  // last confirmed word on a failed revision, because that is where the
-  // card lands (D55). Survey taps never touch it, and it never tracks the
-  // drag live — the swell is the mid-drag signal (D58, ratified).
-  const [echoWord, setEchoWord] = useState<string | null>(null);
   // The surface's phase (D79): the current screen in the sequence. One
-  // screen renders at a time; the ladder's state (shared values included)
-  // lives up here and survives every screen change, so Back to the ladder
-  // lands on the intact card-on-rung state.
+  // screen renders at a time; the flow state lives up here and survives
+  // every screen change, so Back to the score screen lands on the intact
+  // confirmed selection.
   const [phase, setPhase] = useState<Phase>('ladder');
-
-  // Card offset from its home-zone resting position.
-  const tx = useSharedValue(0);
-  const ty = useSharedValue(0);
-  const startX = useSharedValue(0);
-  const startY = useSharedValue(0);
-  // Nearest rung while the card is above the home zone; -1 = none.
-  const activeRung = useSharedValue(-1);
-  // Frames in content-column coordinates: the rung region and the home
-  // zone are siblings of the same column, so their onLayout frames share
-  // an origin and the card's translation maps between them directly.
-  const rungTop = useSharedValue(0);
-  const rungRegionHeight = useSharedValue(0);
-  const homeTop = useSharedValue(0);
-  const restCenterY = useSharedValue(0);
-
-  const onRungRegionLayout = (event: LayoutChangeEvent) => {
-    rungTop.value = event.nativeEvent.layout.y;
-    rungRegionHeight.value = event.nativeEvent.layout.height;
-  };
-  const onHomeLayout = (event: LayoutChangeEvent) => {
-    homeTop.value = event.nativeEvent.layout.y;
-    // The card rests centered in the home zone.
-    restCenterY.value = event.nativeEvent.layout.y + event.nativeEvent.layout.height / 2;
-  };
-
-  // Rung index -> card translation offset, shared by the worklet settle
-  // path and the JS-side failure revert (same math, one source).
-  const rungOffset = (index: number) => {
-    'worklet';
-    const rungHeight = rungRegionHeight.value / RUNG_COUNT;
-    return rungTop.value + (index + 0.5) * rungHeight - restCenterY.value;
-  };
-
-  const clearSaveError = () => setSaveError(null);
-  // Home-zone release means no settled answer, so no echo (D58). A
-  // runOnJS target: the releasing path is the gesture's worklet.
-  const clearEcho = () => setEchoWord(null);
 
   // The D79 screen order. Spark decides whether fit is asked (D73): a
   // non-null spark inserts the fit screen before closing; a null spark
@@ -383,12 +373,12 @@ export function SessionLadder({
   };
 
   // The save attempt (D54): every path is the same insert — same chain,
-  // full snapshot (D52). A drop sends its rung with every fact-class
+  // full snapshot (D52). A score tap sends its rung with every fact-class
   // answer carried forward; an axis tap sends the confirmed word + score
   // with the one axis set (fit nulled iff Spark, D72); a fit tap or panel
   // toggle sends the confirmed snapshot with its one field changed
-  // (D65/D78). Only a failed DROP moves the card (D55) — every other
-  // failure reverts its own control's rendered state only.
+  // (D65/D78). Every failure reverts its own control's rendered state by
+  // derivation (D55) — no card to move (D80 retired the drag).
   const insertEntry = (snapshot: Snapshot, source: InsertSource) => {
     const chainId = sessionId ?? uuid.v4();
     if (sessionId === null) {
@@ -408,6 +398,7 @@ export function SessionLadder({
     const finish = (failed: boolean) => {
       clearTimeout(timer);
       setInFlightSource(null);
+      setPendingScore(null);
       setPendingAxis(null);
       setPendingFit(null);
       setPendingPanel(null);
@@ -421,36 +412,15 @@ export function SessionLadder({
         setPhase((current) => nextScreen(current, snapshot.spark));
         return;
       }
+      // A failed insert never advances and touches no snapshot (D55):
+      // clearing the source's pending state above already reverted the
+      // rendered answer to the last confirmed value. Retry is re-tapping.
       setSaveError("Couldn't save — check your connection.");
-      if (source !== 'drop') {
-        // A failed axis, fit, or panel insert never moves the card or
-        // touches the echo (D55): clearing its pending state already
-        // reverted the rendered answer to the last confirmed value.
-        return;
-      }
-      if (lastConfirmed !== null) {
-        // D55: back to the last CONFIRMED rung, never the home zone —
-        // the last confirmed entry is the truth, and the card lands on
-        // it. The echo names that rung too (D58): the confirmed word,
-        // sharing the box with the error.
-        activeRung.value = lastConfirmed.index;
-        setEchoWord(lastConfirmed.word);
-        tx.value = withSpring(0, SPRING);
-        ty.value = withSpring(rungOffset(lastConfirmed.index), SPRING);
-      } else {
-        // Nothing confirmed yet: back to the home zone (D54). Retry is
-        // simply re-dropping. No answer, no echo (D58) — the error has
-        // the box to itself.
-        activeRung.value = -1;
-        setEchoWord(null);
-        tx.value = withSpring(0, SPRING);
-        ty.value = withSpring(0, SPRING);
-      }
     };
 
     // created_by and deleted are server defaults, never sent. Full
     // snapshot (D52): every fact-class field rides every insert at its
-    // snapshot value — axes and panels carried forward on a rung drop, one
+    // snapshot value — axes and panels carried forward on a score tap, one
     // field changed on a revision (D57/D65/D78). On the lazy path every
     // fact field stays null (the overall word is the only mandatory field).
     supabase
@@ -478,17 +448,19 @@ export function SessionLadder({
       );
   };
 
-  // Rung settle (drop or re-drag): every fact-class answer is carried
-  // forward from the last confirmed entry — a re-drag changes the word,
-  // not the questions: the axes stand, so fit stands too (D72's nulling is
-  // for Spark CHANGES only). Entry 1 sends all fact fields null (the
-  // overall word is the only mandatory field).
-  const settleOnRung = (index: number) => {
+  // Score tap (D80): tap is the save. Builds exactly the payload the retired
+  // drop built — the first-entry shape when nothing is confirmed yet (all
+  // fact fields null, the overall word being the only mandatory field), the
+  // revision shape carrying every fact-class answer forward otherwise (a new
+  // score changes the word, not the questions: the axes stand, so fit stands
+  // too — D72's nulling is for Spark CHANGES only). Fires through the one
+  // writer with the same 'drop' source. A different pill on a Back-revisit is
+  // a revision insert with no special-casing (D80); an identical row on a
+  // same-pill re-tap is a semantic no-op the schema absorbs (D54).
+  const tapScore = (word: string) => {
+    const index = RUNGS.findIndex((rung) => rung.word === word);
     const rung = RUNGS[index];
-    // Echo on settle (D58): the box shows the settling word at once,
-    // pending-translucent until the insert confirms — same condition
-    // as the card's pending visual.
-    setEchoWord(rung.word);
+    setPendingScore(rung.word);
     insertEntry(
       lastConfirmed === null
         ? {
@@ -567,58 +539,6 @@ export function SessionLadder({
     insertEntry(revised, 'panel');
   };
 
-  const pan = Gesture.Pan()
-    // No new drag while an insert is on the wire (D54).
-    .enabled(!inFlight)
-    .onStart(() => {
-      // Re-dragging works indefinitely (D50): each drag starts from
-      // wherever the card currently sits, home or rung.
-      startX.value = tx.value;
-      startY.value = ty.value;
-      runOnJS(clearSaveError)();
-    })
-    .onUpdate((event) => {
-      tx.value = startX.value + event.translationX;
-      ty.value = startY.value + event.translationY;
-      const centerY = restCenterY.value + ty.value;
-      // In or below the home zone there is no pending answer — the
-      // geometry is the cancel (D51). Above it, the nearest rung is
-      // always active: no dead zones between rungs.
-      if (rungRegionHeight.value > 0 && centerY < homeTop.value) {
-        const rungHeight = rungRegionHeight.value / RUNG_COUNT;
-        const index = Math.floor((centerY - rungTop.value) / rungHeight);
-        activeRung.value = Math.min(RUNG_COUNT - 1, Math.max(0, index));
-      } else {
-        activeRung.value = -1;
-      }
-    })
-    .onEnd(() => {
-      if (activeRung.value >= 0) {
-        // Release anywhere above home = snap to nearest rung, and the
-        // drop is the save attempt (D50/D54): the insert fires now.
-        ty.value = withSpring(rungOffset(activeRung.value), SPRING);
-        tx.value = withSpring(0, SPRING);
-        runOnJS(settleOnRung)(activeRung.value);
-      } else {
-        // Home-zone release: the cancel (D51). The echo clears with it
-        // (D58) — the box only ever names a rung the card sits on.
-        tx.value = withSpring(0, SPRING);
-        ty.value = withSpring(0, SPRING);
-        runOnJS(clearEcho)();
-      }
-    });
-
-  const cardStyle = useAnimatedStyle(() => {
-    // Magnetize (D51): while a rung is active the card is pulled a
-    // fraction of the way toward that rung's center, so the pending
-    // answer is unmissable before release.
-    let pull = 0;
-    if (activeRung.value >= 0 && rungRegionHeight.value > 0) {
-      pull = (rungOffset(activeRung.value) - ty.value) * MAGNET_PULL;
-    }
-    return { transform: [{ translateX: tx.value }, { translateY: ty.value + pull }] };
-  });
-
   // The confirmed (or pending) value of a single-select axis (D71): the
   // pending value while that axis's insert is on the wire, the last
   // confirmed value otherwise — so a failed tap reverts by derivation
@@ -629,6 +549,10 @@ export function SessionLadder({
     }
     return lastConfirmed === null ? null : lastConfirmed[axis];
   };
+  // The confirmed (or pending) score word (D80): the tapped word while its
+  // insert is on the wire, the last confirmed word otherwise — a failed tap
+  // reverts by derivation (D55).
+  const selectedScore = pendingScore ?? (lastConfirmed === null ? null : lastConfirmed.word);
   // Fit's selection mirrors the axis rows' (D65): pending while its insert
   // is on the wire, the last confirmed fit otherwise.
   const selectedFit = pendingFit ?? (lastConfirmed === null ? null : lastConfirmed.fit);
@@ -649,75 +573,31 @@ export function SessionLadder({
 
   return (
     <ThemedView style={styles.container}>
-      <ThemedView style={styles.content}>
+      {/* One shared screen container (D80 scaffold): a safe-area top inset
+          plus breathing room above every screen's header, so no header sits
+          under the notch. */}
+      <ThemedView style={[styles.content, { paddingTop: insets.top + Spacing.four }]}>
+        {/* The score screen (D80): the five RUNGS as full-width bottom-
+            anchored pills, Elite top to Trash bottom (D51's up-is-better as
+            visual order). Tap is the save (D50 contract, D54 pending). No
+            Skip — score is the skeleton's mandatory field. The leading
+            control is Close (this is the flow's entry, there is no Back):
+            it dismisses without writing, disabled while an insert is on the
+            wire (D54). */}
         {phase === 'ladder' && (
-          <>
-            <View style={styles.rungRegion} onLayout={onRungRegionLayout}>
-              {RUNG_WORDS.map((word, index) => (
-                <Rung key={word} word={word} index={index} activeRung={activeRung} />
-              ))}
-            </View>
-
-            {/* The home zone: the card's resting shelf and the cancel —
-                the card renders above the rungs because this zone is the
-                later sibling. The vacated box carries the answer echo
-                (D58) and the inline save error (D54), stacked when both
-                are visible; neither intercepts the card's gesture. */}
-            <View
-              style={[styles.homeZone, { backgroundColor: theme.backgroundSelected }]}
-              onLayout={onHomeLayout}>
-              {(echoWord !== null || saveError !== null) && (
-                <View style={styles.notice} pointerEvents="none">
-                  {echoWord !== null && (
-                    <ThemedText
-                      type="title"
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                      style={[
-                        styles.echoWord,
-                        // Mirrors the card's pending translucency exactly
-                        // (D58): same condition, same style — a DROP
-                        // insert on the wire, solid on confirmation.
-                        inFlightSource === 'drop' && styles.cardPending,
-                      ]}>
-                      {echoWord.toUpperCase()}
-                    </ThemedText>
-                  )}
-                  {saveError !== null && <ThemedText type="small">{saveError}</ThemedText>}
-                </View>
-              )}
-              <GestureDetector gesture={pan}>
-                <Animated.View
-                  style={[
-                    styles.cardChip,
-                    { backgroundColor: theme.backgroundElement },
-                    // Pending until confirmed (D54): translucent while a
-                    // DROP insert is on the wire (an axis, fit, or panel
-                    // revision's pending visual belongs to its own
-                    // control, not the card), solid on confirmation.
-                    // Feel is gate-tuned.
-                    inFlightSource === 'drop' && styles.cardPending,
-                    cardStyle,
-                  ]}>
-                  <ThemedText type="smallBold">{coa.strain}</ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {coa.brand}
-                  </ThemedText>
-                </Animated.View>
-              </GestureDetector>
-            </View>
-
-            {/* Close is the ladder's pre-drop exit (D79): a fullScreen
-                modal has no OS dismissal gesture, so the entry screen
-                carries its own Close. Disabled while a drop is on the wire
-                (D54). Every other exit lives on the closing screen. */}
-            <Pressable
-              disabled={inFlight}
-              onPress={onClose}
-              style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
-              <ThemedText type="smallBold">Close</ThemedText>
-            </Pressable>
-          </>
+          <PillScreen
+            theme={theme}
+            product={product}
+            title="Rate this Session"
+            values={RUNG_WORDS}
+            selected={selectedScore}
+            pendingValue={pendingScore}
+            disabled={inFlight}
+            error={saveError}
+            onSelect={tapScore}
+            onLeading={onClose}
+            leadingLabel="Close"
+          />
         )}
 
         {/* The three intent axis screens (D71/D79): one axis per screen,
@@ -727,6 +607,7 @@ export function SessionLadder({
         {currentAxis !== undefined && (
           <PillScreen
             theme={theme}
+            product={product}
             title={currentAxis.label}
             values={currentAxis.values}
             selected={selectedAxis(currentAxis.key)}
@@ -739,7 +620,7 @@ export function SessionLadder({
             error={saveError}
             onSelect={(value) => tapAxis(currentAxis.key, value)}
             onSkip={advanceNoWrite}
-            onBack={goBack}
+            onLeading={goBack}
           />
         )}
 
@@ -749,6 +630,7 @@ export function SessionLadder({
         {phase === 'fit' && (
           <PillScreen
             theme={theme}
+            product={product}
             title="Did it do what you wanted?"
             values={FITS}
             selected={selectedFit}
@@ -757,21 +639,23 @@ export function SessionLadder({
             error={saveError}
             onSelect={tapFit}
             onSkip={advanceNoWrite}
-            onBack={goBack}
+            onLeading={goBack}
           />
         )}
 
         {/* The closing screen (D79): Close plus an optional panels entry,
             off the required path. Close is a sibling of the entry, never
             blocked by it (both disable only while an insert is on the
-            wire, D54). */}
+            wire, D54). It asks nothing, so its header shows the product
+            line alone (D81: no title passed). */}
         {phase === 'closing' && (
           <View style={styles.sequenceScreen}>
-            <View style={styles.sequenceHeader}>
-              <Pressable disabled={inFlight} onPress={goBack} style={styles.backButton}>
-                <ThemedText type="smallBold">Back</ThemedText>
-              </Pressable>
-            </View>
+            <SequenceHeader
+              leadingLabel="Back"
+              onLeading={goBack}
+              disabled={inFlight}
+              product={product}
+            />
             <View style={styles.closingActions}>
               <Pressable
                 disabled={inFlight}
@@ -796,18 +680,13 @@ export function SessionLadder({
             settle in place. Back returns to closing. */}
         {phase === 'panels' && (
           <View style={styles.sequenceScreen}>
-            <View style={styles.sequenceHeader}>
-              <Pressable disabled={inFlight} onPress={goBack} style={styles.backButton}>
-                <ThemedText type="smallBold">Back</ThemedText>
-              </Pressable>
-              <ThemedText
-                type="title"
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                style={styles.sequenceTitle}>
-                Anything else?
-              </ThemedText>
-            </View>
+            <SequenceHeader
+              leadingLabel="Back"
+              onLeading={goBack}
+              disabled={inFlight}
+              product={product}
+              title="Anything else?"
+            />
             <View style={styles.panelsBody}>
               {PANELS.map((panel) => {
                 const values = panelValues(panel.key);
@@ -874,49 +753,9 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.four,
+    paddingBottom: Spacing.four,
     gap: Spacing.three,
     maxWidth: MaxContentWidth,
-  },
-  rungRegion: {
-    flex: 1,
-  },
-  rung: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  homeZone: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: Spacing.three,
-    paddingVertical: Spacing.three,
-    minHeight: 96,
-  },
-  notice: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.half,
-  },
-  echoWord: {
-    maxWidth: '100%',
-    paddingHorizontal: Spacing.three,
-  },
-  cardChip: {
-    alignItems: 'center',
-    gap: Spacing.half,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderRadius: Spacing.four,
-    minWidth: 180,
-  },
-  cardPending: {
-    opacity: 0.5,
   },
   chipQuestion: {
     textAlign: 'center',
@@ -938,7 +777,7 @@ const styles = StyleSheet.create({
   richQuestion: {
     gap: Spacing.one,
   },
-  // The one-screen sequence (D79): a flex column with the header at the
+  // The one-screen sequence (D79/D80): a flex column with the header at the
   // top and the answer stack anchored to the bottom (thumb reach) via
   // marginTop:auto.
   sequenceScreen: {
@@ -947,11 +786,26 @@ const styles = StyleSheet.create({
   sequenceHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.two,
   },
-  sequenceTitle: {
+  // Leading control and the balancing trailing spacer share this width so
+  // the flex:1 centered title sits at the true screen center (D80 scaffold).
+  headerSide: {
+    width: 72,
+    paddingVertical: Spacing.one,
+    justifyContent: 'center',
+  },
+  // The centered two-line unit (D80 balanced-spacer centering, D81 product +
+  // question): flex:1 so it fills between the equal-width side controls, its
+  // lines stretched to that width so each centers and shrinks to fit.
+  headerCenter: {
     flex: 1,
+  },
+  productLine: {
     textAlign: 'center',
+  },
+  headerSubtitle: {
+    textAlign: 'center',
+    marginTop: Spacing.half,
   },
   sequenceError: {
     textAlign: 'center',
@@ -977,11 +831,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     gap: Spacing.four,
-  },
-  backButton: {
-    alignSelf: 'center',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
   },
   button: {
     alignSelf: 'stretch',
