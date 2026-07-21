@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { background:#0c0c0d; }
+  a { color: oklch(0.82 0.13 152); text-decoration: none; }
+  a:hover { color: oklch(0.90 0.10 152); }
+</style>
+</helmet>
+
+<section style="padding:64px 72px 72px;font-family:'Sora',system-ui,sans-serif;color:#e9e9ea;">
+  <div id="1c" style="display:flex;flex-direction:column;gap:28px;">
+    <div style="display:flex;align-items:baseline;gap:14px;margin-top:32px;">
+      <span style="font-size:13px;font-weight:700;background:oklch(0.82 0.13 152);color:#04120b;border-radius:8px;padding:4px 10px;">1C</span>
+      <div>
+        <div style="font-size:24px;font-weight:700;">Moody &amp; tactile — chosen direction</div>
+        <div style="font-size:15px;color:#7f8f84;">Deep green-black · soft glow · living green · Sora + Newsreader</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:36px;">
+      <dc-import name="Screen" theme="moody" control="Close" question="Rate this Session" explainer="{{ ex.rating }}" buttons="{{ ratingBtns }}" hint-size="410px,864px"></dc-import>
+      <dc-import name="Screen" theme="moody" control="Back" question="Energy" explainer="{{ ex.energy }}" buttons="{{ axisBtns }}" has-skip="{{ true }}" hint-size="410px,864px"></dc-import>
+      <dc-import name="Screen" theme="moody" control="Close" show-input="{{ true }}" explainer="{{ ex.closing }}" hint-size="410px,864px"></dc-import>
+      <dc-import name="Screen" theme="moody" control="Back" question="Energy" explainer="{{ ex.energy }}" buttons="{{ axisBtns }}" has-skip="{{ true }}" mode="saving" active-index="{{ 1 }}" hint-size="410px,864px"></dc-import>
+      <dc-import name="Screen" theme="moody" control="Back" question="Energy" explainer="{{ ex.energy }}" buttons="{{ axisBtns }}" has-skip="{{ true }}" mode="error" active-index="{{ 1 }}" hint-size="410px,864px"></dc-import>
+      <dc-import name="Screen" theme="moody" control="Close" mode="bloom" hint-size="410px,864px"></dc-import>
+    </div>
+    <dc-import name="SpecCard" tone="moody" hint-size="410px,340px"></dc-import>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      ex: {
+        rating: "Gut call. How this run stacked up against the rest of your shelf.",
+        energy: "Where it left you on the dial — mellow to wired. Only next to your own past logs.",
+        closing: "That's the run logged. It'll show up next to the rest of this strain.",
+      },
+      ratingBtns: [
+        { label:'Elite', tier:0 },
+        { label:'Solid', tier:1 },
+        { label:'Mid',   tier:2 },
+        { label:'Miss',  tier:3 },
+        { label:'Trash', tier:4 },
+      ],
+      axisBtns: [
+        { label:'Chill' },
+        { label:'Active' },
+        { label:'Buzzing' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

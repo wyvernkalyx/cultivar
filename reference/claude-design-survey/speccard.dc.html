@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</helmet>
+<div style="width:410px;box-sizing:border-box;background:{{ cardBg }};border:1px solid {{ cardBorder }};border-radius:22px;padding:26px 28px;font-family:'Sora',system-ui,sans-serif;color:{{ text }};">
+  <div style="font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:{{ sub }};font-weight:600;margin-bottom:18px;">Handoff spec</div>
+
+  <div style="display:flex;flex-direction:column;gap:14px;font-size:14px;line-height:1.4;">
+    <div style="display:flex;justify-content:space-between;gap:16px;">
+      <span style="color:{{ sub }};">Background</span>
+      <span style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;">{{ bg }}<i style="width:16px;height:16px;border-radius:4px;border:1px solid #ffffff22;background:{{ bg }};display:inline-block;"></i></span>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:16px;">
+      <span style="color:{{ sub }};">Surface / button</span>
+      <span style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;">{{ surface }}<i style="width:16px;height:16px;border-radius:4px;border:1px solid #ffffff22;background:{{ surface }};display:inline-block;"></i></span>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:16px;">
+      <span style="color:{{ sub }};">Text / subtext</span>
+      <span style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;">{{ text }} · {{ sub }}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:16px;">
+      <span style="color:{{ sub }};">Calyx accent</span>
+      <span style="display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;">{{ accent }}<i style="width:16px;height:16px;border-radius:4px;background:{{ accent }};display:inline-block;"></i></span>
+    </div>
+    <div style="height:1px;background:{{ cardBorder }};margin:6px 0;"></div>
+    <div style="display:flex;justify-content:space-between;"><span style="color:{{ sub }};">Brand label</span><span style="font-family:'JetBrains Mono',monospace;">15 / 500 · .14em caps</span></div>
+    <div style="display:flex;justify-content:space-between;"><span style="color:{{ sub }};">Strain (dominant)</span><span style="font-family:'JetBrains Mono',monospace;">38 / 700 · balance</span></div>
+    <div style="display:flex;justify-content:space-between;"><span style="color:{{ sub }};">Question</span><span style="font-family:'JetBrains Mono',monospace;">23 / 500 · accent</span></div>
+    <div style="display:flex;justify-content:space-between;"><span style="color:{{ sub }};">Explainer (serif)</span><span style="font-family:'JetBrains Mono',monospace;">16 / italic · sub</span></div>
+    <div style="display:flex;justify-content:space-between;"><span style="color:{{ sub }};">Answer button</span><span style="font-family:'JetBrains Mono',monospace;">70h · r20 · 20/600</span></div>
+    <div style="display:flex;justify-content:space-between;"><span style="color:{{ sub }};">Gap · edge stripe</span><span style="font-family:'JetBrains Mono',monospace;">12px · 5px tier</span></div>
+    <div style="display:flex;justify-content:space-between;"><span style="color:{{ sub }};">Control chip</span><span style="font-family:'JetBrains Mono',monospace;">44h · r22 · 16/600</span></div>
+    <div style="display:flex;justify-content:space-between;"><span style="color:{{ sub }};">Screen margins</span><span style="font-family:'JetBrains Mono',monospace;">26px · 38px bottom</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:410,&quot;height&quot;:360},&quot;tone&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;warm&quot;,&quot;cool&quot;,&quot;moody&quot;],&quot;default&quot;:&quot;warm&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const themes = {
+      warm: { bg:'#100e0b', surface:'#221d16', text:'#f3ede1', sub:'#9a9081', accent:'oklch(0.76 0.12 150)', cardBg:'#151310', cardBorder:'#2b251c' },
+      cool: { bg:'#000000', surface:'#17191c', text:'#f5f7f9', sub:'#838a92', accent:'oklch(0.80 0.12 168)', cardBg:'#0f1113', cardBorder:'#202327' },
+      moody:{ bg:'#090d0a', surface:'#131b15', text:'#e9f1ea', sub:'#7f8f84', accent:'oklch(0.82 0.13 152)', cardBg:'#0d130f', cardBorder:'#1b241d' },
+    };
+    return themes[this.props.tone] || themes.warm;
+  }
+}
+</script>
+</body>
+</html>

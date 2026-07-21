@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Newsreader:ital@0;1&display=swap" rel="stylesheet">
+<style>
+@keyframes bUnfurl { 0%{transform:scaleY(.08);opacity:0} 12%{opacity:1} 44%{transform:scaleY(1);opacity:1} 84%{transform:scaleY(1);opacity:1} 100%{transform:scaleY(.08);opacity:0} }
+@keyframes bCascade { 0%{transform:scale(.15);opacity:0} 18%{opacity:1;transform:scale(1)} 86%{opacity:1;transform:scale(1)} 100%{transform:scale(.15);opacity:0} }
+@keyframes bRing { 0%{transform:scale(.2);opacity:.55} 80%{opacity:0} 100%{transform:scale(2.6);opacity:0} }
+@keyframes bSeed { 0%{transform:scale(.05) rotate(-55deg);opacity:0} 28%{opacity:1} 54%{transform:scale(1) rotate(0);opacity:1} 84%{transform:scale(1) rotate(0);opacity:1} 100%{transform:scale(.05) rotate(-55deg);opacity:0} }
+@keyframes bBreathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.07)} }
+@keyframes bCalyx { 0%{transform:scale(.2);opacity:0} 40%{transform:scale(1);opacity:1} 100%{transform:scale(1);opacity:1} }
+@keyframes bGlow { 0%,100%{opacity:.28} 50%{opacity:.62} }
+@keyframes bRise { 0%{opacity:0;transform:translateY(8px)} 100%{opacity:1;transform:translateY(0)} }
+</style>
+</helmet>
+<div style="width:340px;box-sizing:border-box;font-family:'Sora',system-ui,sans-serif;">
+  <div style="position:relative;height:300px;border-radius:30px;background:#090d0a;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;border:1px solid #1b241d;">
+    <div style="position:absolute;top:14px;left:16px;font-size:12px;font-weight:700;color:#04120b;background:oklch(0.82 0.13 152);border-radius:7px;padding:3px 9px;">{{ badge }}</div>
+    <div style="position:relative;width:130px;height:130px;display:flex;align-items:center;justify-content:center;">
+      <div style="position:absolute;inset:0;border-radius:50%;background:oklch(0.82 0.13 152);filter:blur(28px);opacity:.4;animation:bGlow 3.2s ease-in-out infinite;"></div>
+      {{ art }}
+    </div>
+    <div style="text-align:center;">
+      <div style="font-size:22px;font-weight:600;color:#e9f1ea;">Logged.</div>
+      <div style="font-size:14px;color:#7f8f84;margin-top:4px;font-family:'Newsreader',serif;font-style:italic;">On the shelf with the rest.</div>
+    </div>
+  </div>
+  <div style="padding:16px 6px 0;">
+    <div style="font-size:17px;font-weight:600;color:#e9f1ea;">{{ title }}</div>
+    <div style="font-size:14px;line-height:1.45;color:#8a988e;margin-top:4px;text-wrap:pretty;">{{ desc }}</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:340,&quot;height&quot;:400},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;unfurl&quot;,&quot;cascade&quot;,&quot;ripple&quot;,&quot;seed&quot;,&quot;breathe&quot;],&quot;default&quot;:&quot;unfurl&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  petal(a, animName, delay, dur) {
+    const accent = 'oklch(0.82 0.13 152)';
+    return React.createElement('div', { key:a, style:{ position:'absolute', left:'50%', top:'50%', width:0, height:0, transform:`rotate(${a}deg)` } },
+      React.createElement('div', { style:{
+        position:'absolute', left:'-12px', top:'-56px', width:'24px', height:'48px',
+        borderRadius:'50% 50% 50% 50% / 62% 62% 38% 38%', background:accent, transformOrigin:'50% 100%',
+        animation: animName ? `${animName} ${dur||3.2}s cubic-bezier(.2,.8,.3,1) infinite` : 'none',
+        animationDelay: (delay||0)+'s',
+      } })
+    );
+  }
+  calyx(animName) {
+    return React.createElement('div', { style:{
+      position:'absolute', left:'50%', top:'50%', width:'26px', height:'26px', margin:'-13px 0 0 -13px',
+      borderRadius:'50%', background:'#e9f1ea', animation: animName ? `${animName} 3.2s ease-out infinite` : 'none',
+    } });
+  }
+  ring(delay) {
+    return React.createElement('div', { key:'r'+delay, style:{
+      position:'absolute', left:'50%', top:'50%', width:'120px', height:'120px', margin:'-60px 0 0 -60px',
+      borderRadius:'50%', border:'2px solid oklch(0.82 0.13 152)', animation:`bRing 3.2s ease-out infinite`, animationDelay:delay+'s',
+    } });
+  }
+  renderVals() {
+    const v = this.props.variant || 'unfurl';
+    const angles = [0,60,120,180,240,300];
+    let children, meta;
+    if (v === 'unfurl') {
+      meta = { badge:'2a', title:'Unfurl', desc:'Six petals rise from the calyx and open, then fold back. The original idea, refined.' };
+      children = [...angles.map(a=>this.petal(a,'bUnfurl', 0.05 + (a/60)*0.06)), this.calyx('bCalyx')];
+    } else if (v === 'cascade') {
+      meta = { badge:'2b', title:'Cascade', desc:'Petals arrive one by one, sweeping around the center like a time-lapse.' };
+      children = [...angles.map(a=>this.petal(a,'bCascade', (a/60)*0.16)), this.calyx('bCalyx')];
+    } else if (v === 'ripple') {
+      meta = { badge:'2c', title:'Ripple', desc:'The bloom holds steady while soft rings pulse outward from it.' };
+      children = [this.ring(0), this.ring(1.05), this.ring(2.1), ...angles.map(a=>this.petal(a,null)), this.calyx(null)];
+    } else if (v === 'seed') {
+      meta = { badge:'2d', title:'Seed to flower', desc:'A single seed swells, turns, and becomes the whole flower.' };
+      children = [React.createElement('div', { key:'g', style:{ position:'absolute', inset:0, animation:'bSeed 3.2s cubic-bezier(.2,.8,.3,1) infinite' } },
+        ...angles.map(a=>this.petal(a,null)), this.calyx(null))];
+    } else {
+      meta = { badge:'2e', title:'Breathe', desc:'A formed bloom that gently breathes and glows. The calmest, quietest option.' };
+      children = [React.createElement('div', { key:'g', style:{ position:'absolute', inset:0, animation:'bBreathe 4s ease-in-out infinite' } },
+        ...angles.map(a=>this.petal(a,null)), this.calyx(null))];
+    }
+    return { ...meta, art: React.createElement('div', { style:{ position:'absolute', inset:0 } }, children) };
+  }
+}
+</script>
+</body>
+</html>
