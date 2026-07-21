@@ -46,7 +46,7 @@ ratified direction:
   visually at the device gate.
 - Type: Sora (UI) / Newsreader italic (explainers). Brand label
   15/500 caps .14em; product line dominant 38/700 lh 1.02; question
-  23/500 accent; explainer 16 serif italic subtext lh 1.55; control
+  23/500 accent; explainer 18 serif italic subtext lh 1.55; control
   chip 16/600; "Logged." 26/600.
 - Shape/spacing language: control chip 44pt tall r22; 26pt side
   margins; 38pt bottom safe padding; generous radii on tap targets.

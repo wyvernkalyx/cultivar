@@ -26,6 +26,29 @@ export const Colors = {
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 
+/**
+ * The session survey's fixed palette (D83 "Moody & tactile"). A named token
+ * set distinct from the app-wide light/dark `Colors`: the survey commits to a
+ * single dark surface regardless of scheme, and it carries survey-only tokens
+ * (accent, the score tier ramp) the general theme has no place for. The hex
+ * values are the architect's oklch->sRGB conversions of the design doc's
+ * tokens; `documentation/design/art-direction.md` keeps the oklch source of
+ * truth, these are the RN-consumable form (RN does not parse oklch()).
+ */
+export const Survey = {
+  background: '#090d0a',
+  surface: '#131b15',
+  surfaceHi: '#1b241d',
+  text: '#e9f1ea',
+  subtext: '#7f8f84',
+  accent: '#7fdc9a',
+  onAccent: '#08120b',
+  errorBorder: '#d6725d',
+  errorDot: '#eb8656',
+  // Tier ramp best -> worst, aligned to the score pill order Elite -> Trash.
+  tier: ['#76cf8a', '#a9cb7d', '#d7c477', '#e4965c', '#d6725d'],
+} as const;
+
 export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */

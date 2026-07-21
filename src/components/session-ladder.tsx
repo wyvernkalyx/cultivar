@@ -5,8 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { MaxContentWidth, Spacing, Survey } from '@/constants/theme';
 import {
   CO_CONSUMPTION,
   ENERGY,
@@ -94,57 +93,85 @@ type Phase =
   | 'co_consumption'
   | 'closing';
 
-// The shared sequence-screen header (D80 scaffold, D81 product line): a
-// leading control, a truly-centered two-line unit — the product
-// identification on top (D81: every screen names the product, so the user
-// never rates an unnamed thing) with the screen's question beneath it as a
-// subordinate subheading — and an equal-width trailing spacer that balances
-// the leading control so the unit sits at the true center regardless of the
-// control's label. A screen that asks nothing (the closing screen) passes no
-// title and shows the product line alone.
+// Font families registered app-wide in the root layout (D83 Decision 1).
+// Referenced by name; when a family is not yet loaded RN falls back to the
+// system font — the ratified fallback, so the survey never blocks on a font.
+const SORA_MEDIUM = 'Sora_500Medium';
+const SORA_SEMIBOLD = 'Sora_600SemiBold';
+const SORA_BOLD = 'Sora_700Bold';
+const SERIF_ITALIC = 'Newsreader_400Regular_Italic';
+
+// One explainer line per screen (D83 Decision 2), verbatim from
+// documentation/design/art-direction.md — personal, observational, zero
+// pharmacology, each pointing at the user's own log. Occupies the empty middle
+// in serif italic. None of these strings contains a double quote, so they read
+// cleanly as double-quoted literals; the "--" is the doc's ASCII em dash.
+const EXPLAINERS: Record<Phase, string> = {
+  ladder: "Gut call. How this run stacked up against the rest of your shelf.",
+  energy: "Where it left you on the dial -- mellow to wired. Only next to your own past logs.",
+  environment: "Who was around. Solo and social runs can read like two different strains in your logs.",
+  spark: "The itch it scratched, if any. Your word for the moment, nothing more.",
+  fit: "Measured against what you came for -- nothing else.",
+  physical_state: "Where you started from. The same run reads different against a different baseline.",
+  co_consumption: "What else was in the mix. Logged so this run isn't judged alone.",
+  closing: "That's the run logged. It'll show up next to the rest of this strain.",
+};
+
+// The shared sequence-screen header (D83 header block, over D80/D81): a styled
+// leading control chip, then a left-aligned block — a quiet brand label on top,
+// the product line dominant beneath it (D81: every screen names the product, so
+// the user never rates an unnamed thing), and the screen's question as an
+// accent subheading. The identification is never fabricated: whichever of brand
+// / strain the COA carries shows, and the dominant line always names something.
+// A screen that asks nothing (closing) passes no title and shows the
+// identification alone.
 function SequenceHeader({
   leadingLabel,
   onLeading,
   disabled,
-  product,
+  brand,
+  strain,
   title,
 }: {
   leadingLabel: string;
   onLeading: () => void;
   disabled: boolean;
-  product: string;
+  brand: string | null;
+  strain: string | null;
   title?: string;
 }) {
+  // The dominant line is the strain when present, the brand otherwise, so a
+  // single-named COA reads as one strong line rather than a lonely label over
+  // an empty product. The brand label shows above only when both exist.
+  const productLine = strain ?? brand ?? '';
+  const brandLabel = strain !== null ? brand : null;
   return (
     <View style={styles.sequenceHeader}>
-      <Pressable disabled={disabled} onPress={onLeading} style={styles.headerSide}>
-        <ThemedText type="smallBold">{leadingLabel}</ThemedText>
+      <Pressable disabled={disabled} onPress={onLeading} style={styles.controlChip}>
+        {/* Leading glyph per D83 item 9: cross for Close, single-angle for
+            Back. */}
+        <ThemedText style={styles.controlChipLabel}>
+          {(leadingLabel === 'Close' ? '✕ ' : '‹ ') + leadingLabel}
+        </ThemedText>
       </Pressable>
-      <View style={styles.headerCenter}>
-        {/* The product line is the prominent line (D81), gate-tuned larger
-            than the pill labels (type "default"); the question subheading
-            scales up with it but stays subordinate — one size step down and
-            in the secondary color. */}
-        <ThemedText
-          type="title"
-          numberOfLines={2}
-          adjustsFontSizeToFit
-          minimumFontScale={0.8}
-          style={styles.productLine}>
-          {product}
+      <View style={styles.headerBlock}>
+        {brandLabel !== null && (
+          <ThemedText style={styles.brandLabel} numberOfLines={1}>
+            {brandLabel}
+          </ThemedText>
+        )}
+        {/* Wrap-only (D83, ratified item 1): up to two lines at full size, no
+            shrink. A real overflow at the device gate is the only thing that
+            reopens it. */}
+        <ThemedText style={styles.productLine} numberOfLines={2}>
+          {productLine}
         </ThemedText>
         {title !== undefined && (
-          <ThemedText
-            type="subtitle"
-            themeColor="textSecondary"
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            style={styles.headerSubtitle}>
+          <ThemedText style={styles.question} numberOfLines={2}>
             {title}
           </ThemedText>
         )}
       </View>
-      <View style={styles.headerSide} />
     </View>
   );
 }
@@ -163,13 +190,15 @@ function SequenceHeader({
 // visual grammar is reused wholesale — selected inverts (text token as fill),
 // pending rides at half opacity (D57/D65/D78/D80).
 function PillScreen({
-  theme,
-  product,
+  brand,
+  strain,
   title,
+  explainer,
   values,
   selected,
   selectedValues,
   pendingValue,
+  tierStripe = false,
   disabled,
   error,
   onSelect,
@@ -178,15 +207,19 @@ function PillScreen({
   onDone,
   leadingLabel = 'Back',
 }: {
-  theme: ReturnType<typeof useTheme>;
-  product: string;
+  brand: string | null;
+  strain: string | null;
   title: string;
+  explainer: string;
   values: readonly string[];
   selected: string | null;
   // Multi-select (D82): when present, a pill is lit iff this set includes it,
   // and `selected` is unused (call sites pass selected={null}).
   selectedValues?: readonly string[];
   pendingValue: string | null;
+  // The score screen (D83, ratified item 2): a 5pt leading tier stripe per
+  // pill, best -> worst, so hue reinforces the order score already carries.
+  tierStripe?: boolean;
   disabled: boolean;
   error: string | null;
   onSelect: (value: string) => void;
@@ -203,11 +236,17 @@ function PillScreen({
         leadingLabel={leadingLabel}
         onLeading={onLeading}
         disabled={disabled}
-        product={product}
+        brand={brand}
+        strain={strain}
         title={title}
       />
+      {/* The explainer occupies the empty middle as the reading surface (D83):
+          one line of personal context, serif italic, quiet. */}
+      <View style={styles.explainerWrap}>
+        <ThemedText style={styles.explainer}>{explainer}</ThemedText>
+      </View>
       <View style={styles.pillStack}>
-        {values.map((value) => {
+        {values.map((value, index) => {
           // Multi-select lights every value in the set (D82); single-select
           // lights the one equal to `selected`.
           const isMulti = selectedValues !== undefined;
@@ -224,64 +263,64 @@ function PillScreen({
                 // Multi-select pills lay label beside the checkbox (D82.1);
                 // single-select pills are unchanged.
                 isMulti && styles.pillMulti,
-                { backgroundColor: isSelected ? theme.text : theme.backgroundElement },
+                { backgroundColor: isSelected ? Survey.text : Survey.surface },
                 isPending && styles.chipPending,
               ]}>
+              {/* Score-pill tier stripe (D83): only the stripe is colored, the
+                  body stays surface. Absolute so it never shifts the centered
+                  label; order best -> worst by pill index (Elite -> Trash). */}
+              {tierStripe && (
+                <View style={[styles.tierStripe, { backgroundColor: Survey.tier[index] }]} />
+              )}
               {/* The leading checkbox is the pre-tap cue (D82.1) that this
                   screen is pick-any and needs Done — a bare pill is pick-one
-                  and advances on tap. Empty square off, checked square on;
-                  final treatment is art-pass scope. */}
+                  and advances on tap. D83 treatment: 20pt square, 1.5pt subtext
+                  border unchecked; accent fill + dark glyph checked. */}
               {isMulti && (
                 <View
                   style={[
                     styles.checkbox,
-                    { borderColor: isSelected ? theme.background : theme.textSecondary },
+                    isSelected
+                      ? { backgroundColor: Survey.accent, borderColor: Survey.accent }
+                      : { borderColor: Survey.subtext },
                   ]}>
-                  {isSelected && (
-                    <ThemedText type="small" style={{ color: theme.background }}>
-                      ✓
-                    </ThemedText>
-                  )}
+                  {isSelected && <ThemedText style={styles.checkGlyph}>✓</ThemedText>}
                 </View>
               )}
               <ThemedText
-                type="default"
-                style={isSelected ? { color: theme.background } : undefined}>
+                style={[styles.pillLabel, { color: isSelected ? Survey.background : Survey.text }]}>
                 {value}
               </ThemedText>
             </Pressable>
           );
         })}
+        {/* Inline save error (D54) as the D83 banner: surface-hi, 1px error
+            border, round badge, above the pills so a retry is one tap away. */}
         {error !== null && (
-          <ThemedText type="small" style={styles.sequenceError}>
-            {error}
-          </ThemedText>
+          <View style={styles.errorBanner}>
+            <View style={styles.errorBadge}>
+              <ThemedText style={styles.errorBadgeGlyph}>!</ThemedText>
+            </View>
+            <ThemedText style={styles.errorText}>{error}</ThemedText>
+          </View>
         )}
         {/* Skip is first-class (D79): a persistent pill, never smaller than
             an answer, that advances and writes nothing. Absent on the score
             screen (D80): the overall word is the only mandatory field. */}
         {onSkip !== undefined && (
-          <Pressable
-            disabled={disabled}
-            onPress={onSkip}
-            style={[styles.pill, styles.skipPill, { backgroundColor: theme.backgroundElement }]}>
-            <ThemedText type="default" themeColor="textSecondary">
-              Skip
-            </ThemedText>
+          <Pressable disabled={disabled} onPress={onSkip} style={[styles.pill, styles.skipPill]}>
+            <ThemedText style={[styles.pillLabel, { color: Survey.subtext }]}>Skip</ThemedText>
           </Pressable>
         )}
         {/* Done advances a multi-select panel (D82): the toggles already saved
             per tap, so Done writes nothing — it only moves on, and Done with
-            nothing selected is the skip by construction. Same geometry as Skip
-            but the primary text color (not Skip's secondary), so the two
+            nothing selected is the skip by construction. D83 confirm treatment:
+            accent-filled with dark text (same as closing's Close), so the two
             grammars' trailing pills read as distinct. Mutually exclusive with
-            onSkip. Final treatment is art-pass scope. */}
+            onSkip. */}
         {onDone !== undefined && (
-          <Pressable
-            disabled={disabled}
-            onPress={onDone}
-            style={[styles.pill, styles.skipPill, { backgroundColor: theme.backgroundElement }]}>
-            <ThemedText type="default">Done</ThemedText>
+          <Pressable disabled={disabled} onPress={onDone} style={[styles.pill, styles.donePill]}>
+            <ThemedText style={[styles.pillLabel, { color: Survey.onAccent }]}>Done</ThemedText>
           </Pressable>
         )}
       </View>
@@ -322,12 +361,7 @@ export function SessionLadder({
   onClose: () => void;
   onBusyChange: (busy: boolean) => void;
 }) {
-  const theme = useTheme();
   const insets = useSafeAreaInsets();
-  // The product identification (D81): every survey screen leads with it, so
-  // the user never rates an unnamed thing. "Brand - Strain" when the COA
-  // carries both; whichever part is present otherwise — never fabricated.
-  const product = [coa.brand, coa.strain].filter(Boolean).join(' - ');
   // One in-flight insert at a time (D54): the source whose insert is on
   // the wire, null when idle. Drives the pending visuals (each source's
   // pending visual belongs to its own control) and disables every tap and
@@ -668,12 +702,14 @@ export function SessionLadder({
             wire (D54). */}
         {phase === 'ladder' && (
           <PillScreen
-            theme={theme}
-            product={product}
+            brand={coa.brand}
+            strain={coa.strain}
             title="Rate this Session"
+            explainer={EXPLAINERS.ladder}
             values={RUNG_WORDS}
             selected={selectedScore}
             pendingValue={pendingScore}
+            tierStripe
             disabled={inFlight}
             error={saveError}
             onSelect={tapScore}
@@ -688,9 +724,10 @@ export function SessionLadder({
             fit (D72) and branches to the fit screen when answered. */}
         {currentAxis !== undefined && (
           <PillScreen
-            theme={theme}
-            product={product}
+            brand={coa.brand}
+            strain={coa.strain}
             title={currentAxis.label}
+            explainer={EXPLAINERS[currentAxis.key]}
             values={currentAxis.values}
             selected={selectedAxis(currentAxis.key)}
             pendingValue={
@@ -711,9 +748,10 @@ export function SessionLadder({
             pill-and-Skip pattern, FITS vocabulary unchanged. */}
         {phase === 'fit' && (
           <PillScreen
-            theme={theme}
-            product={product}
+            brand={coa.brand}
+            strain={coa.strain}
             title="Did it do what you wanted?"
+            explainer={EXPLAINERS.fit}
             values={FITS}
             selected={selectedFit}
             pendingValue={pendingFit}
@@ -733,9 +771,10 @@ export function SessionLadder({
             the skip). Back is the linear predecessor. */}
         {currentPanel !== undefined && (
           <PillScreen
-            theme={theme}
-            product={product}
+            brand={coa.brand}
+            strain={coa.strain}
             title={currentPanel.label}
+            explainer={EXPLAINERS[currentPanel.key]}
             values={currentPanel.values}
             selected={null}
             selectedValues={panelValues(currentPanel.key)}
@@ -764,14 +803,15 @@ export function SessionLadder({
               leadingLabel="Back"
               onLeading={goBack}
               disabled={inFlight}
-              product={product}
+              brand={coa.brand}
+              strain={coa.strain}
             />
+            <View style={styles.explainerWrap}>
+              <ThemedText style={styles.explainer}>{EXPLAINERS.closing}</ThemedText>
+            </View>
             <View style={styles.closingActions}>
-              <Pressable
-                disabled={inFlight}
-                onPress={onClose}
-                style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
-                <ThemedText type="smallBold">Close</ThemedText>
+              <Pressable disabled={inFlight} onPress={onClose} style={styles.closeButton}>
+                <ThemedText style={styles.closeLabel}>Close</ThemedText>
               </Pressable>
             </View>
           </View>
@@ -786,87 +826,186 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     flexDirection: 'row',
+    backgroundColor: Survey.background,
   },
   content: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    paddingBottom: Spacing.four,
+    // 26pt sides / 38pt bottom safe padding (D83 item 9).
+    paddingHorizontal: 26,
+    paddingBottom: 38,
     gap: Spacing.three,
     maxWidth: MaxContentWidth,
+    backgroundColor: Survey.background,
   },
   chipPending: {
     opacity: 0.5,
   },
-  // The one-screen sequence (D79/D80): a flex column with the header at the
-  // top and the answer stack anchored to the bottom (thumb reach) via
-  // marginTop:auto.
+  // The one-screen sequence (D79/D80): a flex column — header at the top, the
+  // explainer filling the empty middle, the answer stack anchored to the
+  // bottom (thumb reach).
   sequenceScreen: {
     flex: 1,
   },
+  // The left-aligned header block (D83): the control chip over the product
+  // identification, both flush left.
   sequenceHeader: {
+    alignItems: 'flex-start',
+    gap: Spacing.three,
+  },
+  // The control chip (D83 item 9): 44pt tall, r22, surface, a leading glyph +
+  // label, sized to its content and pinned left.
+  controlChip: {
+    height: 44,
+    borderRadius: 22,
+    paddingHorizontal: Spacing.three,
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  // Leading control and the balancing trailing spacer share this width so
-  // the flex:1 centered title sits at the true screen center (D80 scaffold).
-  headerSide: {
-    width: 72,
-    paddingVertical: Spacing.one,
     justifyContent: 'center',
+    backgroundColor: Survey.surface,
   },
-  // The centered two-line unit (D80 balanced-spacer centering, D81 product +
-  // question): flex:1 so it fills between the equal-width side controls, its
-  // lines stretched to that width so each centers and shrinks to fit.
-  headerCenter: {
-    flex: 1,
+  controlChipLabel: {
+    fontFamily: SORA_SEMIBOLD,
+    fontSize: 16,
+    color: Survey.text,
+  },
+  headerBlock: {
+    alignSelf: 'stretch',
+    gap: Spacing.two,
+  },
+  brandLabel: {
+    fontFamily: SORA_MEDIUM,
+    fontSize: 15,
+    // .14em at 15pt.
+    letterSpacing: 2.1,
+    textTransform: 'uppercase',
+    lineHeight: 20,
+    color: Survey.subtext,
   },
   productLine: {
-    textAlign: 'center',
+    fontFamily: SORA_BOLD,
+    fontSize: 38,
+    lineHeight: 39,
+    color: Survey.text,
   },
-  headerSubtitle: {
-    textAlign: 'center',
-    marginTop: Spacing.half,
+  question: {
+    fontFamily: SORA_MEDIUM,
+    fontSize: 23,
+    lineHeight: 30,
+    color: Survey.accent,
   },
-  sequenceError: {
-    textAlign: 'center',
+  // The empty middle is the reading surface (D83): the explainer centered in it.
+  explainerWrap: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  explainer: {
+    fontFamily: SERIF_ITALIC,
+    fontStyle: 'italic',
+    fontSize: 18,
+    lineHeight: 28,
+    color: Survey.subtext,
   },
   pillStack: {
-    marginTop: 'auto',
     gap: Spacing.two,
   },
   pill: {
     alignSelf: 'stretch',
     alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: Spacing.four,
     paddingVertical: Spacing.three,
+    // Clips the tier stripe to the pill's rounded leading edge.
+    overflow: 'hidden',
   },
   // Multi-select pills (D82.1): the checkbox and label sit in a centered row.
   pillMulti: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: Spacing.one,
+    gap: Spacing.two,
   },
-  // The leading checkbox square (D82.1): border color and check glyph are set
-  // inline by selection state.
+  pillLabel: {
+    fontFamily: SORA_MEDIUM,
+    fontSize: 16,
+  },
+  // The score-pill tier stripe (D83): a 5pt colored bar on the leading edge,
+  // clipped to the pill radius by the pill's overflow:hidden.
+  tierStripe: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 5,
+  },
+  // The leading checkbox square (D82.1 grammar, D83 treatment): 20pt, r6, a
+  // 1.5pt border; fill and glyph color are set inline by selection state.
   checkbox: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 2,
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  checkGlyph: {
+    fontFamily: SORA_SEMIBOLD,
+    fontSize: 13,
+    color: Survey.onAccent,
+  },
   skipPill: {
     marginTop: Spacing.one,
+    backgroundColor: Survey.surface,
+  },
+  donePill: {
+    marginTop: Spacing.one,
+    backgroundColor: Survey.accent,
+  },
+  // The inline save-error banner (D54 error, D83 treatment): surface-hi with a
+  // 1px error border, a round badge, and the message.
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Survey.errorBorder,
+    backgroundColor: Survey.surfaceHi,
+  },
+  errorBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Survey.errorDot,
+  },
+  errorBadgeGlyph: {
+    fontFamily: SORA_SEMIBOLD,
+    fontSize: 13,
+    color: Survey.onAccent,
+  },
+  errorText: {
+    flex: 1,
+    fontFamily: SORA_MEDIUM,
+    fontSize: 15,
+    lineHeight: 20,
+    color: Survey.text,
   },
   closingActions: {
-    marginTop: 'auto',
     gap: Spacing.two,
   },
-  button: {
+  // The closing Close (D83): the confirm treatment — accent-filled, dark text.
+  closeButton: {
     alignSelf: 'stretch',
     alignItems: 'center',
-    borderRadius: Spacing.three,
+    borderRadius: Spacing.four,
     paddingVertical: Spacing.three,
+    backgroundColor: Survey.accent,
+  },
+  closeLabel: {
+    fontFamily: SORA_SEMIBOLD,
+    fontSize: 16,
+    color: Survey.onAccent,
   },
 });

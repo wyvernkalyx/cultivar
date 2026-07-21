@@ -1,3 +1,6 @@
+import { Sora_400Regular, Sora_500Medium, Sora_600SemiBold, Sora_700Bold } from '@expo-google-fonts/sora';
+import * as Newsreader from '@expo-google-fonts/newsreader';
+import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
@@ -15,6 +18,17 @@ type Status = 'loading' | 'signedOut' | 'signedIn';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  // The survey's type (D83): Sora for UI, Newsreader italic for explainer
+  // lines. Registered app-wide once loaded; we never block on it — the
+  // ratified fallback is system fonts, so the app renders immediately and the
+  // families swap in when ready (D83 Decision 1).
+  useFonts({
+    Sora_400Regular,
+    Sora_500Medium,
+    Sora_600SemiBold,
+    Sora_700Bold,
+    Newsreader_400Regular_Italic: Newsreader.Newsreader_400Regular_Italic,
+  });
   // Three states so a cold-start session restore does not flash sign-in: the
   // gate stays 'loading' until getSession answers, and the splash overlay
   // (which owns the splash hide and its own fade-out) covers that window.
