@@ -1,6 +1,7 @@
 # Art direction -- the survey's visual language (D83)
 
-Status: D83 ratified at this commit; no implementation commits exist.
+Status: D83 ratified at `45e721d`; slice 1 (statics) shipped at `d24c8b4`;
+the animation-constraint section amended by the Reanimated excision chore.
 
 ## Scope and inputs
 
@@ -200,13 +201,17 @@ Shared grammar plus:
 
 All animation in this pass -- transitions, saving spinner, bloom --
 uses the core React Native `Animated` API (or `LayoutAnimation` where
-sufficient). **`react-native-reanimated` is not reintroduced.** The
-intermittent-freeze hypothesis lives in the Reanimated neighborhood
-and its non-recurrence evidence has accumulated only on the
-Reanimated-free build; reintroducing it would both risk the defect
-and destroy the accumulating evidence. If core `Animated` cannot
-express the bloom acceptably, that is a finding to bring back here,
-not a license to install.
+sufficient). **`react-native-reanimated` is not used.** Reanimated
+shipped in the Expo scaffold and ran in the template splash overlay
+until the excision chore removed it (source imports, both manifest
+entries, and the splash consumer); from that commit the constraint is
+enforced by manifest absence plus an Expo autolinking exclusion, so
+the dev-client binary cannot re-acquire it from a peer-materialized
+`node_modules`. The intermittent-freeze hypothesis lives in the
+Reanimated neighborhood; keeping it out preserves the accumulating
+non-recurrence evidence and avoids re-risking the defect. If core
+`Animated` cannot express the bloom acceptably, that is a finding to
+bring back here, not a license to reinstate it.
 
 ## Ratified at review (operator, 2026-07-21)
 

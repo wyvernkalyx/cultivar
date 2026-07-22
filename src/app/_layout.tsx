@@ -6,7 +6,6 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { useColorScheme } from 'react-native';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
 import SignIn from '@/components/sign-in';
 import { ThemedView } from '@/components/themed-view';
@@ -30,8 +29,8 @@ export default function RootLayout() {
     Newsreader_400Regular_Italic: Newsreader.Newsreader_400Regular_Italic,
   });
   // Three states so a cold-start session restore does not flash sign-in: the
-  // gate stays 'loading' until getSession answers, and the splash overlay
-  // (which owns the splash hide and its own fade-out) covers that window.
+  // gate stays 'loading' until getSession answers, and the loading ThemedView
+  // below covers that window.
   const [status, setStatus] = useState<Status>('loading');
 
   useEffect(() => {
@@ -46,9 +45,19 @@ export default function RootLayout() {
     };
   }, []);
 
+  // Release the native splash held by preventAutoHideAsync above. This was
+  // formerly owned by the removed AnimatedSplashOverlay (an animated splash
+  // excised with the animation library it depended on). Fires once on mount,
+  // unconditionally — never gated on an async that could fail, so the app can
+  // never hang on the native splash. Fonts are non-blocking (D83 Decision 1),
+  // so the hide does not wait on them; the loading ThemedView below covers the
+  // getSession window.
+  useEffect(() => {
+    SplashScreen.hideAsync();
+  }, []);
+
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
       {status === 'loading' && <ThemedView style={{ flex: 1 }} />}
       {status === 'signedOut' && <SignIn />}
       {status === 'signedIn' && <AppTabs />}
