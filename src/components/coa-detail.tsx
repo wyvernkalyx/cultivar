@@ -32,6 +32,8 @@ type CoaDetailRecord = {
   total_thc: number | null;
   total_cbd: number | null;
   total_terpenes: number | null;
+  sampled_on: string | null;
+  tested_on: string | null;
   created_at: string;
   coa_terpenes: AnalyteRow[];
   coa_cannabinoids: AnalyteRow[];
@@ -44,6 +46,14 @@ type CoaDetailRecord = {
 // totals and every analyte pct.
 function ndLabel(value: number | null) {
   return value === null ? 'ND' : `${value}%`;
+}
+
+// A `date` column arrives as 'YYYY-MM-DD'. `new Date('YYYY-MM-DD')` parses at
+// UTC midnight, which renders as the prior day west of UTC; constructing from
+// the parts yields local midnight, so the displayed day never shifts.
+function formatIsoDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString();
 }
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -115,7 +125,7 @@ export function CoaDetail({
       supabase
         .from('coas')
         .select(
-          'id, strain, brand, batch, lab, source_lab, total_thc, total_cbd, total_terpenes, created_at, coa_terpenes(id, name, pct), coa_cannabinoids(id, name, pct), coa_safety(id, category, status)'
+          'id, strain, brand, batch, lab, source_lab, total_thc, total_cbd, total_terpenes, sampled_on, tested_on, created_at, coa_terpenes(id, name, pct), coa_cannabinoids(id, name, pct), coa_safety(id, category, status)'
         )
         .eq('id', coaId)
         .single()
@@ -214,6 +224,18 @@ export function CoaDetail({
                 <ThemedText type="small" themeColor="textSecondary">
                   {coa.brand}
                 </ThemedText>
+                {/* Whichever lab dates exist (D84.4), honestly labeled;
+                    Added stays as provenance, never relabeled. */}
+                {coa.sampled_on ? (
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Sampled {formatIsoDate(coa.sampled_on)}
+                  </ThemedText>
+                ) : null}
+                {coa.tested_on ? (
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Tested {formatIsoDate(coa.tested_on)}
+                  </ThemedText>
+                ) : null}
                 <ThemedText type="small" themeColor="textSecondary">
                   Added {new Date(coa.created_at).toLocaleDateString()}
                 </ThemedText>

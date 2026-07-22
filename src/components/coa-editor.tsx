@@ -23,6 +23,8 @@ export interface CoaParseResult {
   brand: string;
   strain: string;
   batch: string;
+  sampledDate: string | null;
+  testedDate: string | null;
   totalThcPct: number | null;
   totalCbdPct: number | null;
   totalTerpenesPct: number | null;
@@ -47,6 +49,10 @@ interface Draft {
   brand: string;
   batch: string;
   lab: string;
+  // Carried through unedited (D84): dates are not editable this slice, so
+  // they ride the draft like `safety` -- init copies them, emit returns them.
+  sampledDate: string | null;
+  testedDate: string | null;
   totalThcPct: number | null;
   totalCbdPct: number | null;
   totalTerpenesPct: number | null;
@@ -70,6 +76,8 @@ function initDraft(coa: CoaParseResult): Draft {
     brand: coa.brand,
     batch: coa.batch,
     lab: coa.lab,
+    sampledDate: coa.sampledDate,
+    testedDate: coa.testedDate,
     totalThcPct: coa.totalThcPct,
     totalCbdPct: coa.totalCbdPct,
     totalTerpenesPct: coa.totalTerpenesPct,
@@ -90,6 +98,8 @@ function emitDraft(draft: Draft): CoaParseResult {
     brand: draft.brand,
     strain: draft.strain,
     batch: draft.batch,
+    sampledDate: draft.sampledDate,
+    testedDate: draft.testedDate,
     totalThcPct: draft.totalThcPct,
     totalCbdPct: draft.totalCbdPct,
     totalTerpenesPct: draft.totalTerpenesPct,

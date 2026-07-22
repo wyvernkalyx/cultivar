@@ -20,6 +20,8 @@ type ShelfCoa = {
   total_thc: number | null;
   total_cbd: number | null;
   total_terpenes: number | null;
+  sampled_on: string | null;
+  tested_on: string | null;
   created_at: string;
 };
 
@@ -27,6 +29,23 @@ type ShelfCoa = {
 // not reported and renders the literal "ND" — never 0, never blank.
 function totalLabel(value: number | null) {
   return value === null ? 'ND' : `${value}%`;
+}
+
+// A `date` column arrives as 'YYYY-MM-DD'. `new Date('YYYY-MM-DD')` parses at
+// UTC midnight, which renders as the prior day west of UTC; constructing from
+// the parts yields local midnight, so the displayed day never shifts.
+function formatIsoDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString();
+}
+
+// Card date line (D84.4), one line by strict precedence: tested, else
+// sampled (each labeled as such), else the existing created_at provenance.
+// created_at is a timestamptz and keeps its own timezone-aware treatment.
+function cardDateLine(coa: ShelfCoa): string {
+  if (coa.tested_on) return `Tested ${formatIsoDate(coa.tested_on)}`;
+  if (coa.sampled_on) return `Sampled ${formatIsoDate(coa.sampled_on)}`;
+  return `Added ${new Date(coa.created_at).toLocaleDateString()}`;
 }
 
 function Total({ label, value }: { label: string; value: number | null }) {
@@ -68,7 +87,7 @@ function ShelfCard({
           {coa.brand}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary">
-          Added {new Date(coa.created_at).toLocaleDateString()}
+          {cardDateLine(coa)}
         </ThemedText>
         {bandWord !== undefined && <ThemedText type="smallBold">{bandWord}</ThemedText>}
         <View style={styles.totalsRow}>
@@ -113,7 +132,9 @@ export function ShelfList() {
       Promise.all([
         supabase
           .from('coas')
-          .select('id, strain, brand, lab, total_thc, total_cbd, total_terpenes, created_at')
+          .select(
+            'id, strain, brand, lab, total_thc, total_cbd, total_terpenes, sampled_on, tested_on, created_at'
+          )
           .order('created_at', { ascending: false }),
         supabase.from('coa_session_stats').select('coa_id, band'),
       ]).then(([coasResult, statsResult]) => {
