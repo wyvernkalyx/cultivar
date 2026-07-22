@@ -1,6 +1,6 @@
 import { uuid } from 'expo-modules-core';
-import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -82,7 +82,7 @@ type InsertSource = 'drop' | 'axis' | 'fit' | 'panel';
 // when spark is answered, D73) -> physical_state -> co_consumption ->
 // closing (D82: the panels join the required sequence). Field keys double
 // as phase names so currentPanel/currentAxis derive config straight from
-// phase. Plain conditional render; transition animation banked to the art pass.
+// phase. Conditional render wrapped in the D83 advance transition (slice 2).
 type Phase =
   | 'ladder'
   | 'energy'
@@ -117,6 +117,102 @@ const EXPLAINERS: Record<Phase, string> = {
   closing: "That's the run logged. It'll show up next to the rest of this strain.",
 };
 
+// The saving-state spinner (D83 Layer 1): a 20pt ring rotating on a linear
+// loop, core Animated only. Sits beside the swapped "Saving…" label on the
+// tapped pill. `color` matches the pill's label so it reads on either fill.
+function SavingSpinner({ color }: { color: string }) {
+  // Lazy state, not a ref: the value is stable across renders and read in
+  // render (interpolate) without tripping the no-refs-in-render rule.
+  const [spin] = useState(() => new Animated.Value(0));
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 700,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [spin]);
+  return (
+    <Animated.View
+      style={[
+        styles.spinner,
+        {
+          borderColor: color,
+          borderTopColor: 'transparent',
+          transform: [
+            { rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) },
+          ],
+        },
+      ]}
+    />
+  );
+}
+
+// The completion bloom (D83 Unfurl 2a, per reference/claude-design-survey mock):
+// six petals unfurl from a rooted calyx, then the "Logged." caption rises. All
+// motion is passed in as native-driven Animated.Values owned by SessionLadder,
+// so a Back-and-return to closing shows the held (settled) bloom rather than
+// replaying it. Each petal wrapper carries a static 60deg rotation; the inner
+// petal scales up from its base (transformOrigin 50% 100%). The glow halo
+// approximates the mock's filter:blur — RN core has no blur (see report).
+function CompletionBloom({
+  petalAnims,
+  calyxAnim,
+  captionAnim,
+}: {
+  petalAnims: Animated.Value[];
+  calyxAnim: Animated.Value;
+  captionAnim: Animated.Value;
+}) {
+  return (
+    <View style={styles.bloomWrap}>
+      <View style={styles.bloomArt}>
+        <View style={styles.bloomGlow} />
+        {petalAnims.map((anim, i) => (
+          <View key={i} style={[styles.petalRoot, { transform: [{ rotate: `${i * 60}deg` }] }]}>
+            <Animated.View
+              style={[
+                styles.petal,
+                {
+                  opacity: anim.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 1, 1] }),
+                  transform: [
+                    { scaleY: anim.interpolate({ inputRange: [0, 1], outputRange: [0.08, 1] }) },
+                  ],
+                },
+              ]}
+            />
+          </View>
+        ))}
+        <Animated.View
+          style={[
+            styles.calyx,
+            {
+              opacity: calyxAnim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 1, 1] }),
+              transform: [
+                { scale: calyxAnim.interpolate({ inputRange: [0, 1], outputRange: [0.2, 1] }) },
+              ],
+            },
+          ]}
+        />
+      </View>
+      <Animated.View
+        style={{
+          opacity: captionAnim,
+          transform: [
+            { translateY: captionAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) },
+          ],
+        }}>
+        <ThemedText style={styles.loggedText}>Logged.</ThemedText>
+        <ThemedText style={styles.loggedSub}>On the shelf with the rest.</ThemedText>
+      </Animated.View>
+    </View>
+  );
+}
+
 // The shared sequence-screen header (D83 header block, over D80/D81): a styled
 // leading control chip, then a left-aligned block — a quiet brand label on top,
 // the product line dominant beneath it (D81: every screen names the product, so
@@ -132,6 +228,7 @@ function SequenceHeader({
   brand,
   strain,
   title,
+  saving = false,
 }: {
   leadingLabel: string;
   onLeading: () => void;
@@ -139,6 +236,9 @@ function SequenceHeader({
   brand: string | null;
   strain: string | null;
   title?: string;
+  // D83 Layer 1 saving state: the header dims to 40% while an insert is on
+  // the wire (the tapped pill stays lit; siblings dim to 32%).
+  saving?: boolean;
 }) {
   // The dominant line is the strain when present, the brand otherwise, so a
   // single-named COA reads as one strong line rather than a lonely label over
@@ -146,7 +246,7 @@ function SequenceHeader({
   const productLine = strain ?? brand ?? '';
   const brandLabel = strain !== null ? brand : null;
   return (
-    <View style={styles.sequenceHeader}>
+    <View style={[styles.sequenceHeader, saving && styles.headerSaving]}>
       <Pressable disabled={disabled} onPress={onLeading} style={styles.controlChip}>
         {/* Leading glyph per D83 item 9: cross for Close, single-angle for
             Back. */}
@@ -230,6 +330,9 @@ function PillScreen({
   onDone?: () => void;
   leadingLabel?: string;
 }) {
+  // Saving state (D83 Layer 1): an insert on this screen is on the wire iff a
+  // pill is pending. The tapped pill spins; header + siblings dim.
+  const saving = pendingValue !== null;
   return (
     <View style={styles.sequenceScreen}>
       <SequenceHeader
@@ -239,6 +342,7 @@ function PillScreen({
         brand={brand}
         strain={strain}
         title={title}
+        saving={saving}
       />
       {/* The explainer occupies the empty middle as the reading surface (D83):
           one line of personal context, serif italic, quiet. */}
@@ -252,6 +356,7 @@ function PillScreen({
           const isMulti = selectedValues !== undefined;
           const isSelected = isMulti ? selectedValues.includes(value) : value === selected;
           const isPending = value === pendingValue;
+          const labelColor = isSelected ? Survey.background : Survey.text;
           return (
             <Pressable
               key={value}
@@ -264,7 +369,9 @@ function PillScreen({
                 // single-select pills are unchanged.
                 isMulti && styles.pillMulti,
                 { backgroundColor: isSelected ? Survey.text : Survey.surface },
-                isPending && styles.chipPending,
+                // Saving state (D83 Layer 1): siblings of the tapped pill dim to
+                // 32%; the tapped pill stays lit and shows the spinner below.
+                saving && !isPending && styles.chipDim,
               ]}>
               {/* Score-pill tier stripe (D83): only the stripe is colored, the
                   body stays surface. Absolute so it never shifts the centered
@@ -287,10 +394,19 @@ function PillScreen({
                   {isSelected && <ThemedText style={styles.checkGlyph}>✓</ThemedText>}
                 </View>
               )}
-              <ThemedText
-                style={[styles.pillLabel, { color: isSelected ? Survey.background : Survey.text }]}>
-                {value}
-              </ThemedText>
+              {/* D83 Layer 1 saving treatment: the tapped pill swaps its label
+                  for a 20pt spinner + "Saving…" while its insert is on the wire
+                  (D54); every other pill keeps its label. */}
+              {isPending ? (
+                <View style={styles.savingRow}>
+                  <SavingSpinner color={labelColor} />
+                  <ThemedText style={[styles.pillLabel, { color: labelColor }]}>
+                    Saving…
+                  </ThemedText>
+                </View>
+              ) : (
+                <ThemedText style={[styles.pillLabel, { color: labelColor }]}>{value}</ThemedText>
+              )}
             </Pressable>
           );
         })}
@@ -308,7 +424,10 @@ function PillScreen({
             an answer, that advances and writes nothing. Absent on the score
             screen (D80): the overall word is the only mandatory field. */}
         {onSkip !== undefined && (
-          <Pressable disabled={disabled} onPress={onSkip} style={[styles.pill, styles.skipPill]}>
+          <Pressable
+            disabled={disabled}
+            onPress={onSkip}
+            style={[styles.pill, styles.skipPill, saving && styles.chipDim]}>
             <ThemedText style={[styles.pillLabel, { color: Survey.subtext }]}>Skip</ThemedText>
           </Pressable>
         )}
@@ -319,7 +438,10 @@ function PillScreen({
             grammars' trailing pills read as distinct. Mutually exclusive with
             onSkip. */}
         {onDone !== undefined && (
-          <Pressable disabled={disabled} onPress={onDone} style={[styles.pill, styles.donePill]}>
+          <Pressable
+            disabled={disabled}
+            onPress={onDone}
+            style={[styles.pill, styles.donePill, saving && styles.chipDim]}>
             <ThemedText style={[styles.pillLabel, { color: Survey.onAccent }]}>Done</ThemedText>
           </Pressable>
         )}
@@ -415,6 +537,70 @@ export function SessionLadder({
   // every screen change, so Back to the score screen lands on the intact
   // confirmed selection.
   const [phase, setPhase] = useState<Phase>('ladder');
+
+  // Screen-advance transition (D83): a gentle ~240ms fade-and-advance on every
+  // phase change. One native-driven value re-runs from 0 whenever `phase`
+  // changes; the whole screen layer fades in and slides a few dp home. Motion
+  // decorates the existing advance — the flow, gate, and persistence are
+  // untouched.
+  const [phaseAnim] = useState(() => new Animated.Value(1));
+  useEffect(() => {
+    phaseAnim.setValue(0);
+    const anim = Animated.timing(phaseAnim, {
+      toValue: 1,
+      duration: 240,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [phase, phaseAnim]);
+
+  // Completion bloom (D83 Unfurl 2a): six petals, the calyx, and the caption,
+  // each a native-driven Animated.Value owned here so they survive the closing
+  // screen's unmount/remount on a Back-and-return. `bloomPlayed` latches the
+  // one play — on revisit the effect early-returns and the values render at
+  // their settled 1, so the bloom holds and never replays (gate requirement).
+  const [petalAnims] = useState(() => Array.from({ length: 6 }, () => new Animated.Value(0)));
+  const [calyxAnim] = useState(() => new Animated.Value(0));
+  const [captionAnim] = useState(() => new Animated.Value(0));
+  // A genuine mutable latch, read only inside the effect (never in render).
+  const bloomPlayed = useRef(false);
+  useEffect(() => {
+    if (phase !== 'closing' || bloomPlayed.current) {
+      return;
+    }
+    bloomPlayed.current = true;
+    // Petals unfurl on a 70ms stagger with the ratified cubic-bezier; the calyx
+    // swells alongside; the caption rises after a 500ms beat. Nothing loops —
+    // each timing settles at 1 and holds (play-once).
+    Animated.parallel([
+      Animated.stagger(
+        70,
+        petalAnims.map((anim) =>
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 700,
+            easing: Easing.bezier(0.2, 0.8, 0.3, 1),
+            useNativeDriver: true,
+          })
+        )
+      ),
+      Animated.timing(calyxAnim, {
+        toValue: 1,
+        duration: 700,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(captionAnim, {
+        toValue: 1,
+        duration: 600,
+        delay: 500,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [phase, petalAnims, calyxAnim, captionAnim]);
 
   // The D82 screen order. Spark decides whether fit is asked (D73): a
   // non-null spark inserts the fit screen before the panels; a null spark
@@ -693,7 +879,20 @@ export function SessionLadder({
           plus breathing room above every screen's header, so no header sits
           under the notch. */}
       <ThemedView style={[styles.content, { paddingTop: insets.top + Spacing.four }]}>
-        {/* The score screen (D80): the five RUNGS as full-width bottom-
+        {/* The advance transition layer (D83): the whole screen fades and
+            slides home on every phase change. One screen renders at a time
+            inside it. */}
+        <Animated.View
+          style={[
+            styles.transitionLayer,
+            {
+              opacity: phaseAnim,
+              transform: [
+                { translateX: phaseAnim.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) },
+              ],
+            },
+          ]}>
+          {/* The score screen (D80): the five RUNGS as full-width bottom-
             anchored pills, Elite top to Trash bottom (D51's up-is-better as
             visual order). Tap is the save (D50 contract, D54 pending). No
             Skip — score is the skeleton's mandatory field. The leading
@@ -806,8 +1005,16 @@ export function SessionLadder({
               brand={coa.brand}
               strain={coa.strain}
             />
+            {/* The completion bloom (D83 Unfurl 2a) occupies closing's empty
+                middle. Per the ratified screen mock the bloom state replaces
+                the explainer line (the middle hosts one or the other, not
+                both); EXPLAINERS.closing remains the copy of record. */}
             <View style={styles.explainerWrap}>
-              <ThemedText style={styles.explainer}>{EXPLAINERS.closing}</ThemedText>
+              <CompletionBloom
+                petalAnims={petalAnims}
+                calyxAnim={calyxAnim}
+                captionAnim={captionAnim}
+              />
             </View>
             <View style={styles.closingActions}>
               <Pressable disabled={inFlight} onPress={onClose} style={styles.closeButton}>
@@ -816,6 +1023,7 @@ export function SessionLadder({
             </View>
           </View>
         )}
+        </Animated.View>
       </ThemedView>
     </ThemedView>
   );
@@ -837,8 +1045,15 @@ const styles = StyleSheet.create({
     maxWidth: MaxContentWidth,
     backgroundColor: Survey.background,
   },
-  chipPending: {
-    opacity: 0.5,
+  // Siblings of the tapped pill dim during a save (D83 Layer 1); the tapped
+  // pill stays lit and carries the spinner.
+  chipDim: {
+    opacity: 0.32,
+  },
+  // The advance transition wraps the one rendered screen (D83); flex so the
+  // screen fills exactly as it did unwrapped.
+  transitionLayer: {
+    flex: 1,
   },
   // The one-screen sequence (D79/D80): a flex column — header at the top, the
   // explainer filling the empty middle, the answer stack anchored to the
@@ -851,6 +1066,10 @@ const styles = StyleSheet.create({
   sequenceHeader: {
     alignItems: 'flex-start',
     gap: Spacing.three,
+  },
+  // The header dims to 40% while a save is on the wire (D83 Layer 1).
+  headerSaving: {
+    opacity: 0.4,
   },
   // The control chip (D83 item 9): 44pt tall, r22, surface, a leading glyph +
   // label, sized to its content and pinned left.
@@ -926,6 +1145,20 @@ const styles = StyleSheet.create({
   pillLabel: {
     fontFamily: SORA_MEDIUM,
     fontSize: 16,
+  },
+  // The tapped pill's saving row (D83 Layer 1): spinner beside "Saving…".
+  savingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  // The 20pt saving spinner (D83 Layer 1): a ring with one transparent edge;
+  // border color is set inline to match the pill's label.
+  spinner: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2.5,
   },
   // The score-pill tier stripe (D83): a 5pt colored bar on the leading edge,
   // clipped to the pill radius by the pill's overflow:hidden.
@@ -1007,5 +1240,82 @@ const styles = StyleSheet.create({
     fontFamily: SORA_SEMIBOLD,
     fontSize: 16,
     color: Survey.onAccent,
+  },
+  // The completion bloom (D83 Unfurl 2a). Art box over caption, centered.
+  bloomWrap: {
+    alignItems: 'center',
+    gap: Spacing.five,
+  },
+  // The bloom art field; petals root at its center and overflow it.
+  bloomArt: {
+    width: 140,
+    height: 140,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // The glow halo (D83): a soft accent disc centered behind the petals. RN
+  // core has no blur, so this translucent disc approximates the mock's
+  // filter:blur(26px) (see report item 5).
+  bloomGlow: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: Survey.accent,
+    opacity: 0.3,
+  },
+  // A petal's 0x0 root at the art center; its static 60deg rotation is applied
+  // inline per index, and the animated petal hangs off it.
+  petalRoot: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    width: 0,
+    height: 0,
+  },
+  // One petal (D83): 24x48, rounded (RN circular radii approximate the mock's
+  // elliptical border-radius), rooted at its base so scaleY unfurls upward.
+  petal: {
+    position: 'absolute',
+    left: -12,
+    top: -56,
+    width: 24,
+    height: 48,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    borderBottomLeftRadius: 9,
+    borderBottomRightRadius: 9,
+    backgroundColor: Survey.accent,
+    transformOrigin: '50% 100%',
+  },
+  // The calyx dot (D83): 22pt, white, at the art center beneath the petals.
+  calyx: {
+    position: 'absolute',
+    left: '50%',
+    top: '50%',
+    width: 22,
+    height: 22,
+    marginLeft: -11,
+    marginTop: -11,
+    borderRadius: 11,
+    backgroundColor: Survey.text,
+  },
+  // "Logged." (D83): 26/600, calm.
+  loggedText: {
+    fontFamily: SORA_SEMIBOLD,
+    fontSize: 26,
+    textAlign: 'center',
+    color: Survey.text,
+  },
+  // The serif-italic completion line (D83).
+  loggedSub: {
+    fontFamily: SERIF_ITALIC,
+    fontStyle: 'italic',
+    fontSize: 15,
+    marginTop: Spacing.half,
+    textAlign: 'center',
+    color: Survey.subtext,
   },
 });

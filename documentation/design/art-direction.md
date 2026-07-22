@@ -1,7 +1,8 @@
 # Art direction -- the survey's visual language (D83)
 
 Status: D83 ratified at `45e721d`; slice 1 (statics) shipped at `d24c8b4`;
-the animation-constraint section amended by the Reanimated excision chore.
+the animation-constraint section amended by the Reanimated excision chore;
+slice 2 (motion) shipped with this commit's amendments.
 
 ## Scope and inputs
 
@@ -93,7 +94,15 @@ RN `Animated` (see the animation constraint).
 | (representative of 2-5) | environment, spark, fit | same |
 | -- none -- | physical_state | grammar + checkbox spec below |
 | -- none -- | co_consumption | grammar + checkbox spec below |
-| Closing (input refuted) | closing | header, explainer, accent-filled Close |
+| Closing (input refuted) | closing | header, bloom, accent-filled Close |
+
+Closing-screen resolution (slice-2 gate): the doc double-assigned the
+closing screen's empty middle -- Decision 2 / dead-space gave it
+explainer line 3, the bloom spec gave it the bloom. The mock settles
+it: in bloom mode the middle renders the bloom plus "Logged." and the
+serif line, and the explainer is emptied (`screen.dc.html:158`). So
+closing renders the bloom, not explainer line 3. Line 3 stays ratified
+copy but is not rendered on closing; flagged to the banked copy review.
 
 ## Decision 1 -- fonts (operator-ratified 2026-07-20, absorbed)
 
@@ -195,6 +204,11 @@ Shared grammar plus:
   calyx dot. Plays ONCE and holds (the mock loops only for canvas
   review). "Logged." 26/600 + serif italic "On the shelf with the
   rest." Calm, not celebratory.
+  Two elements are not expressible in core RN, approximated in slice 2
+  and gate-accepted on device: the glow halo's blur (no blur without a
+  barred native module) renders as a translucent accent disc; the
+  petal's elliptical radius renders as RN's circular capped radii
+  (12/12/9/9).
 - **Checkbox treatment**: resolved in the panel-screen spec above.
 
 ## Animation constraint (skeleton-level)
