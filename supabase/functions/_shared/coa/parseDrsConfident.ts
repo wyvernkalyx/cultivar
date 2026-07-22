@@ -1,4 +1,5 @@
 import type { Analyte, CoaResult, SafetyRow } from './types.ts';
+import { normalizeUsDate } from './dates.ts';
 import { displayTerpene, isKnownTerpene, parsePct } from './normalize.ts';
 
 // DRS Testing / Confident LIMS COAs lay analyte tables out as clean rows:
@@ -79,11 +80,26 @@ export function parseDrsConfident(text: string): CoaResult {
   // No LLC requirement -- the capture is whatever sits between the anchors.
   const brand = firstMatch(text, /\b\d+ of \d+\s+(.+?)\s+Contact Person/) ?? '';
 
+  // Collection is the semantic match for Kaycha's "Sampled" (D84.3); the
+  // lab-intake "Sample Received:" is deliberately not consumed. The
+  // date-shaped capture ignores DRS's trailing time garbage (e.g. "948").
+  const sampledDate = normalizeUsDate(
+    firstMatch(
+      text,
+      /Sample Collection Date\/Time\s*:\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/,
+    ),
+  );
+  const testedDate = normalizeUsDate(
+    firstMatch(text, /Report Created\s*:\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/),
+  );
+
   return {
     lab: 'DRS Testing',
     brand,
     strain,
     batch,
+    sampledDate,
+    testedDate,
     totalThcPct,
     totalCbdPct,
     totalTerpenesPct,

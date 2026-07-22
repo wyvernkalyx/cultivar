@@ -23,6 +23,10 @@ export interface CoaResult {
   brand: string;
   strain: string;
   batch: string;
+  /** ISO YYYY-MM-DD from the COA's sampled/collection date; null when absent or unparseable. */
+  sampledDate: string | null;
+  /** ISO YYYY-MM-DD from the COA's completed/report date; null when absent or unparseable. */
+  testedDate: string | null;
   totalThcPct: number | null;
   totalCbdPct: number | null;
   totalTerpenesPct: number | null;

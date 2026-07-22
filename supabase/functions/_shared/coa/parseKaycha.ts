@@ -1,4 +1,5 @@
 import type { Analyte, CoaResult, SafetyRow } from './types.ts';
+import { normalizeUsDate } from './dates.ts';
 import { displayTerpene, isKnownTerpene, parsePct } from './normalize.ts';
 
 // Kaycha Labs COAs appear in two layouts across the fixtures:
@@ -190,11 +191,23 @@ export function parseKaycha(text: string): CoaResult {
   // match -> '' (D68).
   const brand = firstMatch(text, /\bdba\b\s+(.+?)\s+License\s*#/i) ?? '';
 
+  // One sampled regex spans both Kaycha layouts (2026 "Sampled Date:", 2025
+  // bare "Sampled:"); the date-shaped capture ignores any trailing time and
+  // defuses non-date "Sampled" prose. Kaycha 2025 has no "Completed:" -> null.
+  const sampledDate = normalizeUsDate(
+    firstMatch(text, /Sampled(?:\s+Date)?\s*:\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/),
+  );
+  const testedDate = normalizeUsDate(
+    firstMatch(text, /Completed\s*:\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/),
+  );
+
   return {
     lab: 'Kaycha Labs',
     brand,
     strain,
     batch,
+    sampledDate,
+    testedDate,
     totalThcPct,
     totalCbdPct,
     totalTerpenesPct: parseTotalTerpenes(text),

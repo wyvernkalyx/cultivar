@@ -23,6 +23,8 @@ export function parseCoa(text: string): CoaResult {
         brand: '',
         strain: '',
         batch: '',
+        sampledDate: null,
+        testedDate: null,
         totalThcPct: null,
         totalCbdPct: null,
         totalTerpenesPct: null,
