@@ -94,6 +94,16 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   Co-Authored-By: Claude <noreply@anthropic.com>
   EOF
   ```
+- **The ASCII gate is control-paired.** An ASCII gate is trusted only
+  after its dirty control fails in the same shell that runs it, same
+  session. Standing form (MINGW64-proven):
+  control `printf 'ctl \342\200\224\n' | LC_ALL=C tr -d '\0-\177' | wc -c`
+  → `3`, then gate `git log -1 --format=%B | LC_ALL=C tr -d '\0-\177' |
+  wc -c` → `0`. The superseded form (`grep $'[\x80-\xff]'`) returned
+  exit 1 on files od-verified to contain em dashes (GNU grep 3.11) — it
+  never worked, and every pass it produced observed only the protected
+  case. Controls are od-verified too: a control whose dirty bytes were
+  never actually written is itself vacuous.
 - **Exactly one co-author trailer:** `Claude <noreply@anthropic.com>`. No
   model-specific trailer — models change, and the handbook must not need an edit
   per release.
@@ -125,7 +135,9 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   exact whole line -- never a bare token that also occurs in prose, and single
   unbroken tokens only, since a phrase can span a line-wrap. A criterion the
   file's own prose can trip is malformed, and the implementer STOPping on it is
-  correct.
+  correct. Every result line states the exit code alongside the count (`0`,
+  exit 1): a grep binary that aborts (observed: SIGABRT / exit 134)
+  makes a bare "no output" vacuously silent.
 
 ---
 
@@ -144,6 +156,11 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
     autolink it, then the code that uses it lands after the on-device gate.
 - **Schema/infra slice** — gate is **observed state** (e.g. tables + RLS visible in
   the Supabase dashboard).
+- **Function-security gates observe `prosecdef`, never the deparser.**
+  `pg_get_functiondef` omits `SECURITY INVOKER` because invoker is the
+  default; a deparser's omission is never evidence. Standing form:
+  `select proname, prosecdef from pg_proc where pronamespace =
+  'public'::regnamespace and proname = '<fn>'` → `prosecdef = f`.
 
 ---
 
