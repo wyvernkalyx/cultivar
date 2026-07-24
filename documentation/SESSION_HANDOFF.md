@@ -1,225 +1,224 @@
-# SESSION_HANDOFF -- written 2026-07-22 against pushed HEAD `1398dd1`
+# SESSION_HANDOFF -- written 2026-07-24 against pushed HEAD `b94bb21`
 
 The repo is authoritative over this document. Begin with a read-only
 Phase A audit (`bash scripts/session-audit.sh`, Git Bash only) and try
 to break every claim below before doing anything else.
 
-This file supersedes the handoff committed at `6be881c`.
+This file supersedes the handoff committed at `a8482a2`.
 
 ## Preamble -- refutations and lessons, stated so they cannot be re-carried
 
-1. **The ratified ASCII gate was vacuous.** The prior session's command
-   (`git log -1 --format=%B | LC_ALL=C grep -n $'[\x80-\xff]'`) returns
-   exit 1 on files od-verified to contain em dashes (GNU grep 3.11); every
-   pass it ever produced observed only the protected case, and the prior
-   handoff's "the em dash would have been caught by one grep" was false.
-   Replacement, ratified and used at three commit gates this session, the
-   control proven on MINGW64 each time:
-   control `printf 'ctl \342\200\224\n' | LC_ALL=C tr -d '\0-\177' | wc -c`
-   -> `3`, then gate `git log -1 --format=%B | LC_ALL=C tr -d '\0-\177' |
-   wc -c` -> `0`. **An ASCII gate is trusted only after its dirty control
-   fails in the same shell that runs it.** Corollary found the same hour:
-   the architect's first dirty control was itself broken (`printf '\xe2'`
-   wrote literal characters in that shell) -- controls get od-verified too.
-2. **Two architect prompt premises refuted by the Phase A inventory**:
-   "no date rendered in the client" was false as written (`Added
-   <created_at>` at three sites), and the "Edge Function insert path" item
-   presupposed an insert that does not exist -- ingest-coa is
-   parse-and-return; the client calls `insert_coa` after human confirm
-   (D33/D39). The prediction's core (no COA-sourced date anywhere) held.
-3. **`pg_get_functiondef` omits `SECURITY INVOKER`** because invoker is
-   the default; the architect's gate prediction failed on that literal.
-   Standing form for function-security gates from now on:
-   `select proname, prosecdef from pg_proc where pronamespace =
-   'public'::regnamespace and proname = '<fn>'` -> `prosecdef = f`.
-   A deparser's omission is never again the evidence.
-4. **Diff non-delivery twice** (slices 2 and 4: "pasted in full above"
-   with nothing above). The operator-channel re-run recovered both; the
-   default routing of diffs through the operator's channel is load-bearing
-   and stays. The full-file/full-diff read caught nothing false this
-   session -- but it is also where the slice-4 editor scope was confirmed
-   in-bounds, which no grep could have done.
-5. **Slice-3 criterion wording gap**: the verbatim-base check's "every
-   line except the insert column list and values rows" failed to
-   enumerate the `create` -> `create or replace` line its own content
-   mandated. The implementer proceeded correctly and recorded it;
-   criteria must enumerate every intended difference.
-6. **Mistimed read-back**: the first G5 query ran before the ingest and
-   `limit 1` returned the pre-D84 Rainbow Runtz row (`null,null`,
-   created 07-17). A sequencing artifact, not a failure -- and incidentally
-   a correct live observation of the D84.6 backfill posture.
-7. Operator said "ruby runtz"; the uploaded artifact was RAINBOW RUNTZ
-   (`S01-RARU`). Resolved by reading the artifact, not the name.
+1. **The architect's project-knowledge copy of CLAUDE.md was stale, and
+   an end-to-end read of it produced a confident false claim** ("none of
+   the three rules appears in any form" -- the repo already carried the
+   discriminating-forms bullet). Reading a stale artifact carefully is
+   still reading the wrong artifact. Standing form: state claims about
+   repo files come from repo blobs (`git show HEAD:<path>`), never from
+   carried copies. The implementer proceeded past that contradicted
+   precondition without reporting it (violation, recorded), which forced
+   a mid-flight merge of overlapping rules.
+2. **Six architect instrument/prompt defects, one genus: commands and
+   criteria not tested against the shell or document that runs them.**
+   (a) `grep -F` patterns starting with `-` abort exit 2 without `-e`;
+   (b) unquoted `--format=%h %p %s` passes `%p %s` as pathspecs;
+   (c) a case-sensitive presence gate returned 0 against SPARK/Spark --
+   presence gates need the same case-discipline as absence gates, since
+   an under-matching 0 is indistinguishable from genuine absence;
+   (d) `npx jest` drops `--experimental-vm-modules` and produces 48
+   spurious failures -- `npm test` is the only correct invocation;
+   (e) a prompt's annotation instruction contradicted ratified D85.2
+   ("historical blocks left verbatim") -- the doc governed, the edit was
+   reverted; (f) a revert-exception named a string its target never
+   carried. **Adjudication precedent from (e): when a prompt and a
+   ratified doc conflict, the doc wins; the implementer flags the fork
+   and the architect rules -- exactly what happened.**
+3. **The implementer fabricated unobserved state four times**: "N
+   commits ahead of origin" twice (both wrong -- pushes it never saw had
+   closed), "the migration remains unapplied" and "the device gate is
+   still owed" once each (both events had already happened). Standing
+   rule, now in the commit-prompt boilerplate: **the implementer reports
+   the worktree and nothing beyond it -- no claims about origin,
+   database, or device, in either direction.** Asserting the negative
+   ("not yet applied") is as fabricated as asserting the positive.
+4. Against that: **two model STOPs** (the unplaced glossary file; the
+   missing migration timestamp prefix) -- contradicted precondition,
+   halt, numbered report, nothing touched. The timestamp STOP also
+   exposed that **a bare directory entry count cannot detect a malformed
+   name**; the audit-worthy form is a name-form count
+   (`ls supabase/migrations/ | grep -Ec '^[0-9]{14}_'`).
+5. **autocrlf, nine files this session**: filtering is checkout-side,
+   so index and commit blobs stayed LF and every hash chain held -- but
+   after any fresh clone or checkout on this machine, worktree sha256
+   will not reproduce. **File identity is the blob hash:
+   `git show <rev>:<path> | sha256sum`.** Worktree hashes are valid only
+   for first-placement verification.
+6. **Grants prediction refuted**: `anon` holds ALL seven privileges on
+   both views (Supabase default privileges), as does `authenticated`.
+   Latent, not live (invoker + RLS zeroes anon; the DISTINCT-ON view is
+   not auto-updatable), but contrary to expressed posture. Recreation
+   reproduced the observed set by design; tightening is BANKED as its
+   own slice, never a side effect.
+7. **Operator steps go in numbered runnable blocks, never prose.** Two
+   placement defects (the glossary file never placed; the migration
+   timestamp never applied) trace to operator instructions buried in
+   prompt preambles.
 
 ## Start here (Phase A, read-only) -- every line is a falsifiable prediction
 
 | check | expected |
 |---|---|
 | branch | `main` |
-| HEAD | a `docs:` commit, subject `docs: session handoff at 1398dd1`, parent `1398dd1`. Below it, newest first: `1398dd1`, `17b2879`, `840c573`, `28194a5`, `6be881c`, `9ca1aa6`, `acf8dfa`. |
+| HEAD | a `docs:` commit, subject `docs: session handoff at b94bb21`, parent `b94bb21`. Below it, newest first: `b94bb21`, `9336f54`, `ef67af5`, `0250988`, `3182393`, `a8482a2`, `1398dd1`. |
 | `git rev-list --left-right --count origin/main...HEAD` | `0	0` after the operator pushes this handoff commit. |
-| `git status --short` | clean. Under `--ignored`: `!! .env`, `!! .expo/`, `!! audit.txt`, `!! expo-env.d.ts`, `!! node_modules/`, `!! supabase/.temp/`. |
-| `ls supabase/migrations/` | exactly six; newest `20260722161632_alter_coas_d84.sql`. |
-| Jest | 52 passed (40 + 12 date tests; literal runs observed at slices 2 and 4). |
-| Deno | 5 passed (literal run observed at session open and slice 2). |
+| `git status --short` | clean. Under `--ignored`: the six `!!` lines of the prior handoff. |
+| migrations | `ls supabase/migrations/ \| grep -Ec '^[0-9]{14}_'` -> `7`; newest `20260724163428_rename_spark_main_goal_d85.sql`. |
+| tests | `npm test` -> 52 passed (NEVER `npx jest`; it drops the vm-modules flag and fails 48 spuriously). Deno 5 passed (observed at this session's open, not re-run since). |
 | `npx tsc --noEmit` | exit 0 |
 | `npx expo lint` | 1 error, 0 warnings (template baseline), exit 1 |
-| `npx expo install --check` | jest/@types/jest plus expo patch drift; expected, do not fix |
-| Supabase (four saved queries) | six tables `rowsecurity=t`; 9 policies, `session_entries` exactly INSERT + SELECT; both views `security_invoker=true`. Re-observed at open. |
-| `coas` schema | `sampled_on` and `tested_on` present, `data_type=date`, `is_nullable=YES` (observed live this session). `insert_coa` `prosecdef=f`; execute grants: `authenticated`, `postgres`, `service_role`; no `anon`, no `PUBLIC`. |
-| newest `coas` row | Rainbow Runtz `S01-RARU`, `sampled_on=2025-05-05`, `tested_on=null`, created 2026-07-22 -- unless operator usage added rows (a finding to record, not an error). Pre-D84 rows are all null-dated by design (D84.6). |
-| `session_entries` | 130 at this session's close (observed three times, unchanged -- no session logged during the device gate). Prediction for next open: >= 130; growth is operator usage in confirms + toggle-ONs. |
-| client constant | `src/lib/lexicon.ts:6` `LEXICON_VERSION = 2` |
-| Reanimated posture | unchanged from prior handoff: manifest greps (`"react-native-reanimated": `, `"react-native-worklets": `) 0/exit 1; autolinking exclusion covers both; `grep -rn "^import .*reanimated\|^import .*worklets" src/` -> 0, exit 1; deleted set stays deleted. |
-| slice-4 spot checks (derived from the operator-channel diff; the repo wins) | `grep -c "formatIsoDate" src/components/shelf-list.tsx` -> 3; same in `coa-detail.tsx` -> 3; `grep -c "cardDateLine" src/components/shelf-list.tsx` -> 2; `grep -c "sampledDate" src/components/coa-editor.tsx` -> 4, `testedDate` -> 4. |
-| `CoaResult` | `grep -c "sampledDate" supabase/functions/_shared/coa/types.ts` -> 1; `testedDate` -> 1. |
+| Supabase | six tables `rowsecurity=t`; 9 policies, `session_entries` exactly INSERT + SELECT; both views `security_invoker=true` (re-observed after this session's drop/recreate). View grants: 8 rows x priv_count 7 (anon ALL is a recorded wart, tightening banked). |
+| `session_entries` schema | `main_goal` present, `spark` absent (two-name IN-list returns exactly one row). Only CHECK: `overall_score` 1-5. |
+| rows | `session_entries` >= 143 (143 at close; growth is operator usage). Newest row at close: entry_no 214, `lexicon_version=3`, Loved / High-Energy / Solo / Ease Tension / Matched. Newest v2 row: 206, strings intact under the renamed column (v2 data is never migrated -- D85.3). |
+| newest `coas` row | still Rainbow Runtz `S01-RARU` (no ingest this session). |
+| client | `src/lib/lexicon.ts:6` `LEXICON_VERSION = 3`; `grep -rn -i "spark" src/` -> no output, exit 1; `grep -c "main_goal" src/components/session-ladder.tsx` -> 22. |
+| docs | `grep -rn -F "(since renamed by D85)" documentation/design/` -> no output, exit 1 (the annotation form was reverted; ledger held verbatim). |
+| Reanimated posture | unchanged: manifest greps 0/exit 1; `grep -rn "^import .*reanimated\|^import .*worklets" src/` -> 0, exit 1. |
 
 If any of these don't match, the repo wins -- re-baseline before
 proceeding.
 
-## What shipped (newest first) -- the D84 arc, complete
+## What shipped (newest first) -- the promotion pass and the D85 arc
 
 - (this handoff commit) -- the write-last close, no code.
-- `1398dd1` -- **feat:** D84 slice 4, client wiring + display. Step-0
-  finding: the payload is rebuilt in `coa-editor` (interface, Draft,
-  initDraft, emitDraft), not passed through; the two keys now ride it,
-  uneditable. Shelf card follows D84.4 precedence; detail shows both
-  labeled dates with `Added` as provenance; `formatIsoDate` constructs a
-  local Date from parts so `YYYY-MM-DD` never shifts a day west of UTC.
-  Device-gated (screenshots + raw read-back): live Rainbow Runtz ingest
-  landed `2025-05-05 / null`; the `Sampled` label rendered with the
-  correct day; pre-D84 rows fell back to `Added`. **The `Tested` branch
-  is Jest-evidenced only** -- never observed live (banked, opportunistic).
-- `17b2879` -- **feat:** D84 slice 3, migration
-  `20260722161632_alter_coas_d84.sql`: `sampled_on`/`tested_on` (date,
-  nullable, no defaults) + `insert_coa` recreate reading
-  `sampledDate`/`testedDate` with `::date` casts. Applied to the remote
-  and gated on observed SQL (columns, `prosecdef=f`, grants preserved,
-  standing baseline intact, rows 130). **ingest-coa redeployed** with the
-  slice-2 bundle (asset list observed to include `dates.ts`) -- the D84.5
-  amendment: deployment is assigned to slice 3 operator steps.
-- `840c573` -- **feat:** D84 slice 2, parser date capture. `CoaResult` +2
-  fields; pure `normalizeUsDate` (2-digit pivot to 20YY, numeric bounds
-  only, 3-digit years rejected by a length guard); Kaycha one regex over
-  both layouts, DRS collection + report-created with `Sample Received`
-  deliberately unused; unknown shell nulls. Jest 40 -> 52 including the
-  rainbow-runtz null control.
-- `28194a5` -- **docs:** D84 design (`documentation/design/
-  coa-test-dates.md`), decisions D84.1-D84.6, ratified by the operator
-  before any code moved.
+- `b94bb21` -- **docs:** D85 living-doc pointers. Living prose renamed
+  in four design docs; historical blocks byte-identical per D85.2's
+  ledger boundary after the architect's ruling reverted an annotation
+  draft; session-logging.md gains a dated D85 amendment block in its own
+  convention; the schema doc's lexicon_version claim corrected (3 today).
+- `9336f54` -- **feat:** D85 slice 2, client. `LEXICON_VERSION = 3`;
+  v3 strings everywhere (hidden 5-1 UNCHANGED -- the averaging
+  invariant); SPARK -> MAIN_GOAL across type, phase, payload key, flow
+  logic; axis display labels Target Energy / Setting / Main Goal.
+  Device-gated: full v3 session logged (8 inserts, rows 135->143, the
+  delta matching the walk's tap count exactly), read-back R1 all-v3,
+  R2 the v2 control row intact -- **the version-branching control case
+  observed live.** Fifth consecutive clean walk (freeze posture).
+- `ef67af5` -- **feat:** D85 slice 1, migration
+  `20260724163428_rename_spark_main_goal_d85.sql`: drop both views
+  (dependency order; `CREATE OR REPLACE` cannot rename a view output
+  column), rename `spark` -> `main_goal`, recreate both from observed
+  definitions with `security_invoker = true` inline, grants via default
+  privileges. Applied by the operator and gated 6/6 on observed SQL.
+  Note: the `npx supabase db push` output itself was never pasted --
+  the gate SQL is the applied-state evidence.
+- `0250988` -- **docs:** D85 design (`documentation/design/glossary.md`),
+  D85.1-D85.5, operator-authored v3 vocabulary and all 27 definitions,
+  ratified before any code moved. Landed via the verbatim-persistence
+  protocol (sha256 `a3ff0764...`, three-link chain held).
+- `3182393` -- **docs:** CLAUDE.md promotion pass: control-paired ASCII
+  gate, exit-code rule merged into the discriminating-forms bullet (the
+  stale-copy discovery forced the merge), `prosecdef` standing form.
 
-Five pushes observed this session: `6be881c..28194a5`,
-`28194a5..840c573`, `840c573..17b2879`, `17b2879..1398dd1`, and (this
-handoff, predicted) `1398dd1..<handoff sha>`, each closing to `0	0`.
+Six pushes observed this session, each closing to `0	0`:
+`a8482a2..3182393`, `3182393..0250988`, `0250988..ef67af5`,
+`ef67af5..9336f54`, `9336f54..b94bb21`, and (this handoff, predicted)
+`b94bb21..<handoff sha>`.
 
 ## The arc
 
-Session opened on the `6be881c` handoff; Phase A closed 19/19 with zero
-refutations (rows exactly 130 -- first open in memory with no
-inter-session usage). The COA test date pass ran the full
-document-before-implement cycle in one session: read-only inventory
-(which refuted two architect premises and mapped the parse-and-return
-seam), ratified design doc, then parser, schema, and client slices, each
-gated in its own mode (tests raw; observed SQL; device walk with
-screenshots and a read-back). The one protocol discovery that outranks
-the feature: the ratified ASCII gate never worked, found by running its
-own missing dirty control.
-
-## Refuted hypotheses / memory corrections
-
-- The seven Preamble items above.
-- Prior handoff's ratified ASCII gate command: superseded (Preamble 1).
-- "DRS is 4-digit years": false within one document; the normalizer
-  accepts both widths everywhere (encoded in D84 and the parser).
-- Freeze posture: the device gate added one more clean walk on the
-  existing binary -- now four gated walks, zero freezes since the
-  Reanimated excision. Nothing owed until recurrence or enough clean
-  walks to close.
-- G11 brand/strain nullability worry: still UNOBSERVED -- carried.
+Session opened on the `a8482a2` handoff; Phase A closed 18/18 with zero
+refutations (rows 130->135, first observed inter-session usage). The
+entry-point promotion pass landed, then the glossary pass transformed
+mid-flight: the operator's review doc was not definitions but a full
+vocabulary revision, reclassified as lexicon v3 (D85) -- design doc,
+column-rename migration through both views, client, living-doc
+reconciliation, all four gate types exercised in one arc. The 135 live
+v2 rows retired "vocabularies revise freely" and forced the
+version-branching rule; the arc closed with v2 and v3 rows observed
+side by side. The protocol discovery that outranks the feature: the
+architect's own context is a stale artifact -- repo blobs adjudicate
+even against a careful full read.
 
 ## Ratified decisions
 
-- **D84.1-D84.6** (committed in the design doc at `28194a5`; all four
-  slices landed and gated).
-- **ASCII gate, corrected form** (supersedes the prior session's):
-  control-paired `tr` as in Preamble 1. CLAUDE.md promotion candidate,
-  now alongside the construct-form absence-gate rule.
-- **`prosecdef` observation** is the standing form for function security
-  gates (Preamble 3).
-- **Deployment rides the schema slice**: `supabase functions deploy`
-  is an operator step of the slice that makes the backend live (D84.5
-  amendment, recorded in `17b2879`'s message).
-- **Date columns are `_on`, not `_at`** (date type, not timestamptz --
-  deviation flagged and accepted).
+- **D85.1-D85.5** (committed at `0250988`; all slices landed and gated):
+  v3 vocabulary (Loved/Liked/Neutral/Disliked/Hated; Relaxed/Active/
+  High-Energy; Solo/Social; Ease Tension/Deep Focus/Appetite;
+  Missed/Partly/Matched; Heavy Meal/Aromatic Foods; Thirsty/Tired/
+  Wound Up), Spark -> Main Goal everywhere including the column (no
+  UI/internal split -- operator overruled the architect's split),
+  version-branching (v2 rows immutable; string-readers branch on
+  `lexicon_version`; score averaging exempt via the stable hidden
+  mapping), 27 glossary entries, the co-consumption time window.
+- **Ledger boundary (D85.2)**: history is never rewritten; living docs
+  point, dated blocks stay verbatim -- enforced by ruling at `b94bb21`.
+- **Standing forms adopted this session**: implementer claims are
+  worktree-only; `npm test` never `npx jest`; blob-hash identity for
+  file re-verification; name-form counts for migration listings;
+  presence gates carry case-discipline; `-e` for any grep pattern
+  starting with `-`; operator steps as numbered runnable blocks.
 
 ## Open items
 
 **Runnable now (the entry point)**
-- **CLAUDE.md promotion pass** (one `docs:` commit): promote (a) the
-  construct-form absence-gate rule, (b) the corrected control-paired
-  ASCII gate incl. the control-must-fail-dirty requirement, (c) the
-  `prosecdef` standing form. Three ratified rules now live only in
-  handoffs; promotion prevents next session re-deriving the
-  vacuous-gate discovery from scratch.
+- **CLAUDE.md promotion pass #2** (one `docs:` commit): (a) worktree-only
+  implementer claims, (b) `npm test` as the only test invocation,
+  (c) blob-hash file identity, (d) presence-gate case-discipline +
+  `-e` rule (amends the discriminating-forms bullet), (e) name-form
+  counts. Five ratified forms living only in this handoff.
 
 **Blocked / unresolved**
-- **Supabase MCP connector still sees zero projects** (untouched this
-  session; the operator paste channel carried all SQL cleanly, four
-  saved queries plus the new date/grants observations).
-- **The freeze**: four clean gated walks; accumulating.
+- Supabase MCP connector still sees zero projects (untouched; the
+  operator paste channel carried all SQL cleanly again).
 
 **Banked (prioritized; carried unless noted)**
-1. Glossary pass.
-2. Survey copy review (error-banner copy; "Overall" sweep; "Anything
-   else?"; "Saving..."; dead explainer line 3; NEW: exact strings for
-   the `Sampled`/`Tested` card and detail lines, and any age-in-days
-   phrasing -- D84.4 shipped plain labels deliberately).
-3. **COA PDF persistence in Supabase Storage** -- promoted into the
-   numbered bank this session on the operator's statement that it "will
-   be a requirement" (a later phase, per the operator; not next). The
-   date pass created the first concrete backfill demand: every pre-D84
-   row is null-dated and recoverable only by re-ingest or a persisted
-   PDF (D84.6).
-4. Doc consolidation pass.
-5. NEW: live `Tested`-branch observation -- one-minute opportunistic
-   check the next time a Kaycha-2026 (or DRS) COA is ingested on
-   device: card shows `Tested <date>`, read-back shows both dates.
-6. NEW: COA age as a personal scoring signal (correlate `tested_on`
-   age at session time against the user's own outcomes) -- the honest
-   form of the operator's staleness thesis; depends on nothing further,
-   but no copy may ever claim degradation (personal-empirical
-   invariant).
-7. Audit-script pass (merged items): print exit status for `deno_check`
-   and `expo_lint`; extend coverage toward the Phase A rows the script
-   does not observe (10 of 19 at this session's open were manual);
-   document `count_lib`'s semantics (still unknown to the architect).
-8. check-ignore qualification. 9. Axis deselection-to-null (blocker
-   intact). 10. G11 (carried, unobserved). 11. G12 error-banner-on-device
-   (never seen live). 12. `formatIsoDate` duplicated in two components --
-   below the util-file threshold, recorded as a choice, revisit only if
-   a third consumer appears.
-13. Carried untouched: "Expo Starter" web-tab-bar branding; detail-view
-    read/edit; home-zone parking; shelf sort-by-band; license extraction
-    + NY OCM import; haptics; Resend domain verification;
-    quadrant/intent-lens/confound discounting; anchor-collision residual
-    (D69); `auth-resp.json` at the repo parent.
+1. NEW: **checkbox glyph overflow** on the panel toggle selected state
+   (D78 surface; pre-dates D85, "still" broken per the operator; one
+   small device-gated UI slice).
+2. NEW: **glossary tap-surface UI** (D85 slice 3; its own design pass --
+   27 entries exist and are ratified, the surface does not).
+3. NEW: **anon-grants tightening** on both views (the Preamble 6 wart;
+   its own decided slice).
+4. NEW: **Main Goal screen title** -- ten-second opportunistic check
+   next log (function proven via R1 + the D73 fit branch; the title
+   render is the one unobserved pixel of the device gate).
+5. Survey copy review (bank grew: v3 helper copy still says "The itch
+   it scratched" under a Main Goal title; error banner; "Overall"
+   sweep; closing copy).
+6. Live `Tested`-branch observation (carried, opportunistic).
+7. COA PDF persistence in Supabase Storage (carried; backfill demand
+   stands).
+8. §8A `Relaxed` collision: the banked effects vocabulary shares a term
+   with the live Energy axis; the effects slice inherits it knowingly.
+9. The freeze: five clean gated walks; accumulating toward close.
+10. Audit-script pass (extend: name-form migration count, `npm test`
+    invocation, exit statuses for deno_check/expo_lint, the D85 grep
+    rows; `count_lib` semantics still undocumented).
+11. Carried untouched: glossary-adjacent doc consolidation; COA age as
+    a personal signal; axis deselection-to-null; G11; G12;
+    `formatIsoDate` duplication; "Expo Starter" branding; detail
+    read/edit; home-zone parking; shelf sort-by-band; license
+    extraction + NY OCM import; haptics; Resend domain verification;
+    quadrant/intent-lens/confound discounting; anchor-collision
+    residual (D69); `auth-resp.json` at the repo parent.
 
 ## Working rhythm
 
-Stable method lives in CLAUDE.md and handoff-specs.md. Proven again this
-session: document-before-implement across a four-slice arc; thin build
-prompts with the committed doc authoritative; report-before-change for
-unknown wiring (the step-0 payload finding); diffs through the operator
-channel by default (twice load-bearing); full-diff reads at review;
-per-slice gate typing (tests raw / observed SQL / device walk with
-screenshots and read-back); two-channel body verification plus the
-corrected ASCII gate with its platform control; predictions stated
-before observation, refutations recorded, sequencing artifacts recorded
-as findings; architect self-checks its own artifacts with working
-instruments -- and verifies the instruments against dirty controls first.
+Stable method lives in CLAUDE.md and handoff-specs.md. Proven again:
+document-before-implement across a five-commit arc; architect-authored
+files through the verbatim-persistence protocol (hash chains held 3/3,
+worktree -> index -> blob); thin build prompts with the committed doc
+authoritative -- and the ruling that the doc GOVERNS the prompt when
+they conflict; diffs through the implementer's own paste twice clean
+(default earned back), operator channel on standby; per-slice gate
+typing (hash-chain docs / observed SQL / device walk with per-step
+verdicts, screenshots, and read-back); two-channel body verification
+with the control-paired ASCII gate; predictions stated before
+observation, six architect defects and four implementer fabrications
+recorded, two model STOPs credited; the repo adjudicates -- including
+against the architect's own carried context.
 
 ## Entry point
 
-**The CLAUDE.md promotion pass.** One `docs:` commit, three ratified
-rules, no design work owed. Then the glossary pass (bank item 1). Not a
-menu: absent an operator redirect, this is the move.
+**CLAUDE.md promotion pass #2.** One `docs:` commit, five standing
+forms, no design work owed. Then the checkbox slice (bank item 1).
+Not a menu: absent an operator redirect, this is the move.
