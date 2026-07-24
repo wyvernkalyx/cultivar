@@ -84,6 +84,11 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   lives only in the working tree — `git status` shows `RM`. Committing without a second
   `git add` at the **new** path ships the move without the edit. Before committing a
   move-plus-edit, verify the **staged blob**: `git show :<new/path>`. Never the worktree.
+- **File identity is the blob hash:** `git show <rev>:<path> |
+  sha256sum`. autocrlf filtering is checkout-side, so worktree hashes stop
+  reproducing after any fresh checkout on this machine. A worktree sha256
+  is valid only for first-placement verification, never for re-verifying
+  committed state.
 - **ASCII commit messages** via stdin heredoc:
   ```bash
   git commit -F - <<'EOF'
@@ -137,7 +142,27 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   file's own prose can trip is malformed, and the implementer STOPping on it is
   correct. Every result line states the exit code alongside the count (`0`,
   exit 1): a grep binary that aborts (observed: SIGABRT / exit 134)
-  makes a bare "no output" vacuously silent.
+  makes a bare "no output" vacuously silent. Presence gates carry the
+  same case-discipline as absence gates: a case-sensitive pattern that
+  under-matches returns a 0 indistinguishable from genuine absence
+  (observed: 0 against live SPARK/Spark). State the case posture in the
+  criterion -- `-i`, or exact-case chosen deliberately. Any pattern
+  beginning with `-` is passed via `-e`; without it `grep -F` aborts
+  exit 2 before matching anything.
+- **Directory listings gate on name-form counts, never bare entry
+  counts.** A bare entry count cannot detect a malformed name. Standing
+  form for migrations: `ls supabase/migrations/ | grep -Ec '^[0-9]{14}_'`.
+- **Implementer claims are worktree-only.** The implementer reports the
+  worktree and nothing beyond it -- no claims about origin, database, or
+  device state, in either direction. Asserting the negative ("not yet
+  applied", "still owed") is as fabricated as asserting the positive.
+  Remote state is evidenced only by observed push output and
+  `git rev-list --left-right --count`, both through the operator.
+- **Operator steps are numbered runnable blocks, never prose.** An
+  operator instruction buried in a prompt preamble does not get run
+  (observed twice: a file never placed; a migration timestamp never
+  applied). Each block states what to run, what to expect, and what
+  gets pasted back.
 
 ---
 
@@ -175,11 +200,14 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
    **App-code tests are not currently possible** — React Native Testing Library,
    `jest-expo`, and `react-test-renderer` are not installed, and Jest's `roots` would
    not discover them if they were. A test file placed anywhere under `src/` is silently
-   never run: `npm test` still prints `40 passed` and exits 0, which is a green gate over
+   never run: `npm test` still prints an all-green summary and exits 0, which is a green gate over
    tests that did not execute. Wiring that up is a `chore:` of its own, undertaken when a
    slice actually needs it — not before. UI slices gate on the physical iPhone; unit tests
    are explicitly not evidence for them.
    Builds = EAS. Package manager = npm.
+   **Tests run as `npm test`, never `npx jest`** -- the npm script carries
+   `--experimental-vm-modules`, which bare `npx jest` drops (observed: 48
+   spurious failures against a 52-test suite).
    **Always install Expo-managed deps with `npx expo install`** (not bare `npm install`).
 2. **Repo / handbook / docs.** Repo root: `D:\Projects\Cultivar\cultivar`.
    Handbook: `CLAUDE.md`. Docs: `documentation/`. App source lives under `src/`
