@@ -1,6 +1,6 @@
 # Glossary & Lexicon v3 — design (D85)
 
-Status: RATIFIED by the operator 2026-07-23; amended (D86, tap-surface design, 2026-07-24). Lands as
+Status: RATIFIED by the operator 2026-07-23; amended (D86, tap-surface design, 2026-07-24); erratum D86.6 and build mechanism D86.7 (2026-07-24). Lands as
 `documentation/design/glossary.md` via a `docs:` commit before any code
 moves.
 
@@ -253,3 +253,45 @@ Per term-bearing screen: open the sheet, verify every entry present and
 character-identical to this document, dismiss, and confirm selection
 state unchanged. Then one full logged walk with read-back — which also
 extends the freeze-watch count.
+
+## Erratum (D86.6) — trigger placement corrected against observed structure, 2026-07-24
+
+Operator-ratified in chat (Option B). D86.1's "six term-bearing screens"
+and D86.2's "one panels sheet, two labeled sections" were designed
+against a false premise: the architect's carried pre-D82 layout, in
+which the two multi-select panels were one screen hanging off closing.
+The Phase A diagnostic at de41390 observed eight phases — the panels
+are two sequenced phases, physical_state then co_consumption, before
+closing (D82). D86.1–D86.5 above are ledger and stand as written; this
+erratum is the correcting record.
+
+Correction, applying the ratified grounds (screen-scoping) to observed
+reality: SEVEN term-bearing phases each carry the single info trigger —
+ladder, energy, environment, main_goal, fit, physical_state,
+co_consumption — and closing carries none, unchanged. Each sheet is
+scoped to exactly its own phase's entries; the two-section combined
+panels sheet is retired as decided against a false premise. The
+partition, in phase order, becomes 5 / 4 / 3 / 4 / 3 / 3 / 5 = 27,
+every entry in exactly one sheet, zero orphans. Every other D86.2
+property — dismissible, read-only, never selects, writes, or navigates,
+zero insert-path surface, verbatim ratified language — survives
+unchanged and governs all seven sheets. D86.3, D86.4, and D86.5 are
+untouched. The gate restates over seven phases: open, verify every
+entry present and character-identical to this document, dismiss,
+confirm selection state unchanged; then one full logged walk with
+read-back, extending the freeze-watch count.
+
+### D86.7 — Sheet mechanism and GLOSSARY shape (architect-decided, recorded)
+
+Mechanism: core React Native Modal (pageSheet), matching the app's
+three existing Modal overlays. Grounds: zero new dependency and no
+native module, so the EAS-rebuild split rule is never triggered; the
+@expo/ui native sheet is rejected for this slice — its presence in the
+current dev-client binary is unestablished, and establishing it buys
+nothing over Modal for a read-only list. Reanimated stays excluded.
+GLOSSARY shape: entries of term plus definition, grouped by phase, in
+src/lib/lexicon.ts beside the v3 arrays (D86.3), including as new data
+the three axis-title entries (Target Energy, Setting, Main Goal) —
+which exist today only as component labels — with every definition
+character-identical to this document. The ladder heading is not a
+glossary entry; the ladder sheet is the five rungs.
