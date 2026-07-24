@@ -391,7 +391,7 @@ function PillScreen({
                       ? { backgroundColor: Survey.accent, borderColor: Survey.accent }
                       : { borderColor: Survey.subtext },
                   ]}>
-                  {isSelected && <ThemedText style={styles.checkGlyph}>✓</ThemedText>}
+                  {isSelected && <View style={styles.checkMark} />}
                 </View>
               )}
               {/* D83 Layer 1 saving treatment: the tapped pill swaps its label
@@ -1181,10 +1181,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkGlyph: {
-    fontFamily: SORA_SEMIBOLD,
-    fontSize: 13,
-    color: Survey.onAccent,
+  // The check itself is drawn, never typed: Sora carries no U+2713, so a text
+  // check resolved to an iOS fallback face whose ink escaped the square. Two
+  // borders on a rotated box give deterministic geometry and no font dependence.
+  checkMark: {
+    width: 10,
+    height: 5,
+    borderLeftWidth: 2,
+    borderBottomWidth: 2,
+    borderColor: Survey.onAccent,
+    transform: [{ rotate: '-45deg' }],
+    marginTop: -2,
   },
   skipPill: {
     marginTop: Spacing.one,
