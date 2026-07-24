@@ -24,6 +24,20 @@ run_or() {
   if [ -z "$out" ]; then printf '%s\n' "$fallback"; else printf '%s\n' "$out"; fi
 }
 
+# run_status <fallback> <fn>: like run_or, but also prints the exit status.
+# Required wherever an absence gate runs on a grep that can die: a SIGABRT
+# (exit 134) is indistinguishable from a clean zero-hit without the code.
+# Note the two-step local assignment -- `local out="$(cmd)"` would report
+# local's exit (0), silently swallowing a 134.
+run_status() {
+  local fallback="$1"; shift
+  printf '$ %s\n' "$*"
+  local out status
+  out="$("$@")"; status=$?
+  if [ -z "$out" ]; then printf '%s\n' "$fallback"; else printf '%s\n' "$out"; fi
+  echo "exit: $status"
+}
+
 echo '=== [1] current branch ==='
 run git rev-parse --abbrev-ref HEAD
 echo
@@ -47,6 +61,8 @@ echo
 
 echo '=== [6] client path (index, not worktree) ==='
 run_or '(not tracked)' git ls-files src/lib/supabase.ts
+# count_lib is an absence gate: tracked files under a repo-root lib/ -- a wrong
+# landing spot for client code, which lives at src/lib/. Expected 0.
 count_lib() { git ls-files -- lib/ | wc -l; }
 run count_lib
 echo
@@ -82,9 +98,9 @@ deno_test_tail() { deno test --allow-read --config supabase/functions/deno.json 
 run deno_test_tail
 echo
 
-echo '=== [11] deno check: ingest-coa ==='
+echo '=== [11] deno check: ingest-coa (success is silent; exit status printed) ==='
 deno_check() { deno check --config supabase/functions/deno.json supabase/functions/ingest-coa/index.ts 2>&1; }
-run deno_check
+run_status '(no output)' deno_check
 echo
 
 echo '=== [12] tsc (success is silent; exit status printed) ==='
@@ -98,9 +114,9 @@ if [ -z "$out" ]; then echo '(no output)'; else printf '%s\n' "$out" | tail -3; 
 echo "exit status: $status"
 echo
 
-echo '=== [13] expo lint ==='
-expo_lint() { npx expo lint 2>&1 | tail -14; }
-run expo_lint
+echo '=== [13] expo lint (exit status printed) ==='
+expo_lint() ( set -o pipefail; npx expo lint 2>&1 | tail -14 )
+run_status '(no output)' expo_lint
 echo
 
 echo '=== [14] expo install --check (drift beyond jest/@types/jest is expected from expo patch releases; do not fix any of it) ==='
@@ -114,7 +130,32 @@ trailers() { git log -1 --format=%B | git interpret-trailers --parse; }
 run trailers
 echo
 
-echo '=== [16] MANUAL: run in the Supabase SQL editor ==='
+echo '=== [16] migrations (name-form count + newest) ==='
+migration_count() ( set -o pipefail; ls supabase/migrations/ | grep -Ec '^[0-9]{14}_' )
+run_status '(none)' migration_count
+migration_newest() ( set -o pipefail; ls supabase/migrations/ | grep -E '^[0-9]{14}_' | sort | tail -1 )
+run_status '(none)' migration_newest
+echo
+
+echo '=== [17] D85 client state (lexicon version, spark absence, main_goal count) ==='
+lexicon_line() { grep -n "LEXICON_VERSION = " src/lib/lexicon.ts; }
+run_status '(none)' lexicon_line
+spark_scan() { grep -rn -i "spark" src/; }
+run_status '(none)' spark_scan
+main_goal_count() { grep -c "main_goal" src/components/session-ladder.tsx; }
+run_status '(none)' main_goal_count
+echo
+
+echo '=== [18] checkbox fix (drawn check present, glyph forms absent) ==='
+checkmark_count() { grep -c "checkMark" src/components/session-ladder.tsx; }
+run_status '(none)' checkmark_count
+checkglyph_count() { grep -c "checkGlyph" src/components/session-ladder.tsx; }
+run_status '(none)' checkglyph_count
+u2713_count() { grep -c "✓" src/components/session-ladder.tsx; }
+run_status '(none)' u2713_count
+echo
+
+echo '=== [19] MANUAL: run in the Supabase SQL editor ==='
 cat <<'SQL'
 select tablename, rowsecurity from pg_tables where schemaname='public' order by 1;
 select tablename, policyname, cmd from pg_policies where schemaname='public' order by 1,2;
@@ -124,6 +165,13 @@ from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public' and c.relkind = 'v'
 order by 1, 2;
+select table_name, grantee, count(*) as priv_count
+from information_schema.role_table_grants
+where table_schema='public' and table_name in ('session_current','coa_session_stats')
+group by 1,2 order by 1,2;
+select column_name from information_schema.columns
+where table_schema='public' and table_name='session_entries'
+and column_name in ('main_goal','spark');
 SQL
 echo
 echo 'Note: the SQL editor runs privileged, so RLS does not apply to its queries and'
@@ -131,3 +179,5 @@ echo 'select count(*) cannot distinguish a table with RLS on from one with it'
 echo 'silently off. pg_policies is the observation the schema gate actually requires.'
 echo 'View reloptions is the invocation the schema gate requires; pg_policies never'
 echo 'shows it -- a security_invoker=true view is only provable in the third query.'
+echo 'The grants query exists because pg_policies never shows view grants. The'
+echo 'IN-list query proves the D85 rename at schema level in one output.'
