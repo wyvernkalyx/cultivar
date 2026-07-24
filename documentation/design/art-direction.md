@@ -73,8 +73,9 @@ translation onto the score pills (ratified, item 2 below).
 **Layer 3 -- flow model: SUPERSEDED entirely.** The README's state
 machine (rating -> energy -> environment -> spark -> outcome ->
 closing; six steps, rating-first, no panels) predates D79/D80/D82.
-The live sequence is: ladder -> energy -> environment -> spark -> fit
--> physical_state -> co_consumption -> closing. The canvas's closing
+The live sequence is: ladder -> energy -> environment -> main_goal ->
+fit -> physical_state -> co_consumption -> closing (main_goal renamed
+by D85; documentation/design/glossary.md). The canvas's closing
 screen renders a free-text input the README itself says was removed
 per product decision -- the README and the repo agree; the canvas
 refutes itself. The two panel screens (physical_state,
@@ -91,7 +92,7 @@ RN `Animated` (see the animation constraint).
 |---|---|---|
 | Rating | ladder (score) | header, explainer, tier ramp, states |
 | Energy | energy | everything except button geometry and Skip |
-| (representative of 2-5) | environment, spark, fit | same |
+| (representative of 2-5) | environment, main_goal, fit | same |
 | -- none -- | physical_state | grammar + checkbox spec below |
 | -- none -- | co_consumption | grammar + checkbox spec below |
 | Closing (input refuted) | closing | header, bloom, accent-filled Close |
@@ -152,7 +153,7 @@ Kept verbatim (bundle-authored):
 Addendum drafts (approved):
 4. environment: "Who was around. Solo and social runs can read like
    two different strains in your logs."
-5. spark: "The itch it scratched, if any. Your word for the moment,
+5. main_goal: "The itch it scratched, if any. Your word for the moment,
    nothing more."
 6. fit: "Measured against what you came for -- nothing else."
 

@@ -543,3 +543,10 @@ live null-normalization on deselect).
 
 Gate: the same seam-absence couch gate, re-run on the two panel
 screens after the checkbox lands in the same feat slice.
+
+## Amendment (D85 pointer) -- 2026-07-24
+
+Spark is renamed Main Goal by D85 (column at ef67af5, client at
+9336f54; documentation/design/glossary.md is the renaming record).
+The Spark references in the dated amendment blocks above are
+historical records, left as written per D85.2's ledger boundary.

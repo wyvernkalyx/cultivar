@@ -41,12 +41,12 @@ those operations deserve.
 | `session_id` | uuid | not null | the chain key; client-generated at drop time |
 | `created_by` | uuid | not null, default `auth.uid()`, references `auth.users (id)` on delete cascade | ownership; the `coas` convention verbatim, observed at `20260708220816_create_core_schema.sql:39` — name included: the repo's convention is `created_by`, and this table does not diverge from it (ratified during this pass when the divergence was flagged) |
 | `coa_id` | uuid | not null, references `coas(id)` **on delete cascade** (D53) | what was consumed |
-| `lexicon_version` | smallint | not null | the vocabulary the answers were given under; the client sends its constant (2 today, D77) |
+| `lexicon_version` | smallint | not null | the vocabulary the answers were given under; the client sends its constant (3 today, D77/D85) |
 | `overall_word` | text | not null | the raw answer — the word as tapped |
 | `overall_score` | smallint | not null, check between 1 and 5 | the hidden value at that lexicon_version |
 | `energy` | text | nullable | axis 1 (D71); null = unanswered |
 | `environment` | text | nullable | axis 2 (D71); null = unanswered |
-| `spark` | text | nullable | axis 3, the intent anchor (D71-D72); Spark-null is the aimless session (D73) |
+| `main_goal` | text | nullable | axis 3, the intent anchor (D71-D72); a null Main Goal is the aimless session (D73) (renamed by D85; documentation/design/glossary.md) |
 | `fit` | text | nullable | 3-point strings v1; intent-relative, never touches the score |
 | `co_consumption` | text[] | nullable | multi-select confound panel (D75); presence-only; null/empty both = nothing recorded |
 | `physical_state` | text[] | nullable | multi-select baseline panel (D76); presence-only; null/empty both = nothing recorded |
@@ -62,7 +62,7 @@ Column decisions that are design, not accident:
   the schema and fight the versioning architecture.
 - **No separate session timestamp.** The chain already knows its moment.
 - **Fact classes are distinct columns** (skeleton item 4). Amended by
-  D77 (derived from D76, not re-authored here): `energy`/`environment`/`spark`
+  D77 (derived from D76, not re-authored here): `energy`/`environment`/`main_goal`
   (three axes), `fit`, `co_consumption`, `physical_state`; `context` removed.
 - **Fact-class values are text**, not enums: vocabularies are v1 and
   provisional, user-extensible by design (lexicon doc). The multi-select

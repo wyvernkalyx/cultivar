@@ -2,8 +2,9 @@
 
 Status: design ratified as leans (D64–D66) on 2026-07-16. Fit is
 implemented inside the D79 sequence at `8513c86` as its own Spark-keyed
-screen (see the D79 pointer below). Context and co-alcohol were retired
-by the D77 schema; their prose here is superseded-and-pointed (see the
+screen (renamed by D85; documentation/design/glossary.md) (see the D79
+pointer below). Context and co-alcohol were retired by the D77 schema;
+their prose here is superseded-and-pointed (see the
 D70–D78 pointer below). Display decisions are gate-revisable per the
 operator's standing revision expectation; the revision-insert semantics
 (D65) and the fit-nulling rule (D66) are the durable part. North stars:
