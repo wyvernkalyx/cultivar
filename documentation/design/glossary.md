@@ -1,6 +1,6 @@
 # Glossary & Lexicon v3 — design (D85)
 
-Status: RATIFIED by the operator 2026-07-23. Lands as
+Status: RATIFIED by the operator 2026-07-23; amended (D86, tap-surface design, 2026-07-24). Lands as
 `documentation/design/glossary.md` via a `docs:` commit before any code
 moves.
 
@@ -191,7 +191,7 @@ write one full v3 row and read it back: `lexicon_version = 3`, v3 strings
 in `main_goal` and friends, and a pre-existing v2 row observed intact
 beside it (the version-branching control case).
 
-**Slice 3 (banked) — glossary tap-surface UI.** Its own design pass.
+**Slice 3 — glossary tap-surface UI.** Designed: see Amendment (D86) below.
 
 ## Supersession scope
 Retires the v2 strings of D70 (rungs), D71 (axis values), D64 (fit
@@ -199,3 +199,57 @@ strings), D75/D76 (panel item strings), and the name "Spark" in D71–D73's
 living role (D85.2). Structures, semantics, hidden values, screen order
 (D79), nulling rules (D72/D73 as renamed), and panel mechanics (D78) are
 all UNCHANGED. §8A-a/b/c effects/aroma glossary stays banked.
+
+## Amendment (D86) — glossary tap-surface, 2026-07-24
+
+Operator-ratified in chat, four explicit rulings. Designs the surface
+D85.4 held out. Behavior only; visual treatment (trigger glyph, sheet
+styling, placement) defers to art-direction.md at build time.
+
+### D86.1 — One info trigger per term-bearing screen
+A single per-screen info trigger on each of the six term-bearing screens
+(ladder, energy, environment, main goal, fit, panels); none on closing.
+Ruled over tappable titles and per-term targets. Grounds: tap-on-pill
+already means select; per-term gestures would foreclose the banked
+ladder-drop / pill-tap unification pass, and long-press is
+undiscoverable and collides with drag initiation on the ladder. A
+screen-level trigger touches neither gesture system.
+
+### D86.2 — Screen-scoped bottom sheet, read-only
+The trigger opens a dismissible bottom sheet listing the current
+screen's entries with their ratified one-line definitions. Axis screens
+lead with the axis-title entry (Target Energy, Setting, Main Goal are
+themselves glossary entries). The panels screen gets one sheet with two
+labeled sections (co-consumption, physical state); ruled over one
+trigger per panel. The sheet is read-only: it never selects, writes, or
+navigates, and touches no database path — deliberate while the
+intermittent-freeze defect stays open; this slice adds zero insert-path
+surface. Coverage property, stated for the gate: the 27 entries
+partition across the six sheets as 5 / 4 / 3 / 4 / 3 / 8, every entry
+in exactly one sheet, zero orphans, closing carrying none.
+
+### D86.3 — Verbatim content rule
+Definitions render character-identical to this document's ratified
+language: no truncation, no paraphrase, no supplements, no generated
+copy. Single client source: a GLOSSARY structure in src/lib/lexicon.ts
+beside the v3 strings; the build slice must gate on verbatim identity
+between that structure and this document. Grounds: the Wound Up and
+Ease Tension discipline guardrails live in their exact ratified words —
+a summarizing surface is how drift starts.
+
+### D86.4 — v3-only scope
+The sheet shows the live lexicon's terms only and never branches on
+lexicon_version: the survey always writes the live lexicon, so its
+glossary needs no D85.3 branch. Displaying v2 strings belongs to a
+future read/detail surface, not this one.
+
+### D86.5 — Non-goals, held or banked
+A full-27 standalone glossary screen stays banked (lived demand may
+never ask). Survey helper copy is untouched (its own bank item). No
+change to pill or rung gestures. No affordance on the closing screen.
+
+### Gate (UI slice, device)
+Per term-bearing screen: open the sheet, verify every entry present and
+character-identical to this document, dismiss, and confirm selection
+state unchanged. Then one full logged walk with read-back — which also
+extends the freeze-watch count.
