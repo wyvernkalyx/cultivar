@@ -12,14 +12,14 @@ import {
   ENVIRONMENT,
   FITS,
   LEXICON_VERSION,
+  MAIN_GOAL,
   PHYSICAL_STATE,
   RUNGS,
-  SPARK,
 } from '@/lib/lexicon';
 import { supabase } from '@/lib/supabase';
 
 // Rung order is the lexicon's (D51, preserved as visual order by D80): up =
-// better, best word at the top, "Mid" at dead center, worst at the bottom.
+// better, best word at the top, "Neutral" at dead center, worst at the bottom.
 // Words and scores resolve through the one source.
 const RUNG_WORDS = RUNGS.map((rung) => rung.word);
 
@@ -31,12 +31,12 @@ const INSERT_TIMEOUT_MS = 10000;
 // multi-select panels (D75/D76) as toggle rows: `key` indexes the Snapshot
 // field; `values` come from the one lexicon source. Labels are transitional
 // copy — the wheel pass supersedes this surface (session-logging, banked).
-type AxisKey = 'energy' | 'environment' | 'spark';
+type AxisKey = 'energy' | 'environment' | 'main_goal';
 type PanelKey = 'co_consumption' | 'physical_state';
 const AXES: { key: AxisKey; label: string; values: readonly string[] }[] = [
-  { key: 'energy', label: 'Energy', values: ENERGY },
-  { key: 'environment', label: 'Environment', values: ENVIRONMENT },
-  { key: 'spark', label: 'Spark', values: SPARK },
+  { key: 'energy', label: 'Target Energy', values: ENERGY },
+  { key: 'environment', label: 'Setting', values: ENVIRONMENT },
+  { key: 'main_goal', label: 'Main Goal', values: MAIN_GOAL },
 ];
 // D82: order matches the survey sequence — physical_state (starting out)
 // precedes co_consumption (anything else), the specific question before the
@@ -64,7 +64,7 @@ type Snapshot = {
   score: number;
   energy: string | null;
   environment: string | null;
-  spark: string | null;
+  main_goal: string | null;
   fit: string | null;
   co_consumption: string[] | null;
   physical_state: string[] | null;
@@ -78,8 +78,8 @@ type InsertSource = 'drop' | 'axis' | 'fit' | 'panel';
 // The D82 screen sequence: one screen renders at a time. Single-select
 // screens advance on insert CONFIRM (not on tap); the two multi-select
 // panels toggle in place and advance on a Done pill (D82). Order: ladder
-// (the score pill screen) -> energy -> environment -> spark -> fit (only
-// when spark is answered, D73) -> physical_state -> co_consumption ->
+// (the score pill screen) -> energy -> environment -> main_goal -> fit (only
+// when main_goal is answered, D73) -> physical_state -> co_consumption ->
 // closing (D82: the panels join the required sequence). Field keys double
 // as phase names so currentPanel/currentAxis derive config straight from
 // phase. Conditional render wrapped in the D83 advance transition (slice 2).
@@ -87,7 +87,7 @@ type Phase =
   | 'ladder'
   | 'energy'
   | 'environment'
-  | 'spark'
+  | 'main_goal'
   | 'fit'
   | 'physical_state'
   | 'co_consumption'
@@ -110,7 +110,7 @@ const EXPLAINERS: Record<Phase, string> = {
   ladder: "Gut call. How this run stacked up against the rest of your shelf.",
   energy: "Where it left you on the dial -- mellow to wired. Only next to your own past logs.",
   environment: "Who was around. Solo and social runs can read like two different strains in your logs.",
-  spark: "The itch it scratched, if any. Your word for the moment, nothing more.",
+  main_goal: "The itch it scratched, if any. Your word for the moment, nothing more.",
   fit: "Measured against what you came for -- nothing else.",
   physical_state: "Where you started from. The same run reads different against a different baseline.",
   co_consumption: "What else was in the mix. Logged so this run isn't judged alone.",
@@ -454,7 +454,7 @@ function PillScreen({
  * The session-logging surface (D80 unified pill sequence, D54-D55 persistence,
  * D70-D79 survey): one pill screen per question, advancing on insert CONFIRM.
  * The score screen (D80) leads — the five RUNGS as full-width stacked pills,
- * Elite at top, Trash at bottom, carrying D51's up-is-better geometry as visual
+ * Loved at top, Hated at bottom, carrying D51's up-is-better geometry as visual
  * order. A score tap is the save attempt: it inserts a session entry
  * immediately (the D50 tap-is-the-save contract, motion changed from the
  * retired drag) and the tapped pill renders pending until the insert confirms
@@ -463,12 +463,13 @@ function PillScreen({
  * screens use; a failed revision reverts to the last confirmed truth by
  * derivation (D55).
  *
- * On a confirmed score the flow advances (D79) to the axis screens: Energy,
- * Environment, Spark, one per screen, each a full-snapshot revision insert
- * (D71) carrying the rest forward, with the advance firing on CONFIRM, not on
- * tap. Changing Spark nulls fit (D72); a first-class Skip advances and writes
- * nothing. Fit is its own screen shown only when Spark was answered (D73),
- * then the two multi-select confound panels join the sequence in order (D82):
+ * On a confirmed score the flow advances (D79) to the axis screens: Target
+ * Energy, Setting, Main Goal, one per screen, each a full-snapshot revision
+ * insert (D71) carrying the rest forward, with the advance firing on CONFIRM,
+ * not on tap. Changing Main Goal nulls fit (D72); a first-class Skip advances
+ * and writes nothing. Fit is its own screen shown only when Main Goal was
+ * answered (D73), then the two multi-select confound panels join the sequence
+ * in order (D82):
  * physical-state (D76) then co-consumption (D75), each a toggle-and-save
  * screen (D78) that advances on a Done pill, not on tap. A closing screen (a
  * single Close) terminates the survey. Every write rides the one insertEntry
@@ -602,21 +603,21 @@ export function SessionLadder({
     ]).start();
   }, [phase, petalAnims, calyxAnim, captionAnim]);
 
-  // The D82 screen order. Spark decides whether fit is asked (D73): a
-  // non-null spark inserts the fit screen before the panels; a null spark
-  // (the aimless session) skips fit straight to the first panel. The two
-  // panels (physical_state then co_consumption) trail the verdict block and
+  // The D82 screen order. Main Goal decides whether fit is asked (D73): a
+  // non-null main_goal inserts the fit screen before the panels; a null
+  // main_goal (the aimless session) skips fit straight to the first panel. The
+  // two panels (physical_state then co_consumption) trail the verdict block and
   // lead into closing, the one switch terminal (D82).
-  const nextScreen = (current: Phase, sparkValue: string | null): Phase => {
+  const nextScreen = (current: Phase, mainGoalValue: string | null): Phase => {
     switch (current) {
       case 'ladder':
         return 'energy';
       case 'energy':
         return 'environment';
       case 'environment':
-        return 'spark';
-      case 'spark':
-        return sparkValue !== null ? 'fit' : 'physical_state';
+        return 'main_goal';
+      case 'main_goal':
+        return mainGoalValue !== null ? 'fit' : 'physical_state';
       case 'fit':
         return 'physical_state';
       case 'physical_state':
@@ -628,21 +629,21 @@ export function SessionLadder({
     }
   };
   // Back is navigation only (D79): the linear predecessor. From the first
-  // panel (physical_state) it is fit when spark was answered, spark otherwise
-  // (the derivation that used to live on closing); co_consumption goes back
-  // to physical_state; closing goes back to co_consumption (D82).
+  // panel (physical_state) it is fit when main_goal was answered, main_goal
+  // otherwise (the derivation that used to live on closing); co_consumption
+  // goes back to physical_state; closing goes back to co_consumption (D82).
   const backTarget = (current: Phase): Phase => {
     switch (current) {
       case 'energy':
         return 'ladder';
       case 'environment':
         return 'energy';
-      case 'spark':
+      case 'main_goal':
         return 'environment';
       case 'fit':
-        return 'spark';
+        return 'main_goal';
       case 'physical_state':
-        return lastConfirmed !== null && lastConfirmed.spark !== null ? 'fit' : 'spark';
+        return lastConfirmed !== null && lastConfirmed.main_goal !== null ? 'fit' : 'main_goal';
       case 'co_consumption':
         return 'physical_state';
       case 'closing':
@@ -656,7 +657,7 @@ export function SessionLadder({
   // answered axis leaves the value — axis deselection-to-null is banked).
   const advanceNoWrite = () => {
     setSaveError(null);
-    setPhase((current) => nextScreen(current, lastConfirmed?.spark ?? null));
+    setPhase((current) => nextScreen(current, lastConfirmed?.main_goal ?? null));
   };
   // Back affordance: navigation only, never a write, cleared error.
   const goBack = () => {
@@ -667,7 +668,7 @@ export function SessionLadder({
   // The save attempt (D54): every path is the same insert — same chain,
   // full snapshot (D52). A score tap sends its rung with every fact-class
   // answer carried forward; an axis tap sends the confirmed word + score
-  // with the one axis set (fit nulled iff Spark, D72); a fit tap or panel
+  // with the one axis set (fit nulled iff Main Goal, D72); a fit tap or panel
   // toggle sends the confirmed snapshot with its one field changed
   // (D65/D78). Every failure reverts its own control's rendered state by
   // derivation (D55) — no card to move (D80 retired the drag).
@@ -701,10 +702,10 @@ export function SessionLadder({
         // only. A panel toggle's confirm must NOT advance (D82): the
         // multi-select grammar settles in place and moves on only when the
         // Done pill fires, so the panel source is gated out of the advance
-        // by rule now — not by a terminal phase. Spark's just-confirmed
+        // by rule now — not by a terminal phase. Main Goal's just-confirmed
         // value decides the fit branch.
         if (source !== 'panel') {
-          setPhase((current) => nextScreen(current, snapshot.spark));
+          setPhase((current) => nextScreen(current, snapshot.main_goal));
         }
         return;
       }
@@ -729,7 +730,7 @@ export function SessionLadder({
         overall_score: snapshot.score,
         energy: snapshot.energy,
         environment: snapshot.environment,
-        spark: snapshot.spark,
+        main_goal: snapshot.main_goal,
         fit: snapshot.fit,
         co_consumption: snapshot.co_consumption,
         physical_state: snapshot.physical_state,
@@ -749,7 +750,7 @@ export function SessionLadder({
   // fact fields null, the overall word being the only mandatory field), the
   // revision shape carrying every fact-class answer forward otherwise (a new
   // score changes the word, not the questions: the axes stand, so fit stands
-  // too — D72's nulling is for Spark CHANGES only). Fires through the one
+  // too — D72's nulling is for Main Goal CHANGES only). Fires through the one
   // writer with the same 'drop' source. A different pill on a Back-revisit is
   // a revision insert with no special-casing (D80); an identical row on a
   // same-pill re-tap is a semantic no-op the schema absorbs (D54).
@@ -765,7 +766,7 @@ export function SessionLadder({
             score: rung.score,
             energy: null,
             environment: null,
-            spark: null,
+            main_goal: null,
             fit: null,
             co_consumption: null,
             physical_state: null,
@@ -779,8 +780,9 @@ export function SessionLadder({
   // confirmed snapshot with the one axis set. Re-tapping the confirmed
   // value is a no-op — an identical row carries zero information; a
   // different value corrects it (append-only, the prior survives beneath).
-  // Spark is the fit referent (D72): changing Spark nulls fit; Energy and
-  // Environment never touch fit. Axis deselection-to-null is banked (D78).
+  // Main Goal is the fit referent (D72): changing Main Goal nulls fit; Target
+  // Energy and Setting never touch fit. Axis deselection-to-null is banked
+  // (D78).
   const tapAxis = (axis: AxisKey, value: string) => {
     if (lastConfirmed === null) {
       return;
@@ -794,7 +796,7 @@ export function SessionLadder({
     setPendingAxis({ axis, value });
     const revised: Snapshot = { ...lastConfirmed };
     revised[axis] = value;
-    if (axis === 'spark') {
+    if (axis === 'main_goal') {
       revised.fit = null;
     }
     insertEntry(revised, 'axis');
@@ -863,7 +865,7 @@ export function SessionLadder({
   // The axis config for the current axis screen (D79), undefined off the
   // axis screens — one PillScreen serves all three.
   const currentAxis =
-    phase === 'energy' || phase === 'environment' || phase === 'spark'
+    phase === 'energy' || phase === 'environment' || phase === 'main_goal'
       ? AXES.find((axis) => axis.key === phase)
       : undefined;
   // The panel config for the current multi-select screen (D82), undefined off
@@ -893,7 +895,7 @@ export function SessionLadder({
             },
           ]}>
           {/* The score screen (D80): the five RUNGS as full-width bottom-
-            anchored pills, Elite top to Trash bottom (D51's up-is-better as
+            anchored pills, Loved top to Hated bottom (D51's up-is-better as
             visual order). Tap is the save (D50 contract, D54 pending). No
             Skip — score is the skeleton's mandatory field. The leading
             control is Close (this is the flow's entry, there is no Back):
@@ -919,7 +921,7 @@ export function SessionLadder({
 
         {/* The three intent axis screens (D71/D79): one axis per screen,
             title = axis name, values as full-width bottom-anchored pills,
-            tap-advance on confirm, first-class Skip. Spark's confirm nulls
+            tap-advance on confirm, first-class Skip. Main Goal's confirm nulls
             fit (D72) and branches to the fit screen when answered. */}
         {currentAxis !== undefined && (
           <PillScreen
@@ -942,8 +944,8 @@ export function SessionLadder({
           />
         )}
 
-        {/* The fit screen (D73/D79): shown only when Spark was answered;
-            spark's advance goes straight to closing otherwise. Same
+        {/* The fit screen (D73/D79): shown only when Main Goal was answered;
+            main_goal's advance goes straight to closing otherwise. Same
             pill-and-Skip pattern, FITS vocabulary unchanged. */}
         {phase === 'fit' && (
           <PillScreen
