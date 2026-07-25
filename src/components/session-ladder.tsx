@@ -1,6 +1,6 @@
 import { uuid } from 'expo-modules-core';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -11,6 +11,8 @@ import {
   ENERGY,
   ENVIRONMENT,
   FITS,
+  GLOSSARY,
+  type GlossaryEntry,
   LEXICON_VERSION,
   MAIN_GOAL,
   PHYSICAL_STATE,
@@ -229,6 +231,7 @@ function SequenceHeader({
   strain,
   title,
   saving = false,
+  onInfo,
 }: {
   leadingLabel: string;
   onLeading: () => void;
@@ -239,6 +242,10 @@ function SequenceHeader({
   // D83 Layer 1 saving state: the header dims to 40% while an insert is on
   // the wire (the tapped pill stays lit; siblings dim to 32%).
   saving?: boolean;
+  // The glossary info trigger (D86): present only on a term-bearing phase, so
+  // omitting it is how closing structurally carries no trigger (D86.6). Opens
+  // the read-only definition sheet; it never touches survey state.
+  onInfo?: () => void;
 }) {
   // The dominant line is the strain when present, the brand otherwise, so a
   // single-named COA reads as one strong line rather than a lonely label over
@@ -247,13 +254,26 @@ function SequenceHeader({
   const brandLabel = strain !== null ? brand : null;
   return (
     <View style={[styles.sequenceHeader, saving && styles.headerSaving]}>
-      <Pressable disabled={disabled} onPress={onLeading} style={styles.controlChip}>
-        {/* Leading glyph per D83 item 9: cross for Close, single-angle for
-            Back. */}
-        <ThemedText style={styles.controlChipLabel}>
-          {(leadingLabel === 'Close' ? '✕ ' : '‹ ') + leadingLabel}
-        </ThemedText>
-      </Pressable>
+      {/* The top row holds the leading nav chip and, on a term-bearing phase,
+          the trailing glossary trigger (D86). space-between keeps the nav chip
+          left when the trigger is absent (closing). */}
+      <View style={styles.headerTopRow}>
+        <Pressable disabled={disabled} onPress={onLeading} style={styles.controlChip}>
+          {/* Leading glyph per D83 item 9: cross for Close, single-angle for
+              Back. */}
+          <ThemedText style={styles.controlChipLabel}>
+            {(leadingLabel === 'Close' ? '✕ ' : '‹ ') + leadingLabel}
+          </ThemedText>
+        </Pressable>
+        {onInfo !== undefined && (
+          <Pressable disabled={disabled} onPress={onInfo} style={styles.controlChip}>
+            {/* An ASCII label, not a glyph: Sora's cmap is not guaranteed to
+                carry an info codepoint (cf. the U+2713 checkbox fix), and a
+                word is unambiguously discoverable at the gate. */}
+            <ThemedText style={styles.controlChipLabel}>Info</ThemedText>
+          </Pressable>
+        )}
+      </View>
       <View style={styles.headerBlock}>
         {brandLabel !== null && (
           <ThemedText style={styles.brandLabel} numberOfLines={1}>
@@ -301,6 +321,7 @@ function PillScreen({
   tierStripe = false,
   disabled,
   error,
+  glossary,
   onSelect,
   onLeading,
   onSkip,
@@ -312,6 +333,10 @@ function PillScreen({
   title: string;
   explainer: string;
   values: readonly string[];
+  // This phase's glossary group (D86): the term+definition entries its
+  // read-only sheet shows. Every phase that renders a PillScreen has one, so
+  // the trigger always shows here; closing does not render a PillScreen (D86.6).
+  glossary: readonly GlossaryEntry[];
   selected: string | null;
   // Multi-select (D82): when present, a pill is lit iff this set includes it,
   // and `selected` is unused (call sites pass selected={null}).
@@ -333,7 +358,13 @@ function PillScreen({
   // Saving state (D83 Layer 1): an insert on this screen is on the wire iff a
   // pill is pending. The tapped pill spins; header + siblings dim.
   const saving = pendingValue !== null;
+  // The glossary sheet's only state (D86.7: nothing beyond this visibility
+  // boolean). The sheet's Modal covers the pills, so a phase cannot advance
+  // while it is open; the Info trigger is also disabled in flight (below), so
+  // the phase never changes under an open sheet and no reset effect is needed.
+  const [glossaryOpen, setGlossaryOpen] = useState(false);
   return (
+    <>
     <View style={styles.sequenceScreen}>
       <SequenceHeader
         leadingLabel={leadingLabel}
@@ -343,6 +374,7 @@ function PillScreen({
         strain={strain}
         title={title}
         saving={saving}
+        onInfo={() => setGlossaryOpen(true)}
       />
       {/* The explainer occupies the empty middle as the reading surface (D83):
           one line of personal context, serif italic, quiet. */}
@@ -447,6 +479,33 @@ function PillScreen({
         )}
       </View>
     </View>
+    {/* The glossary sheet (D86): a pageSheet Modal matching the app's overlay
+        grammar (D86.7). Read-only — it lists this phase's ratified definitions
+        and a Close, and touches no survey state. Dismissible by Close or the
+        native pageSheet pull-down (D86.2). */}
+    <Modal
+      visible={glossaryOpen}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={() => setGlossaryOpen(false)}
+      onDismiss={() => setGlossaryOpen(false)}>
+      <ThemedView style={styles.glossarySheet}>
+        <View style={styles.glossaryHeader}>
+          <Pressable onPress={() => setGlossaryOpen(false)} style={styles.controlChip}>
+            <ThemedText style={styles.controlChipLabel}>Close</ThemedText>
+          </Pressable>
+        </View>
+        <ScrollView contentContainerStyle={styles.glossaryList}>
+          {glossary.map((entry) => (
+            <View key={entry.term} style={styles.glossaryEntry}>
+              <ThemedText style={styles.glossaryTerm}>{entry.term}</ThemedText>
+              <ThemedText style={styles.glossaryDef}>{entry.definition}</ThemedText>
+            </View>
+          ))}
+        </ScrollView>
+      </ThemedView>
+    </Modal>
+    </>
   );
 }
 
@@ -907,6 +966,7 @@ export function SessionLadder({
             strain={coa.strain}
             title="Rate this Session"
             explainer={EXPLAINERS.ladder}
+            glossary={GLOSSARY.ladder}
             values={RUNG_WORDS}
             selected={selectedScore}
             pendingValue={pendingScore}
@@ -929,6 +989,7 @@ export function SessionLadder({
             strain={coa.strain}
             title={currentAxis.label}
             explainer={EXPLAINERS[currentAxis.key]}
+            glossary={GLOSSARY[currentAxis.key]}
             values={currentAxis.values}
             selected={selectedAxis(currentAxis.key)}
             pendingValue={
@@ -953,6 +1014,7 @@ export function SessionLadder({
             strain={coa.strain}
             title="Did it do what you wanted?"
             explainer={EXPLAINERS.fit}
+            glossary={GLOSSARY.fit}
             values={FITS}
             selected={selectedFit}
             pendingValue={pendingFit}
@@ -976,6 +1038,7 @@ export function SessionLadder({
             strain={coa.strain}
             title={currentPanel.label}
             explainer={EXPLAINERS[currentPanel.key]}
+            glossary={GLOSSARY[currentPanel.key]}
             values={currentPanel.values}
             selected={null}
             selectedValues={panelValues(currentPanel.key)}
@@ -1068,6 +1131,15 @@ const styles = StyleSheet.create({
   sequenceHeader: {
     alignItems: 'flex-start',
     gap: Spacing.three,
+  },
+  // The header's top row (D86): the leading nav chip and the trailing glossary
+  // trigger. space-between pins the nav chip left; when the trigger is absent
+  // (closing) the lone chip stays left, unchanged from the pre-D86 layout.
+  headerTopRow: {
+    flexDirection: 'row',
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   // The header dims to 40% while a save is on the wire (D83 Layer 1).
   headerSaving: {
@@ -1326,5 +1398,42 @@ const styles = StyleSheet.create({
     marginTop: Spacing.half,
     textAlign: 'center',
     color: Survey.subtext,
+  },
+  // The glossary sheet (D86): a read-only pageSheet. Its container carries the
+  // survey background and the D83 side margins; the pageSheet supplies its own
+  // top offset from the notch.
+  glossarySheet: {
+    flex: 1,
+    backgroundColor: Survey.background,
+    paddingHorizontal: 26,
+    paddingTop: Spacing.four,
+    paddingBottom: 38,
+    gap: Spacing.three,
+  },
+  // Close sits top-right, mirroring the survey header's control-chip grammar.
+  glossaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  glossaryList: {
+    gap: Spacing.four,
+    paddingBottom: Spacing.four,
+  },
+  glossaryEntry: {
+    gap: Spacing.one,
+  },
+  // The term leads in accent (the survey's emphasis color); the definition
+  // reads beneath it in body text, verbatim from the ratified language (D86.3).
+  glossaryTerm: {
+    fontFamily: SORA_SEMIBOLD,
+    fontSize: 18,
+    lineHeight: 24,
+    color: Survey.accent,
+  },
+  glossaryDef: {
+    fontFamily: SORA_MEDIUM,
+    fontSize: 15,
+    lineHeight: 21,
+    color: Survey.text,
   },
 });
