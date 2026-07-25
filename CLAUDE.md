@@ -158,11 +158,27 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   applied", "still owed") is as fabricated as asserting the positive.
   Remote state is evidenced only by observed push output and
   `git rev-list --left-right --count`, both through the operator.
+- **The implementer's report pastes the artifact, never a pointer to
+  it.** "The diff is in the tool output above" is not a report: the
+  architect reviews only what the report body contains, and a pointer
+  to a tool call it cannot see is an unreviewable claim (observed
+  twice, blocked both times). Full diff and full command output go in
+  the report body, verbatim, exit codes included.
 - **Operator steps are numbered runnable blocks, never prose.** An
   operator instruction buried in a prompt preamble does not get run
   (observed twice: a file never placed; a migration timestamp never
   applied). Each block states what to run, what to expect, and what
   gets pasted back.
+- **Tail-check before anchoring on a final line.** Never anchor a
+  criterion, and never place an append, on the last line of a pasted
+  artifact without first observing that line whole: `git show
+  HEAD:<path> | tail -1 | cat -A` for committed state, `tail -1
+  <path> | cat -A` for the worktree. A paste truncated at its final
+  character yields an anchor that matches nothing and an append that
+  lands inside a broken line (observed twice in one day: a diff's
+  closing quote, a blob's final period). Applied twice since -- one
+  real truncation caught, one clean pass. The artifact settles it,
+  never the paste.
 
 ---
 
