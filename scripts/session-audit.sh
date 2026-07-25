@@ -155,7 +155,49 @@ u2713_count() { grep -c "✓" src/components/session-ladder.tsx; }
 run_status '(none)' u2713_count
 echo
 
-echo '=== [19] MANUAL: run in the Supabase SQL editor ==='
+echo '=== [19] glossary verbatim identity (doc vs client, per-term) ==='
+# D86.3 requires every GLOSSARY definition in src/lib/lexicon.ts to be verbatim
+# from documentation/design/glossary.md. That identity was verified once, by
+# hand, during the D86 build; nothing re-checked it afterwards.
+#
+# Identity is per-term, NOT positional. The two sources order their groups
+# differently -- the doc places co-consumption (5) before physical state (3),
+# lexicon.ts is the reverse -- so a positional diff fails on correct files.
+# Both sides are sorted (LC_ALL=C, so the order is machine-independent).
+#
+# Both sides read the HEAD blob, not the worktree: the claim is about the
+# committed pair, and section [4] already surfaces any uncommitted drift.
+#
+# The two counts print BEFORE the diff and are the read-proof. If both
+# extractions fail -- a renamed path, a changed literal shape -- each yields
+# nothing, diff exits 0, and the gate passes silently. Counts of 27 and 27 are
+# what make an empty diff mean something. Patterns and three dirty controls
+# (perturbed client definition; em-dash-to-hyphen in the doc; deleted entry)
+# were run in the architect's sandbox before this shipped.
+glossary_doc() {
+  git show HEAD:documentation/design/glossary.md \
+  | sed -n '/^## The 27 entries/,/^## Implementation plan/p' \
+  | grep -E '^\| \*\*' \
+  | sed -E 's/^\| \*\*([^*]*)\*\* \| (.*) \|$/\1\t\2/' \
+  | LC_ALL=C sort
+}
+glossary_client() {
+  git show HEAD:src/lib/lexicon.ts \
+  | grep -E "^ +\{ term: '" \
+  | sed -E "s/^ +\{ term: '([^']*)', definition: \"(.*)\" \},$/\1\t\2/" \
+  | LC_ALL=C sort
+}
+glossary_doc_count() { glossary_doc | wc -l; }
+glossary_client_count() { glossary_client | wc -l; }
+glossary_diff() { diff <(glossary_doc) <(glossary_client); }
+glossary_sha() { glossary_doc | sha256sum; }
+run_status '(none)' glossary_doc_count
+run_status '(none)' glossary_client_count
+run_status '(identical)' glossary_diff
+run_status '(none)' glossary_sha
+echo
+
+echo '=== [20] MANUAL: run in the Supabase SQL editor ==='
 cat <<'SQL'
 select tablename, rowsecurity from pg_tables where schemaname='public' order by 1;
 select tablename, policyname, cmd from pg_policies where schemaname='public' order by 1,2;
