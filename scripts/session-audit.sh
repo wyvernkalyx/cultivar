@@ -138,20 +138,35 @@ run_status '(none)' migration_newest
 echo
 
 echo '=== [17] D85 client state (lexicon version, spark absence, main_goal count) ==='
-lexicon_line() { grep -n "LEXICON_VERSION = " src/lib/lexicon.ts; }
+# Content assertions read the HEAD blob, never the worktree: the claim is about
+# the committed client, and section [4] already surfaces uncommitted drift.
+# Execution sections ([9]-[14]) necessarily stay on the worktree -- npm test
+# cannot run against a blob.
+#
+# audited_paths is the read-proof for [17] AND [18]. `git show HEAD:<renamed
+# path> | grep -c X` returns 0 with exit 1, byte-identical to a genuine
+# absence, so a rename with imports updated leaves tsc green and every absence
+# gate below passing silently forever. Two printed paths are what make the
+# zeroes mean something; one printed path voids both sections.
+audited_paths() { git ls-tree --name-only HEAD -- src/lib/lexicon.ts src/components/session-ladder.tsx; }
+run_status '(none)' audited_paths
+lexicon_line() { git show HEAD:src/lib/lexicon.ts | grep -n "LEXICON_VERSION = "; }
 run_status '(none)' lexicon_line
-spark_scan() { grep -rn -i "spark" src/; }
+spark_scan() { git grep -n -i "spark" HEAD -- src/; }
 run_status '(none)' spark_scan
-main_goal_count() { grep -c "main_goal" src/components/session-ladder.tsx; }
+main_goal_count() { git show HEAD:src/components/session-ladder.tsx | grep -c "main_goal"; }
 run_status '(none)' main_goal_count
 echo
 
 echo '=== [18] checkbox fix (drawn check present, glyph forms absent) ==='
-checkmark_count() { grep -c "checkMark" src/components/session-ladder.tsx; }
+# Two of the three gates below assert absence, which is also what a renamed
+# blob produces. Their read-proof is audited_paths in [17]; if that printed
+# fewer than two paths, treat every count here as void.
+checkmark_count() { git show HEAD:src/components/session-ladder.tsx | grep -c "checkMark"; }
 run_status '(none)' checkmark_count
-checkglyph_count() { grep -c "checkGlyph" src/components/session-ladder.tsx; }
+checkglyph_count() { git show HEAD:src/components/session-ladder.tsx | grep -c "checkGlyph"; }
 run_status '(none)' checkglyph_count
-u2713_count() { grep -c "✓" src/components/session-ladder.tsx; }
+u2713_count() { git show HEAD:src/components/session-ladder.tsx | grep -c "✓"; }
 run_status '(none)' u2713_count
 echo
 
