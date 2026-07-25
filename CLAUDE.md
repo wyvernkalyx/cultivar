@@ -33,7 +33,12 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
 ## Core principles
 
 - **Repo is authoritative over memory.** When memory and the repo disagree, the repo
-  wins. Verify against the working tree before acting on any remembered fact.
+  wins. Verify before acting on any remembered fact, and read the artifact the claim
+  is about: `git show HEAD:<path>` for committed state, `git show :<path>` for what
+  is staged, the working tree only for what is not committed yet. The three
+  routinely disagree, and a check that passes because two of them happen to agree
+  has verified nothing (see **Commit conventions** on blob identity, and
+  `documentation/process/handoff-specs.md`, "Acceptance criteria").
 - **Lived-demand.** Build what a concrete, present need requires. No speculative
   abstraction, no "we might want this later" scaffolding.
 - **Personal-empirical, never pharmacological.** Cultivar never claims a terpene causes
