@@ -1,6 +1,8 @@
 # Session Handoff
 
-Written 2026-07-26, after `40df989` landed and pushed.
+Written 2026-07-26, after `111a39e` landed and pushed. Supersedes the version
+committed at `210b516` earlier the same day, which said the survey-cut doc
+was "not drafted" -- true when written, false within the hour.
 
 **The repo is authoritative over this document.** Everything below can be
 wrong. Begin with the read-only Phase A audit in the next section and try to
@@ -39,15 +41,20 @@ Every line is a falsifiable prediction. If any does not match, the repo wins
 
 Observed and verified 2026-07-26:
 
-- Branch `main`. `git rev-parse HEAD` -> `40df989`
-- `git log -1 --oneline` -> `docs: COA retention, dedupe, and possession design (D87-D91)`
-- Parent: `ce74453`. Push output observed: `ce74453..40df989  main -> main`
-- `git rev-list --left-right --count origin/main...main` -> `0	0`
+- Branch `main`. `git rev-parse HEAD` -> `111a39e`
+- `git log -1 --oneline` -> `docs: the survey cut (D92-D96)`
+- `git log -1 --stat` -> `documentation/design/survey-cut.md`, 1 file changed,
+  402 insertions
+- Push output observed: `210b516..111a39e  main -> main`
+- `git rev-list --count origin/main..main` -> `0`
 - `select count(*) from session_entries;` -> **0**
 - `select count(*) from coas;` -> **5**
 - `select count(*) from storage.buckets;` -> **0**
 - `src/lib/lexicon.ts`: `LEXICON_VERSION = 3`; six vocabulary arrays plus
-  `GLOSSARY` with 27 entries. **Unchanged this session** -- no code moved.
+  `GLOSSARY` with 27 entries. **Unchanged this session** -- no code moved,
+  no migration applied. The app on the device still walks all eight survey
+  phases and writes the D77 column set. The design is three commits ahead of
+  the product.
 
 NOT observed this session, and therefore NOT to be trusted as stated:
 
@@ -62,11 +69,13 @@ NOT observed this session, and therefore NOT to be trusted as stated:
 
 ## What shipped
 
+- `111a39e` -- `docs:` the survey cut (D92-D96). Eight screens to two.
+- `210b516` -- `docs:` session handoff (superseded by this file).
 - `40df989` -- `docs:` COA retention, dedupe, and possession design (D87-D91).
-  Design only. No schema, no code, nothing implemented.
 
-That is the entire session's committed output. Everything else below is
-decision history that has not yet landed in any document.
+All three are design only. **No schema was migrated and no code was
+changed.** Whatever the docs now say, the running product is unchanged from
+where it stood at `ce74453`.
 
 ## The arcs
 
@@ -181,7 +190,27 @@ handoff.**
 **Landed in `40df989`:** D87 retention, D88 dedupe, D89 possession count,
 D90 retirement events, D91 favorite. Grounds are in the doc.
 
-**Not yet documented:**
+**Landed in `111a39e`:** D92 two screens, D93 fact classes retire (amending
+skeleton item 4 to empty), D94 columns dropped and `LEXICON_VERSION` -> 4,
+D95 free-text notes, D96 glossary reduced to the ladder group. Grounds are in
+the doc.
+
+**Operator overrides recorded at authoring**, so they are not relitigated:
+
+- **D94 reverses the architect's proposal.** The architect proposed leaving
+  the six retired columns in place, on the grounds that dropping them forces
+  a view drop-and-recreate -- D77's named live risk, where
+  `security_invoker = true` gets silently forgotten. The operator ruled to
+  drop: a column the schema carries but nothing writes misdescribes the
+  product. The architect's reasoning is preserved in the doc as the ruled-over
+  alternative; the risk is answered by a mandatory `reloptions`
+  re-observation in the gate rather than by avoiding the migration.
+- **Notes live on the closing screen**, not their own. Named cost: a keyboard
+  on the terminal screen may fight the banked completion animation.
+- **Notes write on Close**, not on blur. Named cost: a force-quit between
+  typing and Close loses the note -- consistent with what D54 already accepts.
+
+**Still not documented anywhere:**
 
 - **D85.3 reversed, scoped.** The 195 test-phase `session_entries` rows were
   deleted. Grounds: D85.3 retired "vocabularies revise freely" because 135+
@@ -189,21 +218,9 @@ D90 retirement events, D91 favorite. Grounds are in the doc.
   artifacts representing zero real sessions, so the rule was protecting
   nothing while imposing a permanent version-branched read layer on every
   future analysis. **D85.3 stands for every row recorded from here forward.**
-  Executed via MCP with explicit operator authorization; verified 0.
-- **The survey cuts to two screens.** Screen 1: the five `RUNGS`,
-  tap-is-the-save, no Skip, Close cancels, glossary trigger showing the five
-  rung definitions. Screen 2: product line, optional free-text note, Close.
-  Two taps minimum. Cut entirely: `ENERGY`, `ENVIRONMENT`, `MAIN_GOAL`,
-  `FITS`, `PHYSICAL_STATE`, `CO_CONSUMPTION`. Operator verbatim on the
-  middle screens: "the rest are garbage."
-- **`notes` is a new nullable column** -- the survey cut's only schema
-  addition.
-- **`LEXICON_VERSION` -> 4** with the cut, because the version must now mark
-  the *field set*, not just the strings. The hidden 5/4/3/2/1 mapping is
-  untouched, so cross-version averaging stays valid and no recompute is
-  triggered.
-- **Tripwire, named:** `CO_CONSUMPTION` returns unchanged, as one screen, if
-  free-text notes start showing confounds worth filtering on.
+  Executed via MCP with explicit operator authorization; verified 0. It is
+  recorded in `40df989`'s commit body and in
+  `coa-retention-and-possession.md`'s baseline, but no D-number carries it.
 - **The handbook's goal sentence is wrong and the fix is not applied.**
   `CLAUDE.md` line 3 still says "learns a person's terpene preferences."
   Ratified replacement: chemistry, cannabinoids *and* terpenes. Rejected in
@@ -216,14 +233,22 @@ D90 retirement events, D91 favorite. Grounds are in the doc.
 
 **Runnable now**
 
-- **The survey cut design doc.** Not drafted. Supersedes D71-D76, D78, D82,
-  D82.1 as surfaces and retires 22 of D86's 27 glossary entries (only the
-  `ladder` group survives). Amends **skeleton item 4** to empty. Skeleton
-  items do not revise without their own ratification pass -- say so in the
-  doc rather than sliding it through.
+- **Survey-cut slice 2 (schema).** The migration in `survey-cut.md`: drop
+  `coa_session_stats`, drop `session_current`, add `notes`, drop the six
+  retired columns, recreate both views, set `security_invoker = true` on
+  both, restore grants to the pre-migration observed set. **Capture the
+  grants before running it** -- there is otherwise nothing to match against.
+  Implementer authors, operator applies. Gate: observed SQL, including the
+  paired control that the nine surviving columns are still present.
+- **Survey-cut slice 3 (client).** `lexicon.ts` to `LEXICON_VERSION = 4`,
+  six arrays removed, `GLOSSARY` reduced to the ladder group;
+  `session-ladder.tsx` down to two phases plus the note field. Lands in the
+  same session as slice 2, device gate after both. No native module, so no
+  new EAS build.
 - **The `CLAUDE.md` goal-sentence amendment.** One-line `docs:` commit.
-- **Implementation slices 2-6 of `coa-retention-and-possession.md`**, in the
-  order given there. Slice 2 (schema) is the gate for everything after.
+- **Slices 2-6 of `coa-retention-and-possession.md`**, in the order given
+  there. Independent of the survey cut -- different tables, no ordering
+  dependency between the two arcs.
 
 **Blocked**
 
@@ -276,23 +301,40 @@ applies migrations, and MCP does not change that.
 This does not extend to the repo. HEAD, worktree state, test counts, and
 warning counts still arrive only through the operator.
 
-Also: the operator did not read `coa-retention-and-possession.md` before
-committing it. Design docs carry architect inferences that no criterion can
-catch, and `handoff-specs.md` is explicit that the claim check is a human
-reading the diff. Worth restoring.
+Also: the operator did not read either design doc before committing it.
+Design docs carry architect inferences that no criterion can catch, and
+`handoff-specs.md` is explicit that the claim check is a human reading the
+diff. Worth restoring, and it matters more now that the docs are what the
+migration will be built against.
+
+**Paste truncation happened twice this session**, both times losing the tail
+of a command's output -- once dropping a field from
+`git rev-list --left-right --count` so a two-number result read as one, and
+once cutting a command block off before it ran. Both were caught only because
+the expected shape was stated as a prediction first. The tail-check rule in
+`CLAUDE.md` covers files; it applies to pasted command output with equal
+force. **Prefer single-value commands with labelled `echo` output** over
+multi-field ones when the result gates a decision.
 
 ## Entry point
 
-**Draft the survey-cut design doc.** It is the largest undocumented decision
-from this session and the one most likely to be re-litigated or half-
-remembered, because it reverses eight days of ratified work across two
-documents and amends a skeleton item. Everything else -- the schema slices,
-the goal-sentence fix, the dashboard -- is either downstream of it or
-independent of it. Write it, land it as `docs:`, then run the schema slice
-from `coa-retention-and-possession.md`.
+**Run survey-cut slice 2, the schema migration.** Three design commits landed
+this session and zero lines of product changed; the app on the device still
+walks eight screens and writes six columns the design has retired. That gap
+is the largest single risk in the repo right now, because every additional
+design pass widens it.
 
-Then stop designing the survey and go log real sessions with it. Three
-survey restructures in eight days were each ratified in good faith and each
-refuted by the next look, and the refuting instrument was never a design
-argument -- it was the operator touching the app. A fourth pass from the same
-standing position will fail the same way.
+The migration's one real hazard is named and must not be treated as
+paperwork: dropping columns forces both views to be recreated, and that is
+exactly where `security_invoker = true` gets silently lost, which would let
+users read each other's rows. **Capture the view grants before running it,
+and re-observe `reloptions` on both views after.** Then slice 3, then the
+device gate.
+
+Then stop designing the survey and go log real sessions with it. Four survey
+restructures landed in nine days -- D79, D80, D82/D82.1, and D92-D96 -- each
+ratified in good faith, each refuted by the next look, and the refuting
+instrument was never a design argument. It was the operator touching the app.
+A fifth pass from the same standing position will fail the same way. The cut
+exists so the survey is cheap enough to actually use; using it is the whole
+point.
