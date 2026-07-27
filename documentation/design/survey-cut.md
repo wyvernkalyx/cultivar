@@ -1,7 +1,8 @@
 # The Survey Cut -- design (D92-D96)
 
-Status: DRAFT -- authored 2026-07-26, NOT ratified. Nothing here is
-implemented. Lands as a `docs:` commit before any code moves; this status
+Status: RATIFIED and implemented 2026-07-27 across 9fb396b, b39d3a5,
+and e7d56fc. See the Amendment at the end for what the device gate
+found. Lands as a `docs:` commit before any code moves; this status
 line is amended by the commit that changes its truth.
 
 North stars: `documentation/design/scoring-lexicon.md` (the durable skeleton,
@@ -400,3 +401,88 @@ The one question this pass deliberately does **not** answer: whether the
 `session_current` recreate should also carry the banked grant tightening. It
 should not. That is its own decided slice, and a security change riding
 inside an unrelated migration is how it ships unreviewed.
+
+---
+
+## Amendment -- shipped, 2026-07-27
+
+Authored after the device gate. Everything in this section is observed, not
+predicted.
+
+### What landed
+
+- `9fb396b` -- schema. Dropped the six retired columns, added `notes`,
+  dropped and recreated both views. Applied by the operator via `db push`.
+  Observed after apply: `session_entries` carries 11 columns with `notes`
+  present and none of the six retired; both views `security_invoker=true`;
+  grants restored to the pre-migration set; 0 rows; 2 policies intact.
+- `b39d3a5` -- client. `LEXICON_VERSION = 4`, the six vocabularies removed
+  from `lexicon.ts`, `GLOSSARY` reduced to the ladder group, the survey cut
+  to two screens, the note field added. 217 insertions, 588 deletions.
+- `e7d56fc` -- keyboard handling on the closing screen.
+
+### Correction to the slice plan above
+
+The Slice plan section states that between slices 2 and 3 "the client writes
+columns the schema still has, so nothing breaks in the interim." **That
+sentence is false and was false when written.** It survived from the
+architect's original proposal to leave the six columns in place; D94 ratified
+dropping them, and the sentence was missed in the edit that reversed it.
+
+The real interim state was total breakage: the client sent all six dropped
+columns on every insert including the first score tap, so PostgREST rejected
+the whole row and no session could be logged at all between `9fb396b` and
+`b39d3a5`. That is exactly the D85 failure mode the sentence claimed to have
+avoided. Recorded rather than deleted, because the class of error -- a
+premise surviving the decision that reversed it -- is the one this project
+keeps hitting.
+
+### Device gate, 2026-07-27
+
+Run by the operator on the physical iPhone. Per-step verdicts:
+
+| step | verdict |
+|---|---|
+| Score tap advances to closing, two taps total | PASS |
+| Back, different pill, Close -- revision accepted | PASS |
+| Type a note, tap Close | **PARTIAL** -- see below |
+| Type then delete a note, Close -- normalization | PASS |
+| Info sheet shows five rung definitions, dismisses | PASS |
+| Seam criterion: feels like one application | PASS |
+
+Read back from the live database after the gate: 9 entries across 4 session
+chains, every row `lexicon_version = 4`. One note wrote as text; every other
+row wrote `notes` as **null, never `''`** -- the D95 normalization control,
+confirmed on the bytes rather than the UI.
+
+### The one defect, accepted rather than fixed
+
+Close stays under the keyboard while the note has focus.
+`keyboardShouldPersistTaps="handled"` works -- the first tap on Close
+registers rather than being swallowed as a dismissal, confirmed twice.
+`automaticallyAdjustKeyboardInsets` does not: `closingContent`'s `flexGrow: 1`
+makes the content exactly fill the frame, so there is no scroll slack for an
+inset to consume.
+
+**Those two are coupled.** `flexGrow: 1` is also what pins the bottom anchor
+the gate passed. Loosening it to make the inset work would cost the layout.
+The banked fix is an input accessory bar pinned above the keyboard, which the
+platform positions without measurement.
+
+Shipped as a named defect: two attempts have gone at it, the field is
+optional, and the cost is one extra tap. The operator found the workaround --
+tap the background to dismiss -- without being told.
+
+### D95's named cost did not materialize
+
+D95 warned that putting the note on the closing screen might fight the banked
+calyx-to-petal completion animation. Observed at the gate: **the bloom stayed
+visible throughout typing.** The stated fallback (the note gets its own
+screen) is not needed and stays unexercised.
+
+### Still true
+
+The app has now logged sessions end to end. **None of them is a real
+session.** The nine entries above are gate taps. The cut exists so the survey
+is cheap enough to actually use; using it is the whole point, and it has not
+happened yet.
