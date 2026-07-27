@@ -91,6 +91,15 @@ The repo does **not** hold: which hypotheses were refuted and why, which decisio
 ### Anatomy
 1. **Preamble — argue against yourself.** Date. "The repo is authoritative over this document." **At least one concrete example, from this session, of carried context being wrong.** A generic disclaimer gets skimmed; a specific, slightly embarrassing refutation gets read. If nothing was refuted, check harder — something usually was. Then instruct: begin with a read-only Phase A audit.
 2. **Start here (Phase A, read-only)** — falsifiable assertions with exact expected values, so the next session's first act is to try to break the handoff. Branch, HEAD sha, the literal sync command and the number it should print, `git status` expectations *including the noise you always ignore*, exact test counts, the warning baseline and the command that produces it. Close with: **"If any of these don't match, the repo wins — re-baseline before proceeding."** Every item is a prediction. A prediction can be wrong, and wrongness is informative.
+   - **The HEAD sha is the one line that cannot be right as written.** A
+     write-last handoff is committed after it is written, so any sha it names
+     is its own parent, not HEAD. Name it as such: give the observed sha as
+     the parent of the handoff commit, predict the handoff commit's subject
+     rather than its sha, and close the item with "if HEAD is neither, work
+     continued past this handoff -- reconcile before proceeding." Observed
+     2026-07-27: a handoff's opening Phase A assertion was false the moment
+     it landed, by construction, and stale again within the day for the
+     ordinary reason.
 3. **What shipped** — sha + one line, newest first. Short. This is the only changelog part.
 4. **The arcs** — one paragraph each: what problem was being solved, what shape the solution took, and *why that shape*. Facts no diff explains and that the next session needs in order not to undo them.
 5. **Refuted hypotheses / memory corrections** — calibrates the next session's trust and prevents a wrong belief from being re-derived. A belief that took an hour to kill should never be killed twice.
