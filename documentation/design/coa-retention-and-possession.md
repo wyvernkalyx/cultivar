@@ -1,7 +1,7 @@
 # COA Retention, Dedupe, and Possession -- design (D87-D91)
 
-Status: DRAFT -- authored 2026-07-26, NOT ratified. Nothing here is
-implemented. Lands as a `docs:` commit before any code moves; this status
+Status: RATIFIED 2026-07-27 (D87-D91, plus the nine sub-decisions in
+"Ratification and amendments"). Nothing here is implemented yet. This status
 line is amended by the commit that changes its truth.
 
 North stars: `documentation/design/product-metaphor.md` (the "in stock"
@@ -89,11 +89,11 @@ upload occurs in the same user action that commits the `coas` row.
 - Bucket: private (`public = false`), owner-scoped by Storage RLS. Never a
   public bucket -- a COA is user data, and a public bucket makes every
   object world-readable by URL regardless of the `coas` row's RLS.
-- **`pdf_url` stores the object path, not a URL.** Signed URLs expire; a
-  stored signed URL is a value that silently rots. The client mints a signed
-  URL at read time from the stored path. The column name is inherited and
-  now slightly wrong; renaming it is banked, not done here (a rename drags
-  the view-recreate hazard for no functional gain).
+- **`pdf_object_path` stores the object path, not a URL** (D87.3). Signed
+  URLs expire; a stored signed URL is a value that silently rots. The client
+  mints a signed URL at read time from the stored path. The inherited
+  `pdf_url` column is not reused and stays dormant; removing it is banked as
+  its own `chore:`.
 - **Delete must reach Storage.** D53's cascade is a foreign key; foreign
   keys do not reach Storage objects. A COA delete that removes the row and
   leaves the object is an orphan leak. The delete path removes the object
@@ -247,6 +247,85 @@ rename the flag, never the rung.
 
 ---
 
+## Ratification and amendments (2026-07-27)
+
+D87-D91 ratified by the operator, per-decision, 2026-07-27. The nine
+sub-decisions below were authored by the architect under a delegation of
+security, performance, and best-practice judgment, and are ratified with
+them. Each is numbered against its parent so the parent's grounds still
+govern.
+
+**D87.1 -- the Storage predicate and path shape are pinned, not described.**
+Object path is `{auth.uid()}/{coa_id}.pdf`. Policies on `storage.objects`
+are written per verb -- SELECT, INSERT, UPDATE, DELETE, four separate
+policies -- each with
+`bucket_id = '<bucket>' and (storage.foldername(name))[1] = auth.uid()::text`.
+Grounds: "owner-scoped by prefix" is a description, not a predicate, and a
+bucket whose policy set is described rather than written is how a private
+bucket turns out to be readable. Four verbs because a single ALL policy
+cannot be tightened later without dropping the one thing protecting reads.
+
+**D87.2 -- the bucket is constrained at creation.** `public = false`,
+`allowed_mime_types = ['application/pdf']`, and an explicit file size limit.
+Grounds: a private bucket with no type or size ceiling is still an upload
+surface. The limit is set at creation because raising one later is trivial
+and lowering one after objects exist is not.
+
+**D87.3 -- Q1 resolved: a new `pdf_object_path` column, and `pdf_url` is
+left in place.** Grounds: `pdf_url` is null on all five rows and neither
+view references it, so reuse is technically available -- but a column named
+`url` holding an object path is a name that lies for the life of the
+schema, and the rename is already banked behind the view-recreate hazard.
+Dropping `pdf_url` in the same migration was considered and rejected: no one
+has read the client code to confirm nothing selects it, and a schema slice is
+the wrong place to carry an unverified assumption. Its removal is banked as
+its own `chore:`, gated on a grep over `src/`.
+
+**D88.1 -- the dedupe lookup is scoped to the caller explicitly, never by
+RLS.** Parsing is server-side. If `ingest-coa` executes under the service
+role, RLS does not apply, and a hash lookup without an explicit
+`created_by` filter would match another user's COA and disclose that it
+exists. The query carries the caller's id as a predicate in its own right.
+Grounds: this is the one item in this pass that is a disclosure hole rather
+than a gap, and relying on RLS to bound a service-role query is relying on a
+protection that is switched off.
+
+**D88.2 -- two non-unique btree indexes, added with the columns.**
+`(created_by, pdf_sha256) where pdf_sha256 is not null` and
+`(created_by, lab, batch)`. Grounds: both dedupe signals are lookups on
+every ingest, and D88 correctly rules out *unique* constraints while saying
+nothing about indexes. Non-unique preserves D88's outcome 3, where a
+corrected report deliberately produces a second row on the same natural key.
+
+**D88.3 -- `pdf_sha256` carries a format check:** `~ '^[0-9a-f]{64}$'`.
+Grounds: the doc records the `brand = ''` landmine and then defends nothing
+against it. A hash column that accepts an empty string re-creates ND != 0
+at the string level, and a malformed hash silently disables the fast path.
+
+**D90.1 -- the retirement event and the decrement are one transaction.**
+Both run inside a single `security invoker` RPC, gated on `prosecdef = f`
+per `CLAUDE.md`. Grounds: as written they are two client operations against
+a table carrying an ALL policy, so a client can produce an event with no
+decrement, or a decrement with no event. Either outcome breaks D89's "the
+count is derived state; the events are the record," and neither is
+detectable after the fact. Lands with slice 6; ratified here so the slice
+is not designed twice.
+
+**D90.2 -- `reason` carries a non-empty check:** `length(trim(reason)) > 0`.
+Grounds: same as D88.3. `not null` does not exclude `''`, and an empty
+reason is an event that records that something happened and not what.
+
+**D90.3 -- the cascade hole is accepted and recorded, not closed.**
+`coa_retirements` cascades on COA delete and `coas` is client-deletable, so
+the append-only record survives exactly as long as its parent. Append-only
+holds against UPDATE and DELETE on the event table and does not hold against
+deleting the COA. Grounds: D53 already made this trade for `session_entries`,
+so parity is honest and closing it here would mean soft-delete on `coas`,
+which is a larger pass than this one. Recorded so that a reader does not
+mistake "append-only" for "durable."
+
+---
+
 ## Schema changes
 
 On `coas`:
@@ -258,10 +337,10 @@ On `coas`:
 | `on_shelf_count` | integer | not null, default 1, check `>= 0` | possession (D89) |
 | `favorite` | boolean | nullable | repurchase intent (D91); null = unasked |
 
-Open: whether to populate `pdf_object_path` or reuse the existing `pdf_url`
-column, which is null on all five rows and currently unused. Reuse avoids a
-column; a fresh column avoids a name that says "url" and holds a path. Named
-here for ratification rather than decided.
+Resolved by D87.3: `pdf_object_path` is a new column and `pdf_url` is left
+in place, dormant. Its removal is banked as its own `chore:`. Indexes and
+check constraints for these columns are specified in D88.2, D88.3 and
+D90.2, and land in the same migration.
 
 New table `coa_retirements`:
 
@@ -302,9 +381,11 @@ Each slice is its own build prompt and its own commit. Gates are typed per
 `CLAUDE.md`.
 
 1. **`docs:`** -- this document. No code.
-2. **Schema (`feat:`)** -- the four `coas` columns, `coa_retirements` and its
-   RLS. Migration authored by the implementer, applied by the operator
-   (`db push`, credentialed). Gate: observed SQL.
+2. **Schema (`feat:`)** -- the four `coas` columns, the D88.2 indexes, the
+   D88.3 and D90.2 check constraints, `coa_retirements` and its RLS.
+   Migration authored by the implementer, applied by the operator
+   (`db push`, credentialed). Gate: observed SQL with the paired control
+   below.
 3. **Storage bucket (infra)** -- bucket creation and Storage RLS. Operator-run;
    no repo change beyond policy SQL. Gate: observed state.
 4. **Retention (`feat:`)** -- upload at save time, populate the path, remove the
@@ -392,7 +473,8 @@ and the card off-shelf but the COA, its sessions, and its favorite intact.
 
 ## Open questions for ratification
 
-1. Reuse `pdf_url` or add `pdf_object_path`?
+1. ~~Reuse `pdf_url` or add `pdf_object_path`?~~ Resolved 2026-07-27 by
+   D87.3: new column, `pdf_url` left dormant.
 2. Do the three duplicate `Animal House / RAINBOW RUNTZ / S01-RARU` rows get
    deleted now, leaving three clean COAs, or does the dedupe slice absorb
    them later? (They currently split nothing, since sessions are at 0.)
