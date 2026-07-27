@@ -128,3 +128,142 @@ Rolling single file at `documentation/SESSION_HANDOFF.md`, **committed**, with a
 6. **Pinned environment.** Expo SDK 56, Node 24 LTS. Do not bump casually; the pin exists because App Store Expo Go predates SDK 56 and the device path is an EAS development build.
 
 7. **Warning baseline is a ceiling, not a target.** Current: `npx tsc --noEmit` -> 0 errors; `npx expo lint` -> 1 error (template `src/hooks/use-color-scheme.web.ts`, not our code). New work must not exceed it. Re-measure, don't recall.
+---
+
+## 4. Session rhythm (adopted 2026-07-27)
+
+**These take precedence over §1-§3 where they differ.** Adopted after two
+days in which seven commits landed, zero lines of product code changed, and
+the operator reported reading roughly 15% of the architect's output. The
+process was reliable and unusable. Both facts matter.
+
+### 4.1 Architect -> operator messages
+
+§1 and §2 specify the chat -> Claude Code and chat -> chat channels. They say
+nothing about chat -> operator, which is where the last two days actually
+failed.
+
+- **Every message opens with an action box**, and the box is one of:
+  - `DECIDE` — the operator must choose. Numbered options.
+  - `DO` — a command or step to run, verbatim.
+  - `NOTHING` — read if you want, act on nothing.
+- **Action items appear only in the box.** Never in prose, never in a
+  paragraph's final sentence, never after a table.
+- **Detail goes below a `— detail —` line** and is skippable by design.
+  Nothing below that line is ever actionable.
+- **Findings accumulate; they do not interrupt.** Defects, stale docs, and
+  observations are held in a running list and delivered once, at session end
+  or on request. A finding mid-flow is a wall of text between the operator and
+  the thing they were doing.
+
+Grounds: buried action items are missed action items. This is a mechanical
+fix, not a discipline the architect can be trusted to remember.
+
+### 4.2 Ceremony is tiered by blast radius
+
+§1's anatomy was applied uniformly, so a markdown file carried the same gate
+weight as a migration. That is backwards: a wrong docs commit is fixed by
+another commit; a migration that loses `security_invoker = true` exposes rows
+across users.
+
+**Tier 1 — docs only** (`.md`, no code, no schema)
+- **One combined prompt**: edit + verify + commit, stopping before push.
+- Operator does **not** run an independent `cat -A`. The architect verifies
+  the implementer's pasted output.
+- Explicitly overrides §1's "Commit is its own handoff" **for this tier
+  only.** Grounds: the human gate exists so the operator sees the change
+  before it becomes a commit. For architect-authored docs the operator has
+  already ratified the exact bytes in chat, so that review has happened —
+  just earlier. This does **not** extend to code, where the diff is not
+  knowable in advance.
+
+**Tier 2 — code** (`.ts`, `.tsx`, Edge Functions)
+- §1 in full. Two phases, separate commit prompt, operator's independent
+  `cat -A`.
+- Device gate if UI-visible, per §3.3.
+
+**Tier 3 — schema / infra** (migrations, RLS, Storage, views)
+- Tier 2, plus **operator-run SQL observation with a paired control.**
+- The migration is applied by the operator (§3.2, unchanged).
+
+### 4.3 Standing prompt preamble
+
+Every prompt to Claude Code opens with these, before any content
+precondition:
+
+```
+Working directory: d:/Projects/Cultivar/cultivar
+(prefix every command with cd /d/Projects/Cultivar/cultivar &&)
+
+PRECONDITION 1 — repo identity. Observe and report:
+  git rev-parse --show-toplevel
+  git log -1 --format=%H
+  git status --porcelain
+Expected: toplevel ends in /Cultivar/cultivar; HEAD is <sha>;
+status --porcelain silent. If any differ, STOP and report. Do not cd
+and retry on your own judgment.
+```
+
+Grounds, observed 2026-07-27: the implementer's shell resets its working
+directory to `d:\Projects\DeadEditor` between calls. A prompt that gates only
+on file content reports a wrong-directory run as "unexpected line 3" rather
+than "wrong repository." The correct stop happened by luck of the content
+differing, not by design.
+
+### 4.4 Criteria are authored to fail
+
+Extends §1's "a criterion must be correlated with the property it gates."
+
+**Before shipping a criterion, state what would make it fire spuriously. If
+no false-positive mode can be named, the criterion is not ready.**
+
+Recorded instance, 2026-07-27: a gate counting non-ASCII bytes on added diff
+lines was written to prove no non-ASCII text had been introduced. It fired.
+The matching line was a substring replacement inside a line that already
+carried an en dash — in a file the prompt itself had flagged as containing
+one. The criterion assumed *added lines ≈ introduced text*, which holds only
+for whole-line insertions.
+
+Correct form: gate the **inserted line range**, never the diff.
+
+```
+sed -n '<first>,<last>p' <file> | grep -c $'[\xc2-\xf4]'   # expect 0, exit 1
+printf 'x\xe2\x80\x94x\n' | grep -c $'[\xc2-\xf4]'          # control, expect 1
+```
+
+### 4.5 The session handoff may be amended
+
+§2 requires the handoff be written against a confirmed end state, which
+assumes sessions end. They do not. The handoff went stale three times in two
+days because work continued past it.
+
+**When work continues past a written handoff, amend it.** An amending commit
+is not a failure of the write-last rule; a handoff that says "not drafted"
+about a document that shipped an hour later is.
+
+### 4.6 Not negotiable, and not affected by any of the above
+
+These earned their place by catching real failures and are exempt from
+ceremony reduction at every tier:
+
+- **Read documents end to end.** In two days this caught D80 (a ratified
+  decision the architect described as still banked), D85.3 (a rule the
+  architect argued against three times without knowing it existed), a false
+  status line that predated the session, and a stale premise in D86.1 that
+  the D86.6 erratum missed.
+- **State predictions before observation.** Caught two truncated pastes.
+- **STOP on a failed precondition.** Caught a run against the wrong
+  repository.
+- **The ASCII gate stays control-paired.** It has a plausible failure mode;
+  a gate that cannot fail is not evidence.
+- **The operator runs `git push`.** Unchanged from §3.1.
+
+### 4.7 The ratio to watch
+
+Every gate in §1-§4 measures artifact correctness. None measures whether the
+product moved. As of 2026-07-27 the verification apparatus is in good order
+and has been applied almost entirely to documents describing a survey that
+has never been used.
+
+If a session ends with more design commits than product commits, that is the
+finding, and it belongs in the handoff's entry point.
