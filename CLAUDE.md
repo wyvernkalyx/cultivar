@@ -1,7 +1,8 @@
 # Cultivar — Project Handbook
 
-Cultivar is a consumer app that learns a person's terpene preferences from lab-tested
-COAs (Certificates of Analysis) and predicts how they'll experience a given product.
+Cultivar is a consumer app that learns which chemistry a person prefers —
+cannabinoids and terpenes, not strain names — from lab-tested COAs (Certificates
+of Analysis), and predicts how a new product will land for them.
 
 This file is the authoritative handbook. **Every prompt begins by reading `CLAUDE.md`
 and the relevant `documentation/` files before doing anything else.**
