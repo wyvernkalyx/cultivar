@@ -1,10 +1,18 @@
 # Session Entries — Schema
 
-Status: design ratified (D52–D53); schema revised for the D70-D76 survey (D77, 2026-07-18; see Amendment at end); no migration applied yet. This is
+Status: design ratified (D52–D53); schema revised for the D70-D76 survey (D77, 2026-07-18; see Amendment at end); migration applied -- column set and the D85 main_goal rename both observed live 2026-07-26. This is
 slice 2 of the plan in `documentation/design/session-logging.md`, which
 deliberately excluded schema. North stars: that doc (the mechanic this
 table records) and `documentation/design/scoring-lexicon.md` (the durable
 skeleton, especially items 2–4 and the D47 amendment).
+
+**Superseded in part by D92-D96** (`documentation/design/survey-cut.md`,
+2026-07-26). That pass retires the three intent axes, `fit`, and both
+multi-select panels as survey surfaces, drops their six columns, adds
+`notes`, and moves `LEXICON_VERSION` to 4. **The table below still
+describes the live schema** and remains correct until that migration
+runs. It is rewritten by the commit that applies the migration, not
+before -- the status-line rule applied to a table.
 
 ## D52 — One table, append-only chain
 
