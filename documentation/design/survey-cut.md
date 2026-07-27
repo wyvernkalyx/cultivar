@@ -2,8 +2,8 @@
 
 Status: RATIFIED and implemented 2026-07-27 across 9fb396b, b39d3a5,
 and e7d56fc. See the Amendment at the end for what the device gate
-found. Lands as a `docs:` commit before any code moves; this status
-line is amended by the commit that changes its truth.
+found. This status line is amended by the commit that changes its
+truth.
 
 North stars: `documentation/design/scoring-lexicon.md` (the durable skeleton,
 especially items 1-4), `documentation/design/session-logging.md` (the
