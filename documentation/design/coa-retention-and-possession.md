@@ -358,10 +358,13 @@ with it, same as its sessions.
 ### RLS
 
 - `alter table coa_retirements enable row level security;`
-- **INSERT**: `created_by = auth.uid()` AND parent-COA ownership, the same
-  predicate `session_entries` uses:
-  `exists (select 1 from public.coas c where c.id = coa_id and c.created_by = auth.uid())`
-  in both `using` and `with check`.
+- **INSERT**: `with check` only -- PostgreSQL rejects `using` on a
+  `for insert` policy, and `session_entries_insert_own`, the live policy this
+  copies, carries `with check` alone. The predicate is
+  `created_by = auth.uid()` AND parent-COA ownership:
+  `exists (select 1 from public.coas c where c.id = coa_id and c.created_by = auth.uid())`.
+  This applies to every policy in this document, including D87.1's four
+  Storage policies.
 - **SELECT**: `created_by = auth.uid()`.
 - **Nothing else.** No UPDATE, no DELETE, by design.
 
@@ -426,9 +429,14 @@ product-photo idea, which would trigger it.
 - `pg_policies` on `coa_retirements` shows exactly two policies, INSERT and
   SELECT, and no others.
 - `pg_tables` shows `rowsecurity = true` on `coa_retirements`.
-- Control case, paired: an attempted UPDATE on `coa_retirements` as the
-  authenticated user fails. Observing only that INSERT works cannot
-  distinguish "no UPDATE policy" from "never tried."
+- Control case, paired, and it is the INSERT that is the control. Acting as
+  the authenticated owner: insert one row, confirm it is visible, then
+  attempt an UPDATE and a DELETE on it. Expect `inserted=1, visible=1,
+  updated=0, deleted=0`, then roll back. **The UPDATE does not raise** --
+  RLS with no UPDATE policy filters the row out and reports zero rows
+  affected. Against an empty table zero is also what a working policy
+  returns, so without the insert the observation cannot distinguish "no
+  UPDATE policy" from "never tried."
 - `session_entries` row count unchanged at 0; no view is dropped or
   recreated by this migration, so `security_invoker` is not at risk here --
   stated so the absence of that check is deliberate rather than forgotten.
