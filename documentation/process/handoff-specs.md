@@ -224,12 +224,35 @@ carried an en dash — in a file the prompt itself had flagged as containing
 one. The criterion assumed *added lines ≈ introduced text*, which holds only
 for whole-line insertions.
 
-Correct form: gate the **inserted line range**, never the diff.
+Correct form: gate the **inserted line range**, never the diff, and pin the
+locale.
 
 ```
-sed -n '<first>,<last>p' <file> | grep -c $'[\xc2-\xf4]'   # expect 0, exit 1
-printf 'x\xe2\x80\x94x\n' | grep -c $'[\xc2-\xf4]'          # control, expect 1
+sed -n '<first>,<last>p' <file> | LC_ALL=C grep -c $'[\xc2-\xf4]'   # gate, expect 0, exit 1
+printf 'x\xe2\x80\x94x\n' | LC_ALL=C grep -c $'[\xc2-\xf4]'          # control, expect 1, exit 0
 ```
+
+`LC_ALL=C` is not decoration. Without it the bracket byte-range is read as
+characters under any UTF-8 ctype, and grep rejects the pattern before reading
+input: `grep: Invalid collation character` on stderr, no stdout at all, exit
+2. A `grep -c` gate that aborts prints nothing, which is indistinguishable
+from a clean pass unless the exit code is stated. Observed 2026-07-27, GNU
+grep 3.0, MINGW64, one machine, two shells:
+
+| shell | ambient `LC_CTYPE` | bare form | `LC_ALL=C` | `LC_ALL=C.UTF-8` |
+|---|---|---|---|---|
+| operator | `en_US.UTF-8` | abort, exit 2 | 1, exit 0 | abort, exit 2 |
+| implementer | unset | 1, exit 0 | 1, exit 0 | abort, exit 2 |
+
+Two consequences. A gate's correctness can depend on an environment variable
+no prompt states, so a byte-level gate pins the locale rather than inheriting
+one. And `locale` output is not evidence for what a tool does: in the
+implementer's shell `locale` reports `LC_CTYPE="C.UTF-8"` while grep behaves
+as plain C, which is why that same shell aborts when `C.UTF-8` is set
+explicitly.
+
+`CLAUDE.md`, "The ASCII gate is control-paired", carries the equivalent
+`LC_ALL=C tr` form for commit messages. Both work; both pin the locale.
 
 ### 4.5 The session handoff may be amended
 
