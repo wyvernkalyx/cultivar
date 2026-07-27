@@ -1,340 +1,246 @@
 # Session Handoff
 
-Written 2026-07-26, after `111a39e` landed and pushed. Supersedes the version
-committed at `210b516` earlier the same day, which said the survey-cut doc
-was "not drafted" -- true when written, false within the hour.
+Written 2026-07-27, after `31089d2` landed and pushed. Supersedes the version
+at `92d1ddb`.
 
 **The repo is authoritative over this document.** Everything below can be
-wrong. Begin with the read-only Phase A audit in the next section and try to
-break it before doing any work.
+wrong. Begin with the read-only Phase A audit and try to break it.
 
-## Preamble -- carried context was wrong, repeatedly, this session
+## Preamble -- argue against yourself
 
-This session was mostly a demolition of the previous session's carried
-context. Concretely, and worth the embarrassment because the pattern will
-recur:
+The architect wrote five broken gate criteria in one day. Every one the same
+defect: predicting what a `grep` would return without checking the shape of
+the text being counted.
 
-The architect opened by offering "unifying the ladder drop gesture with the
-pill-tap pattern" as the top banked design item. **D80 shipped that
-unification on 2026-07-20, six days earlier.** The ladder was already dead;
-the score screen was already pills. The architect was a full ratified
-decision stale and did not discover it until reading `session-logging.md`
-end to end -- not from a search, which would have missed it.
+1. `grep -c 'security_invoker = true'` expected 2, returned 3 -- the file's
+   own comment carries the token.
+2. `grep -c 'KeyboardAvoidingView'` expected 3, returned 4 -- same cause.
+3. A diff-based non-ASCII gate fired on a substring edit to a line that
+   already held an en dash: *added lines* are not *introduced text*.
+4. `git diff | grep -c '^-'` expected 2, returned 3 -- the replaced text
+   spanned two physical lines.
+5. A six-word phrase criterion returned 0 -- written against text the same
+   prompt had just re-wrapped, and `grep` is line-oriented.
 
-Worse, and the reason this preamble exists: the architect recommended
-truncating the test-phase session rows **three separate times**, each time
-citing "test data is disposable, vocabularies revise freely" as doctrinal
-cover. **D85.3 retired that ground on 2026-07-23.** The recommendation was
-right on the merits and wrong on its authority, and the error survived three
-repetitions because nobody had read `glossary.md`.
+`handoff-specs.md` §4.4, which says to name a criterion's false-positive mode
+before shipping it, was authored **the same morning** as items 2 through 5.
+The rule is not the problem. The next session should assume the architect's
+criteria are the weakest link in any prompt it writes, and should write the
+falsification case first, in the prompt, before the expected value.
 
-The lesson is not "read more docs." It is that the D-registry now spans six
-documents and the architect's summary of it is unreliable by default. Read
-the amendment blocks at the end of every doc before reasoning about survey
-or lexicon state. They supersede the prose above them and the prose is not
-always marked.
+The implementer stopped or reported on all five. No artifact was ever bent to
+satisfy a bad gate.
 
 ## Start here (Phase A, read-only)
 
-Every line is a falsifiable prediction. If any does not match, the repo wins
--- re-baseline before proceeding.
+Every line is a falsifiable prediction. If any does not match, the repo wins.
 
-Observed and verified 2026-07-26:
+Observed 2026-07-27:
 
-- Branch `main`. `git rev-parse HEAD` -> `111a39e`
-- `git log -1 --oneline` -> `docs: the survey cut (D92-D96)`
-- `git log -1 --stat` -> `documentation/design/survey-cut.md`, 1 file changed,
-  402 insertions
-- Push output observed: `210b516..111a39e  main -> main`
-- `git rev-list --count origin/main..main` -> `0`
-- `select count(*) from session_entries;` -> **0**
-- `select count(*) from coas;` -> **5**
-- `select count(*) from storage.buckets;` -> **0**
-- `src/lib/lexicon.ts`: `LEXICON_VERSION = 3`; six vocabulary arrays plus
-  `GLOSSARY` with 27 entries. **Unchanged this session** -- no code moved,
-  no migration applied. The app on the device still walks all eight survey
-  phases and writes the D77 column set. The design is three commits ahead of
-  the product.
+- Branch `main`. `git rev-parse HEAD` -> `31089d2`
+- `git log -1 --oneline` -> `docs: drop a false clause from the survey-cut status line`
+- Push output observed: `e7d56fc..31089d2  main -> main`
+- `echo "ahead: $(git rev-list --count origin/main..main)"` -> `ahead: 0`
+- `src/lib/lexicon.ts`: `LEXICON_VERSION = 4`; `RUNGS` plus `GLOSSARY` with
+  the ladder group only. The six vocabulary arrays are gone.
+- `src/components/session-ladder.tsx`: `Phase = 'ladder' | 'closing'`.
+- Database, project `zmmlgatxckplfzqyexjb`:
+  - `session_entries` -> **11 columns**: `id`, `entry_no`, `session_id`,
+    `created_by`, `coa_id`, `lexicon_version`, `overall_word`,
+    `overall_score`, `deleted`, `created_at`, `notes`. None of the six
+    retired columns.
+  - `session_entries` -> **9 rows across 4 chains**, all `lexicon_version 4`.
+    All are device-gate taps. **Zero real sessions.**
+  - `coas` -> **5 rows**, three of which are one Rainbow Runtz COA ingested
+    three times.
+  - `storage.buckets` -> **0**
+  - Both views `security_invoker = true`; `session_entries` has 2 policies.
 
-NOT observed this session, and therefore NOT to be trusted as stated:
+NOT observed this session, so not to be trusted as stated:
 
-- `git status` cleanliness. The commit was surgical (1 file, 403
-  insertions), but the working tree was never inspected.
-- Test counts. `npm test` was never run. `CLAUDE.md` ADAPT 1 no longer
-  quotes a number. The D85 doc's parenthetical implies a 52-test suite;
-  treat that as a guess. **Measure, do not recall.** Use `npm test`, never
-  `npx jest` (drops `--experimental-vm-modules`).
-- Warning baseline. `CLAUDE.md` ADAPT 6 states `tsc --noEmit` -> 0 errors and
-  `expo lint` -> 1 error (template file, not our code). Re-measure per delta 7.
+- `npm test`. Never run. `CLAUDE.md` ADAPT 1 no longer quotes a number.
+  **Measure, do not recall.** Use `npm test`, never `npx jest`.
+- Warning baseline WAS observed repeatedly: `npx tsc --noEmit` -> 0 errors,
+  exit 0; `npx expo lint` -> 1 error, 0 warnings, exit 1, the template file
+  `src/hooks/use-color-scheme.web.ts`. That IS the baseline, exit code
+  included.
+
+`entry_no` starts at 267, not 1. Postgres identity sequences do not reset on
+DELETE, and 195 test rows consumed those numbers permanently. This is why row
+predictions are relative only.
 
 ## What shipped
 
-- `111a39e` -- `docs:` the survey cut (D92-D96). Eight screens to two.
-- `210b516` -- `docs:` session handoff (superseded by this file).
-- `40df989` -- `docs:` COA retention, dedupe, and possession design (D87-D91).
+Newest first. Eight commits, `92d1ddb..31089d2`.
 
-All three are design only. **No schema was migrated and no code was
-changed.** Whatever the docs now say, the running product is unchanged from
-where it stood at `ce74453`.
+- `31089d2` -- `docs:` drop a false clause from the survey-cut status line
+- `da61fa5` -- `docs:` survey cut shipped, with the gate result (D92-D96)
+- `e7d56fc` -- `feat:` keyboard handling on the survey closing screen
+- `b39d3a5` -- `feat:` cut the client survey to two screens (D92-D96)
+- `9fb396b` -- `feat:` apply the survey cut to the schema (D92-D96)
+- `aa2e64a` -- `docs:` session rhythm, section 4 of handoff-specs
+- `2dc281f` -- `docs:` correct false status line in session-entries-schema
+- `d4e7f7f` -- `docs:` goal sentence names chemistry, not terpenes
+
+**The survey works end to end.** That is new as of today and was not true
+this morning.
 
 ## The arcs
 
-**The survey shrank, and the argument that shrank it was the operator's
-own.** `scoring-lexicon.md` already contained the rule: "This is the v1
-ceiling. Completion falls with every added item; each future question must
-argue its way in against the append-only pull, not ride in on it." D71
-through D86.7 -- roughly fifteen ratified decisions across eight days -- added
-three intent axes, a five-value confound panel, a fifth fact class, moved
-both panels onto the required path, and authored 27 glossary definitions.
-None of that chain argued against completion cost. D71 argued the reverse:
-capture three dimensions while capture is free. **Capture was never free.**
-D80 was spent on "it felt like I was using multiple applications," D82 on the
-last seam, and D82.1 failed its gate outright. Three device gates burned on
-the consequences of survey length.
+**The survey cut landed, and the interim was worse than the doc predicted.**
+`survey-cut.md`'s slice plan claimed nothing would break between the schema
+slice and the client slice. That sentence survived from the architect's
+withdrawn proposal to keep the six columns; D94 dropped them, and the
+sentence was missed in the edit that reversed it. The real interim was total:
+the client sent all six dropped columns on every insert including the first
+score tap, so PostgREST rejected the whole row and no session could be logged
+at all between `9fb396b` and `b39d3a5`. Corrected in `da61fa5`, recorded
+rather than deleted, because the error class -- a premise surviving the
+decision that reversed it -- is one this project keeps hitting.
 
-**The decisive fact was that no real session had ever been logged.** 195
-entries across 29 chains existed, all device-gate artifacts, 6.7 revisions
-per chain. The operator confirmed: zero real sessions. That makes every
-survey revision to date a design argument settled by other design arguments,
-which `scoring-lexicon.md`'s own refinement doctrine says cannot work -- "the
-operator cannot know how to improve the survey until real sessions are logged
-against it." The redesign's justification is therefore NOT "the data says
-cut." There is no data. It is: cut to what will actually get used, use it,
-then let real sessions adjudicate.
+**The keyboard defect is shipped, named, and coupled.** On the closing screen
+Close stays under the keyboard while the note has focus.
+`keyboardShouldPersistTaps="handled"` works -- the first tap on Close
+registers rather than being swallowed, confirmed twice at the gate.
+`automaticallyAdjustKeyboardInsets` does not: `closingContent`'s `flexGrow: 1`
+makes content exactly fill the frame, leaving no scroll slack for an inset to
+consume. **Those two are coupled.** `flexGrow: 1` is also what pins the
+bottom anchor the gate passed, so loosening it to rescue the inset would
+break the layout that works. The banked fix is an input accessory bar, which
+the platform positions without measurement. Two attempts have already gone at
+this; the operator found the workaround (tap the background) unprompted.
 
-**COA integrity turned out to be the more urgent problem.** The source PDF
-is discarded after parsing, so every analyte row in the database is derived
-from a document that no longer exists. No re-parse path when a parser is
-fixed; no audit path for the no-fabrication invariant. Meanwhile ingest has
-no duplicate detection (three of five `coas` rows are one document uploaded
-three times) and there is no possession state, so the only way to clear a
-finished product off the shelf is to delete the COA -- which cascades under
-D53 and destroys its sessions. `40df989` designs all three as one pass.
+**Process was rewritten mid-session because it had become unusable.** The
+operator reported reading roughly 15% of the architect's output and missing
+action items buried in prose. `handoff-specs.md` §4 (`aa2e64a`) adds the
+chat -> operator channel: every message opens with a `DECIDE` / `DO` /
+`NOTHING` box, action items appear only in the box, detail sits below a
+skippable line, and findings accumulate rather than interrupting. It also
+tiers ceremony by blast radius -- docs commits combine build with commit and
+drop the operator's independent body check; code and schema keep the full
+two-phase gate.
 
-## Refuted hypotheses and memory corrections
+## Refuted this session
 
-Architect claims made and then refuted in the same session. None should be
-re-derived.
+1. **`KeyboardAvoidingView` with `behavior="padding"`** does not work on this
+   surface. It is not the outermost container; it sits inside a padded parent
+   and an `Animated.View` carrying a transform. Do not retry it, and do not
+   reach for `keyboardVerticalOffset` -- that trades the problem for a
+   per-device constant.
+2. **`automaticallyAdjustKeyboardInsets` alone** does not fix it either, for
+   the `flexGrow` reason above. The architect proposed it confidently and was
+   wrong.
+3. **The architect's `--stat` predictions beat its `grep` criteria** every
+   time both were present. `--stat` states file counts and line deltas
+   directly; a `grep -c` states a number whose meaning depends on text shape.
 
-1. **"Ladder/pill unification is the top banked item."** Refuted by D80,
-   shipped 2026-07-20. The drag is gone; score is a pill screen.
-2. **"The two panels are optional / off the required path."** That was D79.
-   D82 moved both onto the required path as separate screens. Eight phases,
-   not seven: score, energy, environment, main_goal, fit (conditional),
-   physical_state, co_consumption, closing.
-3. **"Spark."** Renamed Main Goal everywhere by D85.2 -- UI, code, column.
-4. **`LEXICON_VERSION`.** Architect said 2. `session-logging.md` says "1
-   today." Live client is **3**. Both were wrong; the doc is two versions
-   stale on its own constant.
-5. **"Vocabularies revise freely, so truncating is free."** Retired by D85.3
-   on 2026-07-23. See the reversal under Ratified decisions.
-6. **"The outcome variable is nearly constant -- 25 of 29 sessions positive
-   -- and that is fatal."** Artifact. Those were gate taps, not ratings. The
-   finding says nothing about the operator's preferences or the scale.
-7. **"The lexicon version -> word-set mapping exists nowhere in the
-   database, so skeleton item 3's recompute promise rests on remembering a
-   commit."** Wrong. The hidden 5/4/3/2/1 mapping is unchanged across
-   v1->v2->v3, which is exactly what makes cross-version averaging in
-   `coa_session_stats` valid with no version branch (D77, D85.1, D85.3).
-   What survives: the *axis strings* changed with no numeric invariant, so
-   `group by main_goal` across versions silently splits one concept in two.
-8. **A `jars` table** (one row per physical package, sessions re-pointed at
-   the jar). Proposed by the architect and withdrawn: the argument used was
-   D71's recover-later asymmetry, which the architect had criticized twice
-   in the same session. It holds only when capture is genuinely free, and a
-   new table plus RLS plus an FK migration is not free. Rejected with
-   grounds in `coa-retention-and-possession.md` D89.
-9. **An "intake" question and a binary "anything else in the mix?" flag.**
-   Both proposed before reading the lexicon. `CO_CONSUMPTION` already does
-   the second one better. Withdrawn.
-10. **"Upload the PDF from the Edge Function at parse time."** `follow-ups.md`
-    already banked the correct design: **save time, not parse time** -- a
-    rejected or abandoned parse must not leave orphan files.
+## Ratified this session
 
-## Document defects found by reading (not by grep)
-
-- **`session-entries-schema.md` status line is false.** It reads "no
-  migration applied yet." The live database has every D77 column plus the
-  D85 `main_goal` rename. This is exactly the failure `CLAUDE.md`'s
-  status-line rule was added for after `44872df`.
-- **D86.6 corrected one false premise in D86 and missed a second.** D86.1's
-  grounds cite "the banked ladder-drop / pill-tap unification pass" and
-  "collides with drag initiation on the ladder." D80 removed the drag four
-  days before D86 was written. The erratum caught the panels-layout premise
-  and left this one. It does not change D86's outcome; it is a live false
-  sentence in a ratified doc.
-
-## Data defects found (live, unfixed)
-
-- Three `coas` rows are one document: `Animal House / RAINBOW RUNTZ /
-  S01-RARU`, `total_thc` 22.7326 and `total_terpenes` 1.53 identical to four
-  decimals, created 07-17, 07-22, 07-25.
-- `brand = ''` (empty string, not null) on the Kaycha Cosmic Cereal row.
-  ND != 0 violated at the string level. It will render as " - Cosmic Cereal"
-  under D81, and D88's natural key depends on how absence is represented.
-- `tested_on` null on all five rows, though both labs print a test date.
-  Parser gap or extract-then-drop -- unresolvable without the PDFs, which is
-  itself an argument for D87.
-- `pdf_url` null on all five.
-- `coas` has **no unique constraint beyond the primary key** -- nothing at
-  the database level prevents duplicate ingest.
-- `coas` carries a single `ALL` policy (`coas_all_own`), so it is
-  client-updatable and client-deletable, unlike `session_entries`. Intended,
-  but note the asymmetry before assuming append-only semantics anywhere.
-
-## Ratified decisions (operator, in chat, 2026-07-26)
-
-Only the first has landed in a document. **The rest exist nowhere but this
-handoff.**
-
-**Landed in `40df989`:** D87 retention, D88 dedupe, D89 possession count,
-D90 retirement events, D91 favorite. Grounds are in the doc.
-
-**Landed in `111a39e`:** D92 two screens, D93 fact classes retire (amending
-skeleton item 4 to empty), D94 columns dropped and `LEXICON_VERSION` -> 4,
-D95 free-text notes, D96 glossary reduced to the ladder group. Grounds are in
-the doc.
-
-**Operator overrides recorded at authoring**, so they are not relitigated:
-
-- **D94 reverses the architect's proposal.** The architect proposed leaving
-  the six retired columns in place, on the grounds that dropping them forces
-  a view drop-and-recreate -- D77's named live risk, where
-  `security_invoker = true` gets silently forgotten. The operator ruled to
-  drop: a column the schema carries but nothing writes misdescribes the
-  product. The architect's reasoning is preserved in the doc as the ruled-over
-  alternative; the risk is answered by a mandatory `reloptions`
-  re-observation in the gate rather than by avoiding the migration.
-- **Notes live on the closing screen**, not their own. Named cost: a keyboard
-  on the terminal screen may fight the banked completion animation.
-- **Notes write on Close**, not on blur. Named cost: a force-quit between
-  typing and Close loses the note -- consistent with what D54 already accepts.
-
-**Still not documented anywhere:**
-
-- **D85.3 reversed, scoped.** The 195 test-phase `session_entries` rows were
-  deleted. Grounds: D85.3 retired "vocabularies revise freely" because 135+
-  recorded rows made revision consequential; those rows were device-gate
-  artifacts representing zero real sessions, so the rule was protecting
-  nothing while imposing a permanent version-branched read layer on every
-  future analysis. **D85.3 stands for every row recorded from here forward.**
-  Executed via MCP with explicit operator authorization; verified 0. It is
-  recorded in `40df989`'s commit body and in
-  `coa-retention-and-possession.md`'s baseline, but no D-number carries it.
-- **The handbook's goal sentence is wrong and the fix is not applied.**
-  `CLAUDE.md` line 3 still says "learns a person's terpene preferences."
-  Ratified replacement: chemistry, cannabinoids *and* terpenes. Rejected in
-  the same pass: "strain preferences" -- strain names are chemically
-  incoherent across growers, the ingestion unit is a per-lot COA, and
-  learning at strain level discards the resolution the data has. Strain is
-  the user's handle for shopping; chemistry is the model. Different layers.
+- **D92-D96 shipped.** Grounds in `documentation/design/survey-cut.md`,
+  including the post-gate Amendment.
+- **The keyboard defect is accepted, not deferred.** The field is optional
+  and the cost is one extra tap. The input accessory bar is banked with a
+  named trigger: daily use making it worth another pass.
+- **Goal sentence** (`d4e7f7f`): the app learns which chemistry a person
+  prefers -- cannabinoids and terpenes, not strain names. "Strain
+  preferences" was considered and rejected: strain names are chemically
+  incoherent across growers, the ingestion unit is a per-lot COA.
+- **Failed criteria stop before commit.** Ruled 2026-07-27 after the
+  implementer proceeded past a failed criterion whose failure it had
+  correctly diagnosed and whose property it had proven by other means. The
+  analysis was right; the precedent is wrong. A rule that bends when the
+  implementer is confident is advisory. Cost of stopping is one round trip.
 
 ## Open items
 
 **Runnable now**
 
-- **Survey-cut slice 2 (schema).** The migration in `survey-cut.md`: drop
-  `coa_session_stats`, drop `session_current`, add `notes`, drop the six
-  retired columns, recreate both views, set `security_invoker = true` on
-  both, restore grants to the pre-migration observed set. **Capture the
-  grants before running it** -- there is otherwise nothing to match against.
-  Implementer authors, operator applies. Gate: observed SQL, including the
-  paired control that the nine surviving columns are still present.
-- **Survey-cut slice 3 (client).** `lexicon.ts` to `LEXICON_VERSION = 4`,
-  six arrays removed, `GLOSSARY` reduced to the ladder group;
-  `session-ladder.tsx` down to two phases plus the note field. Lands in the
-  same session as slice 2, device gate after both. No native module, so no
-  new EAS build.
-- **The `CLAUDE.md` goal-sentence amendment.** One-line `docs:` commit.
-- **Slices 2-6 of `coa-retention-and-possession.md`**, in the order given
-  there. Independent of the survey cut -- different tables, no ordering
-  dependency between the two arcs.
+- **LOG A REAL SESSION.** See Entry point. This is not a task in the same
+  sense as the others and it outranks all of them.
+- **`coa-retention-and-possession.md` slices 2-6** (D87-D91), in the order
+  given there. Slice 2 is schema and gates everything after. Independent of
+  the survey -- different tables, no ordering dependency.
+- **Doc drift, low priority:** `session-logging.md` and
+  `scoring-lexicon.md` still describe the eight-phase survey.
+  `scoring-lexicon.md` holds skeleton item 4, which D93 amended to empty --
+  that one matters most, since a reader hitting the skeleton would build the
+  wrong thing. `product-metaphor.md`'s "Relationship to current work" is
+  stale on two counts.
 
 **Blocked**
 
-- **The user dashboard / preference summary.** Not blocked on engineering --
-  blocked on the operator being a user. Four COAs and zero sessions means
+- **The dashboard / preference summary.** Not blocked on engineering --
+  blocked on real sessions existing. Five COAs and zero real logs means
   nothing to summarize, and a summary at low n either says nothing or
   violates personal-empirical.
 - **Store-inventory matching against favorites.** Structurally blocked:
-  favorites are keyed on chemistry, store menus publish brand and strain
-  name and THC%. No consumer channel publishes per-lot terpene data. Dutchie+
-  and Jane Roots are B2B; Confident LIMS is quote-priced and account-scoped.
-  The honest version is names as a coarse prefilter, chemistry as the
-  adjudicator, never "you'll like this."
+  favorites key on chemistry, store menus publish brand, strain name, and
+  THC%. No consumer channel publishes per-lot terpene data.
 
 **Banked**
 
-- A third retirement reason separating "chose to stop" from "no longer had
-  it." Currently a spilled or spoiled package records as `Gave up on it` and
-  reads as a preference verdict. Operator-accepted at n=1.
-- Pairwise comparison at depletion ("better than the last jar you finished")
-  as a tie-breaker for a top-heavy absolute scale. The reasoning stands on
-  its own; **it has zero empirical support** -- the apparent supporting data
-  was gate artifacts.
-- Product photos / brand logos / user tags. Native-module scope: camera or
-  picker triggers the EAS-rebuild split rule. The COA retention slices do
-  NOT trigger it, which is why they are cheaper than they look.
-- `never_again` -- still unimplemented. `product-metaphor.md` discipline 3
-  defines it as a display override to the darkest band with the honest
-  average intact underneath. **Distinct from `favorite = false`**; do not
-  collapse them.
-- The three duplicate `RAINBOW RUNTZ` rows: delete now, or let the dedupe
-  slice absorb them.
-- `ingest-coa` returns HTTP 200 with an empty shell on an unknown lab
-  (`follow-ups.md`). Still unanswered, still gating the confirm/edit slice.
-- Terpene whitelist silently drops unrecognized analytes (`follow-ups.md`).
-  Direct no-fabrication concern.
-- Grant tightening: `anon` holds ALL privileges on both views. Latent, not
-  live. Already banked by the D85 plan.
+- Input accessory bar for the keyboard. Trigger: daily use.
+- A spinner on Close while a note write is in flight. Today it goes
+  unresponsive for up to 10s on a slow write. D54 is technically satisfied.
+- Tap-outside-to-dismiss as an explicit affordance (`keyboardDismissMode`
+  or a wrapping `Pressable`). The operator found the implicit version
+  himself.
+- `CO_CONSUMPTION` returns as one screen if free-text notes start showing
+  confounds worth filtering on (D93's tripwire). Its column is dropped, so
+  the return costs a migration -- deliberately.
+- Pairwise comparison at jar depletion. Reasoning only, **no empirical
+  support**.
+- The three duplicate `RAINBOW RUNTZ` rows.
+- `tested_on` null on all five COAs; `brand = ''` on one. Parser defects,
+  found by reading the data. D88's natural key depends on how absence is
+  represented.
+- `ingest-coa` returns HTTP 200 with an empty shell on an unknown lab.
+- Terpene whitelist silently drops unrecognized analytes.
+- `anon` holds ALL privileges on both views. Latent, not live. Must not be
+  fixed inside an unrelated migration.
 
-## Working rhythm -- what changed this session
+## Working rhythm
 
-**The architect now has read-only Supabase MCP access and used it.** Roughly
-a dozen read-only SELECTs replaced pasted output. One destructive statement
-was run (the `session_entries` delete) with explicit operator authorization
-requested and given first. Standing posture: **reads freely, writes never
-without explicit per-statement authorization, and `apply_migration` stays
-operator-territory** -- `CLAUDE.md`'s credentialed-command rule is about who
-applies migrations, and MCP does not change that.
+Read `handoff-specs.md` §4 before writing any prompt. It was adopted today
+and supersedes §1-§3 where they differ.
 
-This does not extend to the repo. HEAD, worktree state, test counts, and
-warning counts still arrive only through the operator.
+Two environment facts that cost real time before being written down:
 
-Also: the operator did not read either design doc before committing it.
-Design docs carry architect inferences that no criterion can catch, and
-`handoff-specs.md` is explicit that the claim check is a human reading the
-diff. Worth restoring, and it matters more now that the docs are what the
-migration will be built against.
+- **The implementer's shell resets its working directory to
+  `d:\Projects\DeadEditor` between calls.** Every command needs the `cd`
+  prefix, and every prompt opens with the repo-identity precondition. A
+  prompt gating only on file content once reported a wrong-repository run as
+  "unexpected line 3."
+- **Architect-supplied files must be placed by the operator** at a path
+  named in the prompt. The architect's sandbox is not reachable from the
+  implementer's shell. Twice a prompt said "the operator-supplied file"
+  without the operator having been told to supply it.
 
-**Paste truncation happened twice this session**, both times losing the tail
-of a command's output -- once dropping a field from
-`git rev-list --left-right --count` so a two-number result read as one, and
-once cutting a command block off before it ran. Both were caught only because
-the expected shape was stated as a prediction first. The tail-check rule in
-`CLAUDE.md` covers files; it applies to pasted command output with equal
-force. **Prefer single-value commands with labelled `echo` output** over
-multi-field ones when the result gates a decision.
+The architect now has read-only Supabase MCP access and used it throughout:
+schema observation, gate verification, and the post-gate read-back. Writes
+require explicit per-statement operator authorization; `apply_migration`
+stays operator territory. This does not extend to the repo -- HEAD, worktree
+state, and test counts still arrive only through the operator.
 
 ## Entry point
 
-**Run survey-cut slice 2, the schema migration.** Three design commits landed
-this session and zero lines of product changed; the app on the device still
-walks eight screens and writes six columns the design has retired. That gap
-is the largest single risk in the repo right now, because every additional
-design pass widens it.
+**Log a real session. Then another. Then live with it for a week before
+changing anything about the survey.**
 
-The migration's one real hazard is named and must not be treated as
-paperwork: dropping columns forces both views to be recreated, and that is
-exactly where `security_invoker = true` gets silently lost, which would let
-users read each other's rows. **Capture the view grants before running it,
-and re-observe `reloptions` on both views after.** Then slice 3, then the
-device gate.
+This is the entry point, not a warm-up before the real work. Five survey
+restructures have landed in nine days -- D79, D80, D82/D82.1, and D92-D96 --
+each ratified in good faith, each refuted by the next look. The refuting
+instrument was never a design argument; it was the operator touching the app.
+Every one of those passes was made from a standing position with zero real
+sessions logged, and the sixth would fail the same way.
 
-Then stop designing the survey and go log real sessions with it. Four survey
-restructures landed in nine days -- D79, D80, D82/D82.1, and D92-D96 -- each
-ratified in good faith, each refuted by the next look, and the refuting
-instrument was never a design argument. It was the operator touching the app.
-A fifth pass from the same standing position will fail the same way. The cut
-exists so the survey is cheap enough to actually use; using it is the whole
-point.
+The survey is now two taps. The reason it was cut is that the eight-screen
+version was never used. If the next session opens with another survey design
+question, the answer is in `scoring-lexicon.md` and it was already true when
+this project had one screen: *the operator cannot know how to improve the
+survey until real sessions are logged against it.*
+
+If code must be written, `coa-retention-and-possession.md` slice 2 is ready
+and touches nothing the survey touches. It also fixes something that is
+losing data right now: every COA ingested without its source PDF retained is
+permanently unverifiable.
