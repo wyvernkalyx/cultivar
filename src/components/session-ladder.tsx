@@ -3,9 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -734,16 +732,29 @@ export function SessionLadder({
 
             This is the one screen with a text input, so it is the one screen
             that avoids the keyboard: the note and Close are bottom-anchored and
-            the iOS keyboard would otherwise cover both. KeyboardAvoidingView
-            replaces the plain container and carries the same styles.sequenceScreen
-            (flex: 1) the View had, so the column geometry is unchanged and the
-            explainer/bloom middle absorbs the inset. behavior is 'padding' on iOS
-            and undefined on Android, where the system already resizes the window.
-            The score screen has no input and keeps its plain container. */}
+            the keyboard would otherwise cover both. The 2026-07-27 device gate
+            failed exactly there — the operator typed a note and could not reach
+            Close. KeyboardAvoidingView behavior="padding" was the first attempt
+            and does not work here: it is not the outermost container, it sits
+            inside a padded parent and an Animated.View carrying a transform, and
+            its measured frame yields no usable inset. A keyboardVerticalOffset
+            would only trade that for a per-device constant, so the container is a
+            ScrollView instead and the platform supplies the inset itself.
+
+            Both scroll props are load-bearing and neither substitutes for the
+            other. automaticallyAdjustKeyboardInsets is what makes Close
+            reachable. keyboardShouldPersistTaps="handled" is what makes the FIRST
+            tap on Close register: without it the tap is swallowed as a keyboard
+            dismissal, nothing saves, and Close reads as a dead button.
+
+            The score screen has no input and keeps its plain View container. */}
         {phase === 'closing' && (
-          <KeyboardAvoidingView
+          <ScrollView
             style={styles.sequenceScreen}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            contentContainerStyle={styles.closingContent}
+            automaticallyAdjustKeyboardInsets
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}>
             <SequenceHeader
               leadingLabel="Back"
               onLeading={goBack}
@@ -792,7 +803,7 @@ export function SessionLadder({
                 <ThemedText style={styles.closeLabel}>Close</ThemedText>
               </Pressable>
             </View>
-          </KeyboardAvoidingView>
+          </ScrollView>
         )}
         </Animated.View>
       </ThemedView>
@@ -831,6 +842,15 @@ const styles = StyleSheet.create({
   // bottom (thumb reach).
   sequenceScreen: {
     flex: 1,
+  },
+  // The closing screen's scroll content (keyboard-inset fix). A ScrollView's
+  // children do not inherit flex from its `style` — that sizes the scroll frame,
+  // not the content — so the growth has to live here or the column collapses to
+  // content height and the bottom anchor is lost. flexGrow: 1 reproduces exactly
+  // what sequenceScreen's flex: 1 gave the plain View: header at the top, the
+  // explainer/bloom middle taking the slack, the actions pinned at the bottom.
+  closingContent: {
+    flexGrow: 1,
   },
   // The left-aligned header block (D83): the control chip over the product
   // identification, both flush left.
