@@ -1,154 +1,178 @@
 # Session Handoff
 
-Written 2026-07-28 evening, after `b669814` landed and pushed, sync
-observed `0 0`. Supersedes the 2026-07-28 morning handoff (parent
-`0705eef`), which this session consumed in full.
+Written 2026-07-28 night, after `e136103` landed and pushed, sync
+observed `0 0`. Supersedes the 2026-07-28 evening handoff (parent
+`b669814`), consumed in full.
 
-**The repo is authoritative over this document.** Begin with the read-only
-Phase A audit and try to break it.
+**The repo is authoritative over this document.** Begin with the
+read-only Phase A audit and try to break it.
 
 ## Preamble -- argue against yourself
 
-The architect's project-knowledge copy of `CLAUDE.md` failed its hash check
-against HEAD, and the architect predicted the standard failure: a stale
-copy, with the bucket sentence as the delta. Refuted twice in one probe.
-The copy was content-identical -- the mismatch was CRLF line endings, which
-match no committed blob -- and the false sentence ("the bucket is not yet
-created") was live at HEAD. The comforting hypothesis was that the
-architect's picture was behind; the true one was that the handbook itself
-was wrong, fixed in `5f9254d`. Corollary now standing: a `NO MATCH` from
-the blob-hash loop is uninterpretable until line endings are normalized.
-
-Carried memory was a full arc stale this session (it described the D79
-survey work as current). The repo won on every disagreement.
+Eight architect assertions were refuted by artifacts this session, in
+four classes. The most instructive: the 5a build prompt ordered the
+hash computed "after a successful parseCoa over the exact bytes already
+in scope" -- physically impossible, since unpdf detaches the request
+buffer, and the literal implementation hashed the empty string. The
+architect asserted a runtime property it had never observed; the
+implementer's probe refuted it. The most embarrassing: a criterion
+grepping for a phrase its own supplied text wraps across a line break,
+inside the very commit that promotes the sibling rule about
+bare-identifier counts. The operator's collapsed "all gates passed" was
+also refuted by read-back: outcome 3's write had not happened (a wrong
+button or a skipped step -- benign, thirty seconds to catch, one step
+to redo). Verdicts summarize; databases testify.
 
 ## Start here (Phase A, read-only)
 
-Every line is a falsifiable prediction. If any does not match, the repo wins.
+Every line is a falsifiable prediction. If any does not match, the repo
+wins -- re-baseline before proceeding.
 
-- Branch `main`. **HEAD is the commit that lands this document.**
-  `git log -1 --format=%s` -> `docs: session handoff 2026-07-28 evening`.
+- Branch `main`. HEAD is the commit that lands this document.
+  `git log -1 --format=%s` -> `docs: session handoff 2026-07-28 night`.
   Its parent, `git rev-parse HEAD~1`, is
-  `b669814ecc330b96fd3a778085f6386de1b6b5fd`. If HEAD is neither, work
+  `e1361032c1a34c6c5ab5b874f3510312e4d6ef37`. If HEAD is neither, work
   continued past this handoff -- reconcile before proceeding.
 - `git fetch origin` then
-  `git rev-list --left-right --count origin/main...main` -> two zeros,
-  tab-separated: nothing ahead, nothing behind.
+  `git rev-list --left-right --count origin/main...main` -> `0 0`,
+  tab-separated. This assumes the push that follows this commit
+  happened; `0 1` means it did not -- a finding, not an error.
 - `git status --porcelain` -> silent.
 - `npm test` -> `Test Suites: 1 passed`, `Tests: 52 passed`, exit 0.
-  **Measured at `b669814` this session.** Never `npx jest`.
-- `npx tsc --noEmit` -> 0 errors, exit 0.
-- `npx expo lint` -> 1 error, 0 warnings, exit 1, the template file. That
-  IS the baseline, exit code included.
-- `ls supabase/migrations/ | grep -Ec '^[0-9]{14}_'` -> 10. No migration
-  landed this session.
-- Database, project `zmmlgatxckplfzqyexjb`, schema shape only, unchanged
-  from the morning handoff: `coas` 19 columns with both named checks and
-  both D88.2 indexes; `coa_retirements` two policies (INSERT/SELECT);
-  bucket `coa-pdfs` private, 10485760, pdf-only; four `storage.objects`
-  policies. Row counts deliberately absent; everything in the database is
-  test data.
-- `grep -rn "pdf_object_path" src/ | wc -l` -> nonzero now (slice 4
-  landed); `grep -rn "pdf_url" src/` -> no output, exit 1, still.
+  Never `npx jest`.
+- Deno: from supabase/functions/ingest-coa,
+  `deno test --allow-read --no-lock` -> `6 passed | 0 failed`, exit 0.
+  WITHOUT `--no-lock` the run generates an untracked `deno.lock` and
+  dirties the tree; lockfile adoption is banked, not decided.
+- `npx tsc --noEmit` -> 0 errors, exit 0. `npx expo lint` -> 1 error,
+  0 warnings, exit 1, the template file. That IS the baseline.
+- `ls supabase/migrations/ | grep -Ec '^[0-9]{14}_'` -> 12.
+- Database, project `zmmlgatxckplfzqyexjb` (architect observes over
+  MCP): `coas` 5 rows -- Animal Face (count 1), Cosmic Cereal (1),
+  legacy RAINBOW RUNTZ (hash null, count 1), new RUNTZ (64-hex hash,
+  path set, count 1), Permanent Shade (64-hex hash, path set, count
+  2). Two `storage.objects` in `coa-pdfs`, zero orphans in either
+  direction. `find_coa_duplicates` and `insert_coa` both
+  `prosecdef = f`; `find_coa_duplicates` grants
+  postgres/authenticated/service_role only. `session_entries` 0 rows,
+  still.
+- `grep -rnF ".rpc(" src/ | wc -l` -> 2. `grep -rnF ".from('coas')"
+  src/ | wc -l` -> 5. `grep -rn "pdfSha256" src/` -> hits only in
+  `components/add-to-shelf-modal.tsx` and `lib/coa-dedupe.ts`.
 
 ## What shipped
 
-Newest first, all pushed, sync verified, plus the commit landing this
-document.
+Newest first, all pushed, sync verified at `e136103`, plus the commit
+landing this document.
 
-- `b669814` -- `feat:` retain COA source PDFs in Storage (slice 4, D87)
-- `b9e7fdf` -- `docs:` D87.4 after-save sequencing + slice 4 observed
-  constraints
-- `daeef78` -- `docs:` tidy D87-D91 design to match shipped slices 1-3
-- `5f9254d` -- `docs:` ADAPT-3 bucket claim amended to match 0705eef
+- `e136103` -- `docs:` close slice 5 into the record; construct-count
+  grep rule promoted to CLAUDE.md
+- `a273931` -- `feat:` dedupe prompt on ingest (slice 5c, D88)
+- `5e7e37e` -- `feat:` dedupe lookup RPC + insert_coa pdf_sha256
+  (slice 5b; two migrations, one gate-caught fix)
+- `3336d51` -- `feat:` ingest-coa returns pdfSha256 (slice 5a, D88.5)
+- `1097d85` -- `docs:` ratify D88.4-D88.6, slice 5 recon, status line
 
-Three docs commits to one product commit -- but the product commit is the
-first `src/` change in three sessions, and the docs commits were its
-prerequisites, not its substitutes. The 4.7 ratio finding is answered,
-not merely restated.
+Three product commits, three docs commits, one feature end to end:
+designed, ratified, migrated, fixed, deployed, device-gated, live.
 
 ## The arcs
 
-**A false sentence in the handbook, found by hash, located by refutation.**
-`CLAUDE.md` at HEAD claimed the bucket did not exist while the architect
-observed it over MCP. The blob-hash standing move surfaced it; the
-architect's stale-copy hypothesis obscured it until the history loop
-returned `NO MATCH` and the diff showed line endings only. Fixed first
-(`5f9254d`) because slice 4's implementer would otherwise read a handbook
-contradicting its own prompt -- a correct STOP waiting to happen.
+**Slice 5 in one day, recon-first.** The Phase A recon mapped what the
+5f9254d recon had not: `ingest-coa` is identity-blind (no client, no
+env read, no uid reaching the handler), which turned D88.1's
+conditional into D88.4's ruling -- the lookup is a security invoker
+RPC, not Edge Function code. Every later fork resolved against recon
+facts rather than assumptions.
 
-**Slice 4 shipped against a doc that was made true first.** Tidying pass
-(`daeef78`, five stale passages including the status line), then D87.4
-recorded with the recon facts (`b9e7fdf`), then code. The recon
-(read-only Phase A at `5f9254d`) established the facts the build leaned
-on: neither the PDF bytes nor the picked URI survive the parse step; the
-returned RPC id is exactly what the D87.1 path needs; `.storage` ships in
-the installed client, so no new package and no EAS rebuild; one delete
-call site, fire-and-forget.
+**The schema gate caught a real defect before any client existed.** As
+first applied, `find_coa_duplicates` returned NULL instead of false
+for a signal flag whenever its comparison touched a NULL column on a
+row the other signal selected -- SQL three-valued logic. JS would have
+coerced the null falsy and the lie would have shipped invisibly. Fixed
+by `create or replace` in a second migration; both committed together.
+Applied-but-uncommitted is a normal intermediate state under the
+gate-before-commit rhythm; the migrations ledger
+(`supabase_migrations.schema_migrations`) is the arbiter of what
+actually ran, and it settled a scrollback-paste ambiguity this session
+(each version present exactly once, no duplicates).
 
-**The review catch: `remove()` lies by omission.** Supabase Storage
-`remove()` reports a policy refusal and an already-absent object alike as
-`error: null` with empty `data`. The built `removeCoaPdf` trusted the
-error alone -- a blocked removal would have returned ok and left a silent
-orphan, against D87's surfaced-never-swallowed. Amended before the gate:
-zero-removed is failure. Same class as SQLSTATE-without-SQLERRM, which the
-morning handoff documented and the architect still failed to carry across
-to the Storage API when writing the build prompt. The class transfers;
-the lesson evidently must be re-derived per API surface unless written
-down -- hence this paragraph.
+**unpdf detaches the request buffer.** Post-parse, the PDF bytes are
+zero-length server-side; the hash must be computed before extractText.
+Anything wanting the bytes later re-reads the cache URI -- the
+mechanism behind D88.5's named hash/object mismatch risk. Recorded in
+the design doc's slice 5 gate record.
 
-**Device gate with per-step MCP read-backs, first live DELETE policy
-exercise.** Save observed writing object and path (shape
-`{uid}/{coa_id}.pdf` exact, application/pdf, ~647KB); delete observed
-removing row then object, bucket back to 0, no orphan; legacy null-path
-delete clean, Storage untouched. The Storage DELETE policy passed its
-first exercise through the only path that can test it.
+**The device gate as designed, plus one extra save.** All three
+outcomes, both signals, no-prompt control, airplane-mode fail-closed.
+The operator's collapsed verdict hid one missing write (outcome 3);
+the per-step MCP read-back caught it; one re-run closed it. Per-step
+read-backs are load-bearing even when the verdict feels sufficient --
+now with a second observed instance.
+
+**Fixtures were curated, not cleaned.** One RUNTZ duplicate deleted by
+operator ruling; one retained deliberately because its null hash is
+the only free exercise of the natural-key-only arm. It now has a
+legitimate corrected-report sibling (outcome 3's product) -- two
+`S01-RARU` rows is correct state, not leftover mess. Permanent Shade
+sits at count 2, which is exactly the precondition slice 6's
+retirement gate spec needs.
 
 ## Refuted this session
 
-Architect's unless noted.
+Architect's unless noted. Eight defects, four classes:
 
-1. **The architect's `CLAUDE.md` copy matched a pre-`0705eef` commit.**
-   No committed blob matches it; the difference is CRLF, the content is
-   HEAD's. The false sentence was at HEAD.
-2. **Project-knowledge sync might normalize line endings** (raised as a
-   caveat). It demonstrably does not for two of three files, which match
-   their blobs byte-for-byte; why `CLAUDE.md` alone synced CRLF is
-   unexplained and banked.
-3. **Carried memory's picture of the project** (D79 survey as latest
-   work). A full arc stale.
-4. **`git diff <path>` shows an untracked file's content** (implicit in a
-   criterion the architect wrote). It prints nothing, exit 0 -- silent
-   success, the class the same prompt was fixing. Implementer flagged it
-   and substituted a `--no-index` snapshot taken before editing.
+1. Bare-token / bare-identifier grep counts tripped by prose -- FOUR
+   instances across three prompts (5b build x2, 5c commit x2).
+   Promoted to CLAUDE.md at `e136103`; the class is closed by rule.
+2. Hash placement "after parseCoa" -- impossible; the buffer detaches
+   (implementer probe: byteLength 662519 -> 0, detached = true).
+3. `find_coa_duplicates` three-valued-logic flag defect -- caught by
+   the schema gate's combined-signal control.
+4. A criterion phrase wrapping across its own supplied line break
+   (docs pass), plus numstat deletion predictions computed from
+   replaced-block line counts instead of the aligned diff. Numstat
+   predictions are computed against the diff or written as
+   observed-and-reported. Not yet promoted; once more and it goes in.
+5. (Operator) "all gates passed" -- the database showed outcome 3
+   unwritten. Benign, caught by read-back, closed by one re-run.
+6. (Implementer, minor) "CLAUDE.md is already CRLF in the index" --
+   autocrlf stores LF in the index; the CRLF is the worktree copy.
+   Matters because it feeds the CRLF hypothesis below.
+
+CRLF sync hypothesis, unverified, banked: the worktree is mixed --
+files in fresh-checkout state carry CRLF, files rewritten by the
+editor tool carry LF. Project-knowledge sync reads the worktree, which
+would explain why `CLAUDE.md` alone synced CRLF while editor-rewritten
+files matched their blobs byte for byte. Testable at the next sync.
 
 ## Ratified this session
 
-- **D87.4** (operator, 2026-07-28): slice 4 sequencing is after-save
-  update. `insert_coa` unchanged; upload keyed by the returned id;
-  `pdf_object_path` written by follow-up update. Grounds in the design
-  doc: an insert-time path records a reference to an object that does not
-  exist yet -- the fabrication class -- and costs a migration. Named,
-  accepted cost: failure between upload and update leaves a null path and
-  possibly an orphan, detectable and repairable, unlike its inverse.
-- **Docs-before-build sequencing for this slice** (operator): tidy pass
-  and amendment landed before the build prompt.
-- **Architect-owned prompt-authoring rules, adopted after defects, all
-  observed this session:** heredocs left-aligned always; supplied
-  insertion text is byte-verbatim or explicitly delegated for re-wrap,
-  never both; presence anchors wrap-safe or explicitly exempt from
-  wrapping; new-file evidence is `cat` or `--no-index` snapshot, never
-  `git diff <path>`; commit-prompt staging gates check presence of staged
-  forms (`A `, `M `), not absence of unstaged ones.
+- **D88.4** (operator): the dedupe lookup is a security invoker RPC,
+  `find_coa_duplicates`, with `created_by = auth.uid()` as an explicit
+  predicate. Grounds: `ingest-coa` is identity-blind; a Postgres RPC
+  satisfies D88.1 with no disclosure surface.
+- **D88.5** (operator): hash computed in `ingest-coa`, returned as
+  `pdfSha256` inside `data`. Hex lowercase, D88.3's case. Named cost:
+  the hash describes the parsed bytes; the upload re-reads the URI.
+- **D88.6** (operator): outcome 1 is a client update, count + 1 on the
+  strongest-matched row. Race named and accepted at one user.
+- **Routing** (operator): strongest match wins -- hash beats natural
+  key; among equal natural-key matches the pick is arbitrary and
+  accepted (every such row is the same physical lot).
+- **Test-data ruling** (operator): delete one RUNTZ duplicate, retain
+  one as the natural-key gate fixture.
+- **Fail-closed lookup** (architect call, operator-unvetoed): a dedupe
+  outage is a save outage, surfaced. Exercised at the gate via
+  airplane mode.
 
 ## Open items
 
 **Runnable now**
 
-- **Slice 5, dedupe** (entry point, below).
-- **`pdf_url` column removal.** Its gate is now satisfied: recon at
-  `5f9254d` observed `grep -rn "pdf_url" src/` empty, exit 1. Still its
-  own `chore:` with a migration; do not fold into slice 5.
+- **Slice 6** (entry point, below).
+- **`pdf_url` removal** -- gate long satisfied; its own `chore:` with
+  a migration. Unchanged from the prior handoff.
 
 **Blocked**
 
@@ -157,59 +181,62 @@ Architect's unless noted.
 
 **Banked**
 
-- The design doc's Observed-baseline block is stale in three places
-  (bucket rows, `coas` index list, column count) -- one passage, one fix:
-  re-observe or mark historical. Next tidying pass.
-- "PDF not removed" alert cannot distinguish refusal from prior absence;
-  zero-removed is all the API reports. Intended, documented here so it is
-  not re-litigated as a bug.
-- Two `RAINBOW RUNTZ` duplicates remain (was three; one deleted as the
-  gate's legacy control). Dedupe slice may absorb them or they may be
-  deleted; decide when slice 5 is live.
+- Deno lockfile adoption (a generated `deno.lock` would pin
+  @supabase/server 1.3.0 and unpdf 1.6.2 against deploy) -- a real
+  choice, its own `chore:`.
+- Q4 representation fix: the parser emits `''` where absence should be
+  null. Permanent Shade proved the absence genuine -- the document
+  carries no brand line -- so `''` is honest content, wrong type. A
+  parser pass of its own.
+- Q3 `tested_on` nulls on legacy rows -- hypothesis: they predate a
+  parser fix; fixtures parse dates correctly and new rows should carry
+  them. Verify against the two new rows, then close or escalate.
+- Numstat-prediction method (refuted item 4) -- promote on recurrence.
+- CRLF sync mechanism hypothesis (above) -- test at next sync.
 - `anon` ALL grants on the two views + `coa_retirements`; latent.
-- FK-supporting indexes on `coa_retirements`, with slice 6.
+- FK-supporting indexes on `coa_retirements` -- join the D90.1
+  migration in slice 6.
 - `CLAUDE.md` grep 3.11 pin vs installed 3.0; unresolved.
-- CRLF project-knowledge sync oddity (refuted item 2).
-- Prior banked UI items from `9d66c49` (keyboard accessory bar, Close
-  spinner, tap-outside-dismiss, `CO_CONSUMPTION`, pairwise comparison at
-  depletion, `tested_on` null / `brand = ''` parser gaps, unknown-lab 200,
-  terpene whitelist drops) -- all still banked.
-- Doc drift: `session-logging.md` / `scoring-lexicon.md` still describe
-  the eight-phase survey.
+- Multi-match row picker -- only if persistent multi-match states
+  emerge beyond corrected-report pairs.
+- Design doc Observed-baseline block stale (bucket rows, index list,
+  column count) -- further aged by slice 5's rows; one passage,
+  re-observe or mark historical, next tidying pass.
+- Prior banked UI items from `9d66c49` -- all still banked.
+- Doc drift: `session-logging.md` / `scoring-lexicon.md` still
+  describe the eight-phase survey.
 
 ## Working rhythm
 
 `handoff-specs.md` 4 governs. In flux:
 
-- The LF->CRLF warning at `git add` is now the expected case on every
-  tracked-file edit on this machine; its **absence** is the anomalous
-  signal. Blob evidence (numstat, staged-blob greps) settles content.
-- `src/` baseline for recon greps: **four** `.from('coas')` sites
-  (detail select, detail delete, shelf select, lib update), one `.rpc`.
-- Device gates: per-step verdicts remain mandatory, and the paste-back
-  data lines (ids, names) are load-bearing even when the verdict feels
-  sufficient -- this gate stayed unambiguous only because exactly one row
-  could carry a path.
-- DB observation stays the architect's job over MCP; repo state arrives
+- Per-step device-gate read-backs are mandatory and now twice-proven:
+  a collapsed verdict hid a missing write both times the discipline
+  was tested.
+- `src/` recon baselines: five `.from('coas')` sites, two `.rpc(`
+  sites (insert_coa, find_coa_duplicates).
+- Deno tests run with `--no-lock` until the lockfile decision is made.
+- DB observation stays the architect's over MCP; repo state arrives
   only through the operator. Unchanged and load-bearing.
 
 ## Entry point
 
-**Slice 5, dedupe.**
+**Slice 6: retirement + favorite (D90, D90.1-D90.3, D91).**
 
-The design doc's order, and the next thing that stops a live defect: the
-two remaining RUNTZ duplicates exist because ingest cannot recognize a
-re-upload. Scope per D88/D88.1-D88.3: hash on ingest, both match signals
-(content hash; natural key treating `''` as absent), the three-outcome
-prompt, never a silent merge. The dedupe lookup runs server-side scoped
-by explicit `created_by`, never RLS (D88.1). Device gate exercises all
-three outcomes plus the no-prompt control, per the design doc's gate
-spec. Open questions 2-4 in the design doc touch this slice -- Q2 (the
-duplicates) is answerable at gate time; Q4 (`brand = ''`) is already
-half-answered by D88's empty-string-as-absent rule.
+The design doc's final slice and the last thing between this schema
+and real use: the two-question retirement surface, the event insert
+plus decrement in ONE security invoker RPC (D90.1 -- a migration,
+Tier 3 ceremony, `prosecdef = f` gate), `coas.favorite` settable from
+the detail view and prompted at retirement, and the quantity badge D89
+assigns to this slice. The gate spec is already written in the design
+doc, and its precondition exists in live data: Permanent Shade sits at
+`on_shelf_count = 2`, so retire-twice-with-different-reasons runs with
+no seeding. The FK-supporting indexes on `coa_retirements` join the
+D90.1 migration. Recon first, scoped small: the shelf-card badge
+touches `shelf-list.tsx`, which no recon has ever pasted -- map it
+before the build prompt.
 
-Slice 4's pattern held: recon first if the ingest path needs mapping
-beyond what the 5f9254d recon covered (it mapped save, not the Edge
-Function's internals), then docs amendment if any fork surfaces, then
-build. The apparatus is in order and, as of this session, applied to
-things that run.
+After slice 6 the retention and possession arc is closed and the
+standing milestone returns to the front: no real session has ever been
+logged. The apparatus is in order and, two sessions running, applied
+to things that run.
