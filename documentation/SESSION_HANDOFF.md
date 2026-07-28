@@ -1,8 +1,8 @@
 # Session Handoff
 
-Written 2026-07-27 evening. Supersedes `7e8f578`, an earlier version of this
-same document shipped hours earlier and retired by the operator within the
-hour. See "The arcs".
+Written 2026-07-28, after `0705eef` landed and pushed. Supersedes `dc74d38`.
+Three versions of this file shipped on 2026-07-27; each went stale inside its
+own session. That is a property of writing it last, not an accident.
 
 **The repo is authoritative over this document.** Everything below can be
 wrong. Begin with the read-only Phase A audit and try to break it.
@@ -33,8 +33,8 @@ Every line is a falsifiable prediction. If any does not match, the repo wins.
 
 - Branch `main`.
 - **HEAD is the commit that lands this document.** `git log -1 --format=%s`
-  -> `docs: session handoff 2026-07-27 evening (revised)`. Its parent,
-  `git rev-parse HEAD~1`, is `7e8f5780214b0e875392f8957c3a79bb0f86dd64`.
+  -> `docs: session handoff 2026-07-28`. Its parent,
+  `git rev-parse HEAD~1`, is `0705eef723a2ddb6eec8c013676674044140646a`.
   If HEAD is neither, work continued past this handoff -- reconcile before
   proceeding. (This form is D from `dac6f0a`: a write-last handoff cannot
   name its own HEAD, because the sha it would name is its own parent.)
@@ -51,7 +51,7 @@ Every line is a falsifiable prediction. If any does not match, the repo wins.
 - `npx expo lint` -> 1 error, 0 warnings, exit 1, the template file
   `src/hooks/use-color-scheme.web.ts`. That IS the baseline, exit code
   included.
-- `ls supabase/migrations/ | grep -Ec '^[0-9]{14}_'` -> 9.
+- `ls supabase/migrations/ | grep -Ec '^[0-9]{14}_'` -> 10.
 
 Database, project `zmmlgatxckplfzqyexjb`. **Schema shape only. Row counts are
 deliberately absent from this audit** -- see Working rhythm.
@@ -66,8 +66,13 @@ deliberately absent from this audit** -- see Working rhythm.
   INSERT with `with_check` only, SELECT with `qual` only. No UPDATE, no
   DELETE. One named check constraint,
   `coa_retirements_reason_nonempty_check`.
-- `storage.buckets` -> 0. No bucket exists yet; that is slice 3.
-- Migrations applied: 9, latest version `20260727194652`.
+- `storage.buckets` -> one bucket, `coa-pdfs`: `public = false`,
+  `file_size_limit` 10485760, `allowed_mime_types` `{application/pdf}`.
+- `storage.objects` -> four policies, all `to authenticated`, all keyed on
+  `bucket_id = 'coa-pdfs' and (storage.foldername(name))[1] = auth.uid()::text`.
+  SELECT and DELETE carry `using` only, INSERT carries `with check` only,
+  UPDATE carries both. Zero objects.
+- Migrations applied: 10, latest version `20260728000000`.
 
 **Everything in the database is test data.** Not a hedge -- the operator's
 position, stated plainly: the app is nowhere near production use, and the
@@ -77,22 +82,23 @@ about them.
 
 ## What shipped
 
-Newest first. Six commits, `9d66c49..7e8f578`, plus the commit landing this
-document. `9d66c49..b3016bf` was pushed and sync verified; `7e8f578` and this
-commit had not been pushed at the time of writing -- confirm with
-`git rev-list --left-right --count origin/main...main`.
+Newest first. Eight commits, `9d66c49..0705eef`, all pushed and sync
+verified, plus the commit landing this document.
 
-- `7e8f578` -- `docs:` session handoff 2026-07-27 evening (superseded by this
-  document within the hour; see "The arcs")
+- `0705eef` -- `feat:` private COA PDF bucket and its policy surface
+  (slice 3, D87)
+- `dc74d38` -- `docs:` session handoff 2026-07-27 evening (revised)
+- `7e8f578` -- `docs:` session handoff 2026-07-27 evening (superseded within
+  the hour; see "The arcs")
 - `b3016bf` -- `docs:` fix two gate defects in the D87-D91 design
 - `bc7a91b` -- `feat:` COA retention and possession schema (slice 2, D87-D91)
 - `3b08e68` -- `docs:` ratify D87-D91 with nine sub-decisions
 - `dac6f0a` -- `docs:` a handoff's HEAD sha is its own parent
 - `3c0df2b` -- `docs:` 4.4's byte-class gate pins the locale
 
-Five documentation commits to one product commit, two of them versions of this
-file. Per `handoff-specs.md` 4.7 that ratio is itself a finding, and it is in
-the entry point.
+Six documentation commits to two product commits, three of them versions of
+this file. Per `handoff-specs.md` 4.7 that ratio is itself a finding, and it
+is in the entry point.
 
 ## The arcs
 
@@ -148,6 +154,26 @@ it. Both were correct; neither was visible from the repo. Recorded because the
 first version was verified byte for byte and still wrong in its premise --
 gates check bytes, not premises, and the premise is what a handoff is for.
 
+**Slice 3 shipped, and the architect was wrong about whether it could.**
+`storage.objects` is owned by `supabase_storage_admin`; the migration runs as
+`postgres`, which is neither that role nor a superuser, and `create policy`
+requires ownership. The architect had a well-grounded prediction that both
+`db push` and MCP would fail and that the dashboard was the only route. A
+probe that created a policy and rolled it back showed otherwise. That single
+observation moved slice 3 from operator-run dashboard clicking into an
+ordinary migration file, which is why the bucket and its four policies are now
+reproducible from the repo rather than existing only in the remote database.
+
+**The slice 3 gate almost lied, for the second time in one day.** The first
+probe reported `own_delete = refused 42501`, which reads as the DELETE policy
+rejecting its own owner. It had captured `SQLSTATE` and discarded `SQLERRM`.
+Re-run with the message: `Direct deletion from storage tables is not allowed.
+Use the Storage API instead.` -- a Supabase trigger, not RLS. `42501` is
+returned by an RLS refusal, a trigger block, and a missing grant alike, so the
+code alone cannot distinguish "the protection worked" from "something else
+stopped it." **`SQLSTATE` without `SQLERRM` is a vacuous gate**, exactly as
+`grep -c` without its exit code is.
+
 ## Refuted this session
 
 Architect's unless noted.
@@ -167,7 +193,12 @@ Architect's unless noted.
 6. **Two grep patterns beginning with `-` shipped without `-e`,** against a
    rule already written in `CLAUDE.md`. They aborted exit 2. Reading a
    handbook end to end is not the same as applying it.
-7. **The implementer reported a parent sha `7d0b346`.** It does not exist:
+7. **`create policy` on `storage.objects` would fail from `postgres`.** It
+   succeeds. Ownership, superuser status and `pg_has_role(...,'MEMBER')` all
+   said no; the probe said yes. Slice 3 is a migration file because of it.
+8. **`SQLSTATE` alone identifies why a statement was refused.** It does not.
+   RLS refusal, trigger block and missing grant all return `42501`.
+9. **The implementer reported a parent sha `7d0b346`.** It does not exist:
    `git rev-parse --verify` -> `fatal: Needed a single revision`, exit 128.
    Its "three commits ahead" was also wrong; the session range is five
    commits, `9d66c49..b3016bf`. The implementer's own report correctly
@@ -190,32 +221,27 @@ Architect's unless noted.
 - **A handoff names its own HEAD as a parent** (`dac6f0a`). Applied above.
 - **Byte-level gates pin the locale** (`3c0df2b`). `LC_ALL=C`, always,
   control-paired.
-
-## Awaiting the operator's ruling
-
-**The tool-abort exemption.** Architect-authored, used twice, not ratified:
-
-> A criterion that runs and returns a value contradicting its prediction is a
-> STOP. A criterion that *aborts* -- a tool error, exit 2 -- never evaluated
-> the property, so it is not a failure. Where `CLAUDE.md` names that abort
-> mode and prescribes its repair verbatim, the implementer applies that
-> repair, pastes both the abort and the repaired run, and pairs the repaired
-> form with a control. Any other repair is a STOP.
-
-This narrows "failed criteria stop before commit" (ratified 2026-07-26) and
-should not ship into `CLAUDE.md` without the operator saying so.
+- **The tool-abort exemption.** Architect-owned, not operator-ratified, and
+  the operator was explicit that it did not warrant a ruling: a criterion that
+  runs and contradicts its prediction is a STOP; a criterion that *aborts*
+  never evaluated the property and is not a failure. Where `CLAUDE.md` names
+  that abort mode and prescribes its repair verbatim, the implementer applies
+  it, pastes both runs, and pairs the repaired form with a control. Any other
+  repair is a STOP. It is a backstop, not a licence -- if it starts getting
+  used regularly that is a finding about prompt authoring, not about the rule.
 
 ## Open items
 
 **Runnable now**
 
-- **Slice 3, the Storage bucket** (D87.1, D87.2). Operator-run: private
-  bucket, `allowed_mime_types = ['application/pdf']`, a size limit, and four
-  per-verb policies on `storage.objects` keyed on
-  `(storage.foldername(name))[1] = auth.uid()::text`. Unblocked by `bc7a91b`
-  and correctly specified only since `b3016bf`.
-- Slices 4-6 follow slice 3 in the order given in the design doc. All three
-  are device-gated; none adds a native module.
+- **Slice 4, retention.** Upload the source PDF at save time -- never at
+  parse time, so an abandoned parse leaves no orphan -- write the object path
+  to `coas.pdf_object_path`, and remove the object when the COA is deleted.
+  D53's cascade is a foreign key and foreign keys do not reach Storage, so
+  the delete path removes the object explicitly and surfaces failure rather
+  than swallowing it. First app code in this arc; device-gated.
+- Slices 5 and 6 follow, in the design doc's order. Neither adds a native
+  module.
 
 **Blocked**
 
@@ -226,8 +252,12 @@ should not ship into `CLAUDE.md` without the operator saying so.
 
 **Banked**
 
-- Three stale `pdf_url` phrasings in the design doc: inside D87.3, in
-  Non-goals, in Banked. Moot rather than false; verified still present.
+- Four items now want one tidying pass over
+  `documentation/design/coa-retention-and-possession.md`: three stale
+  `pdf_url` phrasings, inside D87.3, in Non-goals and in Banked; and the
+  slice 3 line reading "Operator-run; no repo change beyond policy SQL",
+  disproved by `0705eef`. All moot rather than false, which is why none of
+  them has shipped.
 - `anon` holds ALL privileges on `session_current`, `coa_session_stats`, and
   now `coa_retirements`. Latent, not live -- RLS is on and `auth.uid()` is
   null for `anon`. Three instances of one Supabase default. Must not be fixed
@@ -267,7 +297,14 @@ should not ship into `CLAUDE.md` without the operator saying so.
   model for future schema gates.
 - **Architect-side copies of repo files are not the repo.** Hash them against
   `git show HEAD:<path>` before treating a read as complete.
-- **Predict a diffstat from the diff, never from the edit script.**
+- **Predict a diffstat from the diff, never from the edit script.** Before
+  predicting, check whether the FIND and REPLACE blocks share a byte-identical
+  line; a shared boundary line becomes context, not delete-plus-add.
+- **Any grep pattern beginning with `-` is passed via `-e`.** Already in
+  `CLAUDE.md`; violated twice this session by the architect. Verify prompt
+  criteria in a scratch shell before the prompt goes out.
+- **A gate that reads `SQLSTATE` reads `SQLERRM` too.** `42501` is returned by
+  an RLS refusal, a trigger block and a missing grant alike.
 - **The architect's picture of HEAD goes stale silently.** A prompt was run
   and committed this session without its report reaching the architect, and
   the next prompt's repo-identity precondition was the only thing that caught
@@ -279,24 +316,25 @@ should not ship into `CLAUDE.md` without the operator saying so.
 
 ## Entry point
 
-**Slice 3, the Storage bucket. Then 4, 5, 6, in order.**
+**Slice 4, retention.**
 
-The previous handoff's entry point was "log a real session, then live with it
-for a week." That instruction is retired. It rested on a distinction between
-device-gate taps and real sessions that does not exist: the operator's
-position is that the whole database is test data and the app is nowhere near
-being used for real. A plan whose first step is "generate production-grade
-evidence" is not actionable on a product this early, and the architect spent
-five asks discovering that.
+Slices 2 and 3 shipped schema and a bucket. Nothing in `src/` touches either.
+Slice 4 is the first code in this arc and the first thing that stops a live
+defect: every COA ingested without its source PDF retained is permanently
+unverifiable, and there is no re-parse path when a parser is fixed.
 
-What replaces it is the arc already half-built. Slice 2 shipped schema that no
-code reads. Slice 3 is operator-run infrastructure -- one private bucket, a
-mime-type and size limit, four per-verb policies -- and it unblocks slice 4,
-which stops a live defect: every COA ingested without its source PDF retained
-is permanently unverifiable, and there is no re-parse path when a parser is
-fixed. Slices 5 and 6 follow in the document's order and are device-gated.
+It is also the first slice this arc that needs the app in front of the
+operator rather than a migration file, which makes it the natural opening for
+a session rather than the tail of one.
 
-The ratio finding from `handoff-specs.md` 4.7 still stands and is the thing to
-watch: this session shipped four documentation commits against one schema
-commit, and the schema commit is read by nothing. The next session should end
-with more product than process, or say why not.
+Two things to carry into it. The DELETE policy on `storage.objects` has been
+asserted structurally but never exercised -- direct SQL deletion is blocked by
+a Supabase trigger, so the only path that tests it is the Storage API, which
+slice 4 is the first to use. And the upload happens in the same user action
+that commits the `coas` row, never at parse time; that ordering is the whole
+of D87's orphan-avoidance and it is easy to lose while wiring a UI.
+
+The ratio finding from `handoff-specs.md` 4.7 still stands: six documentation
+commits to two product commits, three of them versions of this file. The
+apparatus is in good order. It has been applied almost entirely to artifacts
+describing behaviour no code has exercised.
