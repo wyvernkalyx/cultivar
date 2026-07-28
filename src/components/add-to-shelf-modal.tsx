@@ -1,17 +1,33 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { CoaEditor, type CoaParseResult } from '@/components/coa-editor';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import {
+  findCoaDuplicates,
+  pickDedupeTarget,
+  type DuplicateMatch,
+} from '@/lib/coa-dedupe';
 import { uploadCoaPdf, type UploadStage } from '@/lib/coa-pdf-storage';
 import { ingestCoaPdf, type IngestResult } from '@/lib/ingest-coa';
 import { supabase } from '@/lib/supabase';
 
-type Phase = 'idle' | 'picking' | 'sending' | 'done' | 'confirming' | 'saved';
+// 'incremented' is a second terminal state beside 'saved', not a variant of
+// it (D88 outcome 1): nothing was inserted and nothing was uploaded, so the
+// saved arm's id and retention notice would both be lies. Separate phase,
+// separate copy.
+type Phase =
+  | 'idle'
+  | 'picking'
+  | 'sending'
+  | 'done'
+  | 'confirming'
+  | 'saved'
+  | 'incremented';
 
 // Retention failure is reported, never recovered from (slice 4). The stage is
 // in the copy on purpose: the gate is the device, where this notice is the
@@ -47,30 +63,39 @@ export default function AddToShelfModal({
   // uploads in the same user action that commits the row, and nothing else in
   // the flow keeps a handle on the PDF once the parse call returns.
   const [pickedUri, setPickedUri] = useState<string | null>(null);
+  // Transport metadata, never a reviewable parse field (D88.5): held here as a
+  // sibling of pickedUri rather than threaded through CoaParseResult, so the
+  // editor neither renders it nor can edit it. Null when the deployed Edge
+  // Function did not supply one -- that disables the hash arm of the lookup
+  // and leaves the natural key doing the work, which is the live case today.
+  const [pdfSha256, setPdfSha256] = useState<string | null>(null);
   // Non-blocking: the COA is saved whether or not this is set.
   const [retentionNotice, setRetentionNotice] = useState<string | null>(null);
+  // The matched row's new count, shown on the 'incremented' arm.
+  const [shelfCount, setShelfCount] = useState<number | null>(null);
 
   // The component stays mounted while the Modal is hidden, so state would
   // survive a close; resetting here (not in an effect) keeps reopen-at-idle
   // without a setState-in-effect.
   const close = () => {
-    setPhase('idle');
-    setResult(null);
-    setConfirmError(null);
-    setSavedId(null);
-    setPickedUri(null);
-    setRetentionNotice(null);
+    reset();
     onClose();
   };
 
-  const pickAnother = () => {
+  // Pre-pick state. Also the D88 outcome-2 discard ("I uploaded this by
+  // mistake"): nothing was written, so returning to idle IS the whole action.
+  const reset = () => {
     setPhase('idle');
     setResult(null);
     setConfirmError(null);
     setSavedId(null);
     setPickedUri(null);
+    setPdfSha256(null);
     setRetentionNotice(null);
+    setShelfCount(null);
   };
+
+  const pickAnother = reset;
 
   const pick = async () => {
     setConfirmError(null);
@@ -90,7 +115,16 @@ export default function AddToShelfModal({
       // confirm time possible at all.
       setPickedUri(uri);
       setPhase('sending');
-      setResult(await ingestCoaPdf(uri));
+      const ingested = await ingestCoaPdf(uri);
+      setResult(ingested);
+      // Read off the transport envelope, not the parse: the field is optional
+      // because the hashing function is committed but not deployed, and a
+      // client that required it would break against the live deployment.
+      setPdfSha256(
+        ingested.ok
+          ? ((ingested.json as { data?: { pdfSha256?: string } }).data?.pdfSha256 ?? null)
+          : null,
+      );
     } catch (err) {
       setResult({
         ok: false,
@@ -107,7 +141,94 @@ export default function AddToShelfModal({
     setConfirmError(null);
     setRetentionNotice(null);
     setPhase('confirming');
-    const { data, error } = await supabase.rpc('insert_coa', { payload });
+
+    // Dedupe runs before the insert and FAILS CLOSED (D88): a lookup error
+    // stops the save rather than falling through to it. A check that silently
+    // fails re-opens the exact hole it exists to close, and the failure is the
+    // user's to see -- surfaced, never swallowed.
+    //
+    // lab and batch come from the payload, so they are post-edit values, never
+    // raw parse output (the design doc's slice 5 constraints). The user may
+    // have corrected the very fields the natural key is built from.
+    const found = await findCoaDuplicates(pdfSha256, payload.lab, payload.batch);
+    if (!found.ok) {
+      setConfirmError(found.message);
+      setPhase('done');
+      return;
+    }
+    if (found.rows.length > 0) {
+      // Never a silent merge (D88): every match is the user's call. The phase
+      // stays 'confirming' while the dialog is up, which keeps the editor's
+      // button disabled until an outcome is chosen.
+      promptDuplicate(found.rows, payload);
+      return;
+    }
+    await save(payload);
+  };
+
+  /**
+   * The three-outcome prompt (D88). Alert.alert is the codebase's one
+   * confirmation pattern (coa-detail.tsx); the identity echo is D44/D45 reused
+   * -- name the row before saying what will happen to it, and never render a
+   * blank where a name should be.
+   */
+  const promptDuplicate = (rows: DuplicateMatch[], payload: CoaParseResult) => {
+    const target = pickDedupeTarget(rows);
+    const strain = target.strain?.trim() ? target.strain.trim() : 'this COA';
+    const brand = target.brand?.trim();
+    const identity = [strain, ...(brand ? [brand] : [])].join('\n');
+    const summary =
+      rows.length === 1
+        ? 'This document matches a COA already on your shelf.'
+        : `This document matches ${rows.length} COAs on your shelf; the strongest match is shown.`;
+    Alert.alert('Already on your shelf?', `${identity}\n\n${summary}`, [
+      // Outcome 1: no new row, no upload -- the shelf gains a package, not a
+      // document (D88.6).
+      { text: 'I bought another package', onPress: () => void increment(target) },
+      // Outcome 3: a lab correction is a different document about the same
+      // lot. New row; the prior row is left intact, and supersession is
+      // banked by D88 rather than improvised here.
+      { text: 'This is a corrected report', onPress: () => void save(payload) },
+      // Outcome 2: nothing was written, so discarding is a pure reset.
+      { text: 'I uploaded this by mistake', style: 'cancel', onPress: reset },
+    ]);
+  };
+
+  /**
+   * D88.6 outcome 1: a client update on the matched row. `coas` carries a
+   * single ALL policy by design -- on_shelf_count is derived, revisable state,
+   * not a record -- so this needs no RPC. The count is read from the matched
+   * row rather than recomputed, and the race it loses to (the same user
+   * ingesting the same document on two devices at once) is named and accepted.
+   */
+  const increment = async (target: DuplicateMatch) => {
+    const next = target.on_shelf_count + 1;
+    const { error } = await supabase
+      .from('coas')
+      .update({ on_shelf_count: next })
+      .eq('id', target.id);
+    if (error) {
+      setConfirmError(error.message);
+      setPhase('done');
+      return;
+    }
+    setShelfCount(next);
+    setPhase('incremented');
+  };
+
+  /**
+   * The save path, unchanged in substance from the pre-dedupe flow. Reached
+   * two ways now: no match at all, and D88 outcome 3.
+   */
+  const save = async (payload: CoaParseResult) => {
+    setConfirmError(null);
+    setPhase('confirming');
+    // pdfSha256 rides the payload (D88.5). insert_coa itself is unchanged: it
+    // reads payload->>'pdfSha256', and both a JSON null and a missing key
+    // arrive as SQL NULL, so an undeployed hasher needs no special case here.
+    const { data, error } = await supabase.rpc('insert_coa', {
+      payload: { ...payload, pdfSha256 },
+    });
     if (error) {
       setConfirmError(error.message);
       setPhase('done');
@@ -151,7 +272,25 @@ export default function AddToShelfModal({
             Add to shelf
           </ThemedText>
 
-          {phase === 'saved' ? (
+          {phase === 'incremented' ? (
+            <>
+              <ScrollView style={styles.resultScroll}>
+                <ThemedText type="smallBold" style={styles.centered}>
+                  Another package added
+                </ThemedText>
+                {shelfCount !== null && (
+                  <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
+                    {`You now have ${shelfCount} of this on your shelf.`}
+                  </ThemedText>
+                )}
+              </ScrollView>
+              <Pressable
+                onPress={pickAnother}
+                style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+                <ThemedText type="smallBold">Pick another</ThemedText>
+              </Pressable>
+            </>
+          ) : phase === 'saved' ? (
             <>
               <ScrollView style={styles.resultScroll}>
                 <ThemedText type="smallBold" style={styles.centered}>
