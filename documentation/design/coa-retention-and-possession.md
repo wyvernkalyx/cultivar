@@ -324,6 +324,31 @@ so parity is honest and closing it here would mean soft-delete on `coas`,
 which is a larger pass than this one. Recorded so that a reader does not
 mistake "append-only" for "durable."
 
+**D87.4 -- slice 4 sequencing: after-save update. Ratified by the operator
+2026-07-28.** The client saves the row via `insert_coa` unchanged, uploads
+the PDF to `{auth.uid()}/{coa_id}.pdf` using the returned id, then writes
+`coas.pdf_object_path` in a follow-up update. `insert_coa` gains no path
+argument: the path embeds the row id, which exists only after the insert,
+so an insert-time path would record a reference to an object that does not
+exist yet -- the fabrication class, and a migration besides. Named cost,
+accepted: a failure between upload and update leaves a saved COA with a
+null path and possibly an orphan object -- detectable and repairable,
+unlike its inverse. Upload or update failure surfaces to the user and
+never unwinds the save that already happened.
+
+**Slice 4 observed constraints (2026-07-28 recon, read-only, at `5f9254d`).**
+Neither the PDF bytes nor the picked file URI survive the parse
+step today -- the URI never enters component state -- so slice 4
+threads the URI from pick to confirm; `copyToCacheDirectory: true` keeps
+it resolvable for the session. Storage needs no new package:
+`supabase.storage` ships in the installed `@supabase/supabase-js` 2.110.1,
+so the EAS-rebuild split rule stays untriggered. Deletion order is row
+first, then Storage object: a failed object removal leaves a detectable
+orphan, while object-first would leave a row referencing a document that
+no longer exists. The sole delete site (`deleteCoa`,
+`src/components/coa-detail.tsx`) is fire-and-forget today; slice 4 makes
+its failure surface explicit.
+
 ---
 
 ## Schema changes
