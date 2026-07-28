@@ -154,7 +154,13 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   (observed: 0 against live SPARK/Spark). State the case posture in the
   criterion -- `-i`, or exact-case chosen deliberately. Any pattern
   beginning with `-` is passed via `-e`; without it `grep -F` aborts
-  exit 2 before matching anything.
+  exit 2 before matching anything. Predicted counts against code or
+  other self-documenting files count constructs -- anchored or
+  qualified forms (`^ *security invoker$`, `phase === 'incremented'`)
+  -- never bare identifiers: reviewed code repeats its names in
+  comment prose, and a bare-identifier count misses by exactly the
+  number of times the file explains itself (corrected three times,
+  2026-07-28).
 - **Directory listings gate on name-form counts, never bare entry
   counts.** A bare entry count cannot detect a malformed name. Standing
   form for migrations: `ls supabase/migrations/ | grep -Ec '^[0-9]{14}_'`.

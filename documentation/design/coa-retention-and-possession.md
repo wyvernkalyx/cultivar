@@ -1,10 +1,10 @@
 # COA Retention, Dedupe, and Possession -- design (D87-D91)
 
 Status: RATIFIED 2026-07-27 (D87-D91), plus the sub-decisions in
-"Ratification and amendments" (latest D88.6, 2026-07-28). Slices 1-4 are
+"Ratification and amendments" (latest D88.6, 2026-07-28). Slices 1-5 are
 implemented (docs `3b08e68`, schema `bc7a91b`, bucket `0705eef`, retention
-`b669814`); slices 5-6 are not. This status line is amended by the commit
-that changes its truth.
+`b669814`, dedupe `a273931` with `3336d51`/`5e7e37e`); slice 6 is not.
+This status line is amended by the commit that changes its truth.
 
 North stars: `documentation/design/product-metaphor.md` (the "in stock"
 open question this pass answers), `documentation/design/session-entries-schema.md`
@@ -404,6 +404,22 @@ The client's only confirmation-dialog pattern is two-button
 `Alert.alert` (`coa-detail.tsx`); the ingest modal imports no Alert
 today.
 
+**Slice 5 gate record (2026-07-28, closed at `a273931`).** All three
+outcomes and both signals exercised on device with per-step MCP
+read-backs: no-prompt control; hash arm -> another package -> count 2,
+one row; mistake -> no change; natural-key-only arm via the retained
+legacy RUNTZ row -> corrected report -> a second row on the same key,
+legacy intact, no orphans; airplane-mode lookup failure -> save
+blocked, error surfaced (the fail-closed cost, seen once and accepted).
+The "imports no Alert" sentence above is superseded: 5c added the
+three-outcome `Alert.alert`. Also observed during 5a: unpdf detaches
+the request buffer, so post-parse the PDF bytes are gone server-side
+as well as client-side -- anything wanting them re-reads the cache
+URI, the mechanism behind D88.5's named mismatch risk. The shelf now
+legitimately holds two `S01-RARU` rows (outcome 3's product) -- the
+live example of the multi-match state pickDedupeTarget's
+arbitrary-among-equals rule covers.
+
 ---
 
 ## Schema changes
@@ -565,11 +581,18 @@ and the card off-shelf but the COA, its sessions, and its favorite intact.
 
 1. ~~Reuse `pdf_url` or add `pdf_object_path`?~~ Resolved 2026-07-27 by
    D87.3: new column, `pdf_url` left dormant.
-2. Do the three duplicate `Animal House / RAINBOW RUNTZ / S01-RARU` rows get
-   deleted now, leaving three clean COAs, or does the dedupe slice absorb
-   them later? (They currently split nothing, since sessions are at 0.)
+2. ~~Delete the duplicate `S01-RARU` rows now, or let dedupe absorb them?~~
+   Resolved 2026-07-28 at the slice 5 gate: one was deleted earlier as a
+   gate control, one deleted by operator ruling, one retained as the
+   natural-key gate fixture (its null hash is what exercises the nk-only
+   arm) -- now joined by its corrected-report sibling from outcome 3.
 3. `tested_on` is null on all five rows though both labs print a test date.
    Parser gap or extraction-then-drop -- unresolved, and unresolvable without
    the PDFs. Does it join this pass or get its own?
-4. The `brand = ''` empty-string row. Parser or validation gap; it will recur,
-   and D88's natural key depends on the answer.
+4. The `brand = ''` empty-string row. Half-answered 2026-07-28: the
+   Permanent Shade layout genuinely carries no brand line (a licensee
+   address block and a website, never a stated brand), so `''` records
+   real absence and no-fabrication forbids inferring one. The remaining
+   gap is representation: absence should be null, not `''` -- a parser
+   pass of its own, still banked. D88's natural key never used `brand`
+   and is unaffected.
