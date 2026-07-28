@@ -27,6 +27,23 @@ function mediaType(contentType: string | null): string {
 }
 
 /**
+ * Lowercase hex SHA-256 of the given bytes (D88.5). Lowercase is not
+ * cosmetic: it is the case D88.3's `~ '^[0-9a-f]{64}$'` check constraint
+ * accepts, and a rejected hash silently disables the dedupe fast path.
+ *
+ * The parameter is `Uint8Array<ArrayBuffer>`, not bare `Uint8Array`: under
+ * TS 6 the bare form widens to `ArrayBufferLike`, which `BufferSource`
+ * rejects because it admits `SharedArrayBuffer`. The caller's array is
+ * already backed by a plain `ArrayBuffer`.
+ */
+async function sha256Hex(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/**
  * The handler body, exported separately from the authenticated default export
  * so it can be exercised in tests without minting a user JWT.
  *
@@ -47,9 +64,20 @@ export async function ingestCoa(req: Request): Promise<Response> {
     return jsonError('Empty request body; expected PDF bytes.', 400);
   }
 
+  // Hashed BEFORE extraction, never after: unpdf takes ownership of the array
+  // and detaches its buffer, so `bytes` is zero-length by the time parseCoa
+  // returns and a digest taken there is the hash of the empty string
+  // (observed: e3b0c442...). This is still the digest of exactly what was
+  // parsed -- same array, read before the parser consumes it. Outside the try
+  // on purpose: that catch maps a throw to 400 as the caller's error, and a
+  // digest failure would not be the caller's.
+  const pdfSha256 = await sha256Hex(bytes);
+
   try {
     const parsed = parseCoa(await extractText(bytes));
-    return Response.json({ data: parsed });
+    // Still parse-and-return: hashing reads, writes nothing, adds no
+    // dependency, and rides on the success shape only (D88.5).
+    return Response.json({ data: { ...parsed, pdfSha256 } });
   } catch (err) {
     return jsonError(
       err instanceof Error ? err.message : 'Could not parse the PDF.',
