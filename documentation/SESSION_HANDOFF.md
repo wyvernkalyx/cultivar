@@ -1,7 +1,8 @@
 # Session Handoff
 
-Written 2026-07-27 evening, after `b3016bf` landed and pushed. Supersedes the
-version at `9d66c49`.
+Written 2026-07-27 evening. Supersedes `7e8f578`, an earlier version of this
+same document shipped hours earlier and retired by the operator within the
+hour. See "The arcs".
 
 **The repo is authoritative over this document.** Everything below can be
 wrong. Begin with the read-only Phase A audit and try to break it.
@@ -32,8 +33,8 @@ Every line is a falsifiable prediction. If any does not match, the repo wins.
 
 - Branch `main`.
 - **HEAD is the commit that lands this document.** `git log -1 --format=%s`
-  -> `docs: session handoff 2026-07-27 evening`. Its parent,
-  `git rev-parse HEAD~1`, is `b3016bf019688227052d1336d714148f39aa9bb2`.
+  -> `docs: session handoff 2026-07-27 evening (revised)`. Its parent,
+  `git rev-parse HEAD~1`, is `7e8f5780214b0e875392f8957c3a79bb0f86dd64`.
   If HEAD is neither, work continued past this handoff -- reconcile before
   proceeding. (This form is D from `dac6f0a`: a write-last handoff cannot
   name its own HEAD, because the sha it would name is its own parent.)
@@ -52,37 +53,46 @@ Every line is a falsifiable prediction. If any does not match, the repo wins.
   included.
 - `ls supabase/migrations/ | grep -Ec '^[0-9]{14}_'` -> 9.
 
-Database, project `zmmlgatxckplfzqyexjb`, observed 2026-07-27 evening:
+Database, project `zmmlgatxckplfzqyexjb`. **Schema shape only. Row counts are
+deliberately absent from this audit** -- see Working rhythm.
 
-- `coas` -> 5 rows, 19 columns. `on_shelf_count` = 1 on all five;
-  `pdf_object_path`, `pdf_sha256`, `favorite`, `tested_on`, `pdf_url` all null
-  on all five. Three rows are one Rainbow Runtz COA ingested three times.
-- `coa_retirements` -> 0 rows, `rowsecurity = true`, exactly two policies:
-  INSERT with `with_check` only, SELECT with `qual` only.
-- `session_entries` -> **13 rows across 6 chains**, all `lexicon_version 4`,
-  all created between 17:03 and 17:13 UTC on 2026-07-27.
-- `storage.buckets` -> 0. `storage.objects` -> 0.
+- `coas` -> 19 columns, including `pdf_object_path`, `pdf_sha256`,
+  `on_shelf_count` (not null, default 1), `favorite`. Two named check
+  constraints: `coas_pdf_sha256_hex_check` and
+  `coas_on_shelf_count_nonneg_check`.
+- Two indexes on `coas` from D88.2: `coas_created_by_pdf_sha256_idx` (partial,
+  `where pdf_sha256 is not null`) and `coas_created_by_lab_batch_idx`.
+- `coa_retirements` exists, `rowsecurity = true`, exactly two policies:
+  INSERT with `with_check` only, SELECT with `qual` only. No UPDATE, no
+  DELETE. One named check constraint,
+  `coa_retirements_reason_nonempty_check`.
+- `storage.buckets` -> 0. No bucket exists yet; that is slice 3.
 - Migrations applied: 9, latest version `20260727194652`.
 
-**Unresolved, and do not assume either way:** whether the last two chains
-(entries 276-279, 17:13 UTC) are real sessions or device-gate taps. The
-operator was asked five times across this session and did not answer. The
-first four chains are gate taps by the previous handoff's own account. If the
-answer is "real," the entry point below changes and this is the most
-important fact in the file. Ask before relying on it.
+**Everything in the database is test data.** Not a hedge -- the operator's
+position, stated plainly: the app is nowhere near production use, and the
+contents of `coas` and `session_entries` are disposable. Do not build an
+argument on a row, do not count them in an audit, and do not ask the operator
+about them.
 
 ## What shipped
 
-Newest first. Five commits, `9d66c49..b3016bf`, all pushed and sync verified.
+Newest first. Six commits, `9d66c49..7e8f578`, plus the commit landing this
+document. `9d66c49..b3016bf` was pushed and sync verified; `7e8f578` and this
+commit had not been pushed at the time of writing -- confirm with
+`git rev-list --left-right --count origin/main...main`.
 
+- `7e8f578` -- `docs:` session handoff 2026-07-27 evening (superseded by this
+  document within the hour; see "The arcs")
 - `b3016bf` -- `docs:` fix two gate defects in the D87-D91 design
 - `bc7a91b` -- `feat:` COA retention and possession schema (slice 2, D87-D91)
 - `3b08e68` -- `docs:` ratify D87-D91 with nine sub-decisions
 - `dac6f0a` -- `docs:` a handoff's HEAD sha is its own parent
 - `3c0df2b` -- `docs:` 4.4's byte-class gate pins the locale
 
-Four documentation commits to one product commit. Per `handoff-specs.md` 4.7
-that ratio is itself a finding, and it is in the entry point.
+Five documentation commits to one product commit, two of them versions of this
+file. Per `handoff-specs.md` 4.7 that ratio is itself a finding, and it is in
+the entry point.
 
 ## The arcs
 
@@ -128,6 +138,15 @@ elements not tracing to a numbered decision. A sibling's shape is not a
 ratification, and nothing reads the table until slice 6, so they were deleted
 and their absence recorded in the migration header. The alternative was a
 documentation commit to legitimise something nothing needs yet.
+
+**The handoff shipped, and one sentence from the operator retired it.**
+`7e8f578` carried an entry point built on "log a real session" and a Phase A
+block that predicted row counts, and it passed all seven of its criteria. The
+operator's response was that the entire database is test data and that the
+Supabase MCP access existed precisely so the architect would stop asking about
+it. Both were correct; neither was visible from the repo. Recorded because the
+first version was verified byte for byte and still wrong in its premise --
+gates check bytes, not premises, and the premise is what a handoff is for.
 
 ## Refuted this session
 
@@ -190,7 +209,6 @@ should not ship into `CLAUDE.md` without the operator saying so.
 
 **Runnable now**
 
-- **LOG A REAL SESSION.** See Entry point. Outranks everything else here.
 - **Slice 3, the Storage bucket** (D87.1, D87.2). Operator-run: private
   bucket, `allowed_mime_types = ['application/pdf']`, a size limit, and four
   per-verb policies on `storage.objects` keyed on
@@ -233,14 +251,27 @@ should not ship into `CLAUDE.md` without the operator saying so.
 
 `handoff-specs.md` 4 governs. Only what is in flux:
 
-- **The architect has read-only Supabase MCP and used it for the entire
-  schema gate**, including a transactional probe that inserts, reads,
-  attempts UPDATE and DELETE, and rolls back by raising. That worked well and
-  is the model for future schema gates. It does not extend to the repo: HEAD,
-  worktree state, and test counts still arrive only through the operator.
+- **Database observation is the architect's job, not the operator's.** The
+  architect has Supabase MCP and it exists precisely so the operator never
+  has to query or report database state. Query it directly; never ask the
+  operator what is in a table. This was the explicit reason the access was
+  granted, and asking anyway wastes the operator's attention on bookkeeping.
+  It does not extend to the repo: HEAD, worktree state, and test counts still
+  arrive only through the operator.
+- **Row counts do not belong in Phase A.** A prediction that goes stale
+  whenever the operator opens the app teaches the next session that Phase A
+  failures are noise to skip past, which is the opposite of what the audit is
+  for. Predict schema shape, which changes only when a migration runs.
+- The schema gate for slice 2 used a transactional probe run over MCP --
+  insert, read, attempt UPDATE and DELETE, roll back by raising. That is the
+  model for future schema gates.
 - **Architect-side copies of repo files are not the repo.** Hash them against
   `git show HEAD:<path>` before treating a read as complete.
 - **Predict a diffstat from the diff, never from the edit script.**
+- **The architect's picture of HEAD goes stale silently.** A prompt was run
+  and committed this session without its report reaching the architect, and
+  the next prompt's repo-identity precondition was the only thing that caught
+  it. Never carry HEAD across a turn; predict it and let it fail.
 - Two environment facts, unchanged and still costly: the implementer's shell
   resets to `d:\Projects\DeadEditor` between calls, so every prompt opens
   with the repo-identity precondition; and architect-supplied files must be
@@ -248,26 +279,24 @@ should not ship into `CLAUDE.md` without the operator saying so.
 
 ## Entry point
 
-**Log a real session. Then slice 3.**
+**Slice 3, the Storage bucket. Then 4, 5, 6, in order.**
 
-Nothing this session touched the thing the last handoff called the entry
-point, and the reason it was the entry point has not weakened: five survey
-restructures in nine days, every one ratified in good faith and refuted by
-the next look, every one designed from a standing position with zero real
-sessions logged. The refuting instrument was never a design argument. It was
-the operator touching the app.
+The previous handoff's entry point was "log a real session, then live with it
+for a week." That instruction is retired. It rested on a distinction between
+device-gate taps and real sessions that does not exist: the operator's
+position is that the whole database is test data and the app is nowhere near
+being used for real. A plan whose first step is "generate production-grade
+evidence" is not actionable on a product this early, and the architect spent
+five asks discovering that.
 
-This session added four documentation commits and one schema commit. The
-schema is correct, gated, and read by no code. That is a real asset and it is
-also exactly what `handoff-specs.md` 4.7 warns about: the verification
-apparatus is in excellent order and has been applied almost entirely to
-artifacts describing behaviour nobody has exercised.
+What replaces it is the arc already half-built. Slice 2 shipped schema that no
+code reads. Slice 3 is operator-run infrastructure -- one private bucket, a
+mime-type and size limit, four per-verb policies -- and it unblocks slice 4,
+which stops a live defect: every COA ingested without its source PDF retained
+is permanently unverifiable, and there is no re-parse path when a parser is
+fixed. Slices 5 and 6 follow in the document's order and are device-gated.
 
-Slice 3 is second, not first, and it is second on purpose. It is operator-run
-infrastructure that unblocks slice 4, which stops a live defect -- every COA
-ingested without its source PDF retained is permanently unverifiable. But it
-is still building for a product whose core loop has never run in anger.
-
-If the answer to the unresolved question above is that those two 17:13 chains
-were real, promote that to the top of this file and re-read the survey with
-two data points instead of zero.
+The ratio finding from `handoff-specs.md` 4.7 still stands and is the thing to
+watch: this session shipped four documentation commits against one schema
+commit, and the schema commit is read by nothing. The next session should end
+with more product than process, or say why not.
