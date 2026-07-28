@@ -1,8 +1,9 @@
 # COA Retention, Dedupe, and Possession -- design (D87-D91)
 
 Status: RATIFIED 2026-07-27 (D87-D91, plus the nine sub-decisions in
-"Ratification and amendments"). Nothing here is implemented yet. This status
-line is amended by the commit that changes its truth.
+"Ratification and amendments"). Slices 1-3 are implemented (docs `3b08e68`,
+schema `bc7a91b`, bucket `0705eef`); slices 4-6 are not. This status line is
+amended by the commit that changes its truth.
 
 North stars: `documentation/design/product-metaphor.md` (the "in stock"
 open question this pass answers), `documentation/design/session-entries-schema.md`
@@ -274,8 +275,7 @@ and lowering one after objects exist is not.
 **D87.3 -- Q1 resolved: a new `pdf_object_path` column, and `pdf_url` is
 left in place.** Grounds: `pdf_url` is null on all five rows and neither
 view references it, so reuse is technically available -- but a column named
-`url` holding an object path is a name that lies for the life of the
-schema, and the rename is already banked behind the view-recreate hazard.
+`url` holding an object path is a name that lies for the life of the schema.
 Dropping `pdf_url` in the same migration was considered and rejected: no one
 has read the client code to confirm nothing selects it, and a schema slice is
 the wrong place to carry an unverified assumption. Its removal is banked as
@@ -389,8 +389,9 @@ Each slice is its own build prompt and its own commit. Gates are typed per
    Migration authored by the implementer, applied by the operator
    (`db push`, credentialed). Gate: observed SQL with the paired control
    below.
-3. **Storage bucket (infra)** -- bucket creation and Storage RLS. Operator-run;
-   no repo change beyond policy SQL. Gate: observed state.
+3. **Storage bucket (infra)** -- bucket creation and Storage RLS. Landed as
+   migration `20260728000000` in `0705eef`, applied by the operator. Gate:
+   observed state.
 4. **Retention (`feat:`)** -- upload at save time, populate the path, remove the
    object on COA delete. Gate: device, plus an observed Storage listing.
 5. **Dedupe (`feat:`)** -- hash on ingest, both match signals, the three-outcome
@@ -416,7 +417,8 @@ product-photo idea, which would trigger it.
 - Product photos, brand logos, user tags. Banked; native-module scope.
 - Store-inventory matching against favorites. Banked; requires chemistry on
   the menu side, which no consumer channel publishes.
-- Renaming `pdf_url`. Banked -- the view-recreate hazard for no gain.
+- Removing the dormant `pdf_url` column. Banked as its own `chore:`, gated
+  on a grep over `src/`.
 - Grant tightening on the two views (`anon` holds ALL; latent, not live).
   Already banked by the D85 implementation plan; untouched here.
 
@@ -473,7 +475,7 @@ and the card off-shelf but the COA, its sessions, and its favorite intact.
 - Re-parse from retained PDFs. D87 makes it *possible*; whether it is a named
   product capability is undecided, and it should not be improvised into
   existence by whoever first wants it.
-- Renaming `pdf_url` / `favorite` if either name reads badly in use.
+- Renaming `favorite` if the name reads badly in use.
 - Jar-level session provenance (D89's rejected alternative), seeded by
   `coa_retirements` if it ever earns a consumer.
 
