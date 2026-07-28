@@ -237,8 +237,9 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
    as `@/lib/...`.
 3. **Source-of-truth.** Supabase Postgres is canonical; a local cache **will** serve
    offline reads — none exists and nothing reads from one. COA PDFs **will** live in
-   Supabase Storage — the bucket is not yet created and nothing writes to it. No
-   auto-transform on save. Never fabricate terpene / cannabinoid values.
+   the private Storage bucket `coa-pdfs` — created in migration `20260728000000`,
+   no writer yet; slice 4 lands the first. No auto-transform on save. Never
+   fabricate terpene / cannabinoid values.
 4. **Protected data dirs.** COA fixtures
    (`supabase/functions/_shared/coa/__fixtures__/`) and any seeded or user data. The
    staging and prefix rules that govern them live in **Commit conventions**; this slot
