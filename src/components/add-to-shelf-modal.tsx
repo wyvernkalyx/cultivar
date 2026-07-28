@@ -7,10 +7,23 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { uploadCoaPdf, type UploadStage } from '@/lib/coa-pdf-storage';
 import { ingestCoaPdf, type IngestResult } from '@/lib/ingest-coa';
 import { supabase } from '@/lib/supabase';
 
 type Phase = 'idle' | 'picking' | 'sending' | 'done' | 'confirming' | 'saved';
+
+// Retention failure is reported, never recovered from (slice 4). The stage is
+// in the copy on purpose: the gate is the device, where this notice is the
+// only evidence anyone gets.
+function retentionMessage(stage: UploadStage, detail?: string): string {
+  return [
+    `Added to your shelf, but the source PDF was not retained (${stage}).`,
+    detail,
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
 
 export default function AddToShelfModal({
   visible,
@@ -30,6 +43,12 @@ export default function AddToShelfModal({
   // mounted; retry is just pressing Confirm again.
   const [confirmError, setConfirmError] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
+  // The picked file URI, held from pick() to confirm() (D87.4): retention
+  // uploads in the same user action that commits the row, and nothing else in
+  // the flow keeps a handle on the PDF once the parse call returns.
+  const [pickedUri, setPickedUri] = useState<string | null>(null);
+  // Non-blocking: the COA is saved whether or not this is set.
+  const [retentionNotice, setRetentionNotice] = useState<string | null>(null);
 
   // The component stays mounted while the Modal is hidden, so state would
   // survive a close; resetting here (not in an effect) keeps reopen-at-idle
@@ -39,6 +58,8 @@ export default function AddToShelfModal({
     setResult(null);
     setConfirmError(null);
     setSavedId(null);
+    setPickedUri(null);
+    setRetentionNotice(null);
     onClose();
   };
 
@@ -47,6 +68,8 @@ export default function AddToShelfModal({
     setResult(null);
     setConfirmError(null);
     setSavedId(null);
+    setPickedUri(null);
+    setRetentionNotice(null);
   };
 
   const pick = async () => {
@@ -61,8 +84,13 @@ export default function AddToShelfModal({
         setPhase('idle');
         return;
       }
+      const uri = picked.assets[0].uri;
+      // Retained for the save step. copyToCacheDirectory above means this URI
+      // stays resolvable for the session, which is what makes a second read at
+      // confirm time possible at all.
+      setPickedUri(uri);
       setPhase('sending');
-      setResult(await ingestCoaPdf(picked.assets[0].uri));
+      setResult(await ingestCoaPdf(uri));
     } catch (err) {
       setResult({
         ok: false,
@@ -77,6 +105,7 @@ export default function AddToShelfModal({
 
   const confirm = async (payload: CoaParseResult) => {
     setConfirmError(null);
+    setRetentionNotice(null);
     setPhase('confirming');
     const { data, error } = await supabase.rpc('insert_coa', { payload });
     if (error) {
@@ -84,7 +113,20 @@ export default function AddToShelfModal({
       setPhase('done');
       return;
     }
-    setSavedId(String(data));
+    const id = String(data);
+    setSavedId(id);
+    // Past this line the row is committed and the save is NEVER unwound
+    // (D87.4). Retention runs after it, and every outcome below — including a
+    // missing URI, which can only mean the picked file was never readable —
+    // lands on 'saved' with a notice rather than an error arm.
+    if (pickedUri === null) {
+      setRetentionNotice(retentionMessage('read'));
+    } else {
+      const stored = await uploadCoaPdf(pickedUri, id);
+      if (!stored.ok) {
+        setRetentionNotice(retentionMessage(stored.stage, stored.message));
+      }
+    }
     setPhase('saved');
   };
 
@@ -118,6 +160,13 @@ export default function AddToShelfModal({
                 {savedId && (
                   <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
                     {savedId}
+                  </ThemedText>
+                )}
+                {/* Same display pattern as confirmError, different meaning:
+                    this one reports on something that already succeeded. */}
+                {retentionNotice && (
+                  <ThemedText type="small" style={[styles.centered, styles.confirmError]}>
+                    {retentionNotice}
                   </ThemedText>
                 )}
               </ScrollView>

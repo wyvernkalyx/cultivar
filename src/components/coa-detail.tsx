@@ -5,6 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { removeCoaPdf } from '@/lib/coa-pdf-storage';
 import { supabase } from '@/lib/supabase';
 
 // DB shape (D45): exactly the selected columns and embeds, snake_case, as
@@ -35,6 +36,9 @@ type CoaDetailRecord = {
   sampled_on: string | null;
   tested_on: string | null;
   created_at: string;
+  // Selected for the delete path only (D87): nothing renders it — there is no
+  // reader for retained PDFs yet.
+  pdf_object_path: string | null;
   coa_terpenes: AnalyteRow[];
   coa_cannabinoids: AnalyteRow[];
   coa_safety: SafetyRow[];
@@ -125,7 +129,7 @@ export function CoaDetail({
       supabase
         .from('coas')
         .select(
-          'id, strain, brand, batch, lab, source_lab, total_thc, total_cbd, total_terpenes, sampled_on, tested_on, created_at, coa_terpenes(id, name, pct), coa_cannabinoids(id, name, pct), coa_safety(id, category, status)'
+          'id, strain, brand, batch, lab, source_lab, total_thc, total_cbd, total_terpenes, sampled_on, tested_on, created_at, pdf_object_path, coa_terpenes(id, name, pct), coa_cannabinoids(id, name, pct), coa_safety(id, category, status)'
         )
         .eq('id', coaId)
         .single()
@@ -152,15 +156,30 @@ export function CoaDetail({
   // Client delete, no RPC (D42 mechanism, unchanged): the child analyte rows
   // are the schema's on-delete-cascade concern, not the client's; RLS scopes
   // the delete. Success is the caller's to handle — close and refetch.
-  const deleteCoa = () =>
+  const deleteCoa = (objectPath: string | null) =>
     supabase
       .from('coas')
       .delete()
       .eq('id', coaId)
-      .then(({ error: deleteError }) => {
+      .then(async ({ error: deleteError }) => {
         if (deleteError) {
           Alert.alert('Delete failed', deleteError.message);
           return;
+        }
+        // Row first, then the Storage object (D87.4 observed constraints).
+        // D53's cascade is a foreign key and foreign keys do not reach
+        // Storage, so the removal is explicit. A failure here leaves a
+        // detectable orphan; object-first would leave a row pointing at a
+        // document that no longer exists. Surfaced, never swallowed — and
+        // never a reason to withhold onDeleted(), since the row is gone.
+        if (objectPath !== null) {
+          const removed = await removeCoaPdf(objectPath);
+          if (!removed.ok) {
+            Alert.alert(
+              'PDF not removed',
+              `This COA was deleted, but its stored PDF was not removed.\n\n${removed.message}`
+            );
+          }
         }
         onDeleted();
       });
@@ -183,7 +202,11 @@ export function CoaDetail({
       `${identity}\n\nDeletes this COA, all of its lab data (terpene, cannabinoid, and safety rows), and its logged sessions. This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteCoa() },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteCoa(record.pdf_object_path),
+        },
       ]
     );
   };
