@@ -1,9 +1,10 @@
 # COA Retention, Dedupe, and Possession -- design (D87-D91)
 
-Status: RATIFIED 2026-07-27 (D87-D91, plus the nine sub-decisions in
-"Ratification and amendments"). Slices 1-3 are implemented (docs `3b08e68`,
-schema `bc7a91b`, bucket `0705eef`); slices 4-6 are not. This status line is
-amended by the commit that changes its truth.
+Status: RATIFIED 2026-07-27 (D87-D91), plus the sub-decisions in
+"Ratification and amendments" (latest D88.6, 2026-07-28). Slices 1-4 are
+implemented (docs `3b08e68`, schema `bc7a91b`, bucket `0705eef`, retention
+`b669814`); slices 5-6 are not. This status line is amended by the commit
+that changes its truth.
 
 North stars: `documentation/design/product-metaphor.md` (the "in stock"
 open question this pass answers), `documentation/design/session-entries-schema.md`
@@ -348,6 +349,60 @@ orphan, while object-first would leave a row referencing a document that
 no longer exists. The sole delete site (`deleteCoa`,
 `src/components/coa-detail.tsx`) is fire-and-forget today; slice 4 makes
 its failure surface explicit.
+
+**D88.4 -- the dedupe lookup is a security invoker RPC, not Edge Function
+code. Ratified by the operator 2026-07-28.** A new Postgres function,
+`find_coa_duplicates`, `security invoker`, `set search_path = ''`,
+carrying `created_by = auth.uid()` as an explicit predicate in its own
+right; called by the client at confirm time, before `insert_coa`.
+Grounds: recon at `e052264` observed `ingest-coa` is identity-blind by
+construction -- no Supabase client, no env read, no user id reaching the
+handler -- and its stated design property is purity with respect to
+project state. A Postgres RPC is server-side, carries D88.1's explicit
+predicate verbatim, and under `security invoker` the service-role
+disclosure hole D88.1 guards against cannot exist. The alternative (a
+lookup inside `ingest-coa`) needs identity plumbing through
+`npm:@supabase/server@^1`, whose internals are outside the repo and
+unobservable.
+
+**D88.5 -- the hash is computed in `ingest-coa` and returned with the
+parse result. Ratified by the operator 2026-07-28.** SHA-256 via
+`crypto.subtle.digest` over the request bytes, hex-encoded lowercase
+(the D88.3 check's case), returned as `pdfSha256` alongside the parsed
+fields. Zero new dependencies, no native module: the EAS-rebuild split
+rule stays untriggered, preserving the slice plan's ground. Named,
+accepted: the hash describes the document that was parsed, while the
+slice-4 upload re-reads the cache URI at save time, so a hash/object
+mismatch is possible if the cache file changes mid-session -- negligible
+at this trust level, recorded rather than defended against.
+
+**D88.6 -- outcome 1's increment is a client update on the matched row.
+Ratified by the operator 2026-07-28.** "I bought another package" writes
+`on_shelf_count` = the lookup's returned count + 1 via a client
+`.update()` on the matched row. Grounds: `coas` carries a single ALL
+policy by design ("derived and revisable state," recorded under RLS
+above), and a dedicated RPC would buy atomicity against a race requiring
+the same user to ingest the same document concurrently on two devices --
+named and accepted at one user. If the count ever needs event-grade
+integrity, that is D90.1's transaction pattern, not a patch here.
+
+**Slice 5 observed constraints (2026-07-28 recon, read-only, at
+`e052264`).** `ingest-coa` is parse-and-return only: raw
+`application/pdf` body in, `{ data: <parse result> }` out, no Supabase
+client, no identity, no database access, no hashing. Auth is
+`withSupabase({ auth: 'user' })` from `npm:@supabase/server@^1`, outside
+the repo. The handler is exported separately from the authenticated
+default, so `deno test` exercises it without a JWT. `insert_coa` (newest
+definition, migration `20260722161632`) is `security invoker` with an
+explicit column list; adding `pdf_sha256` is one payload key and one
+column in the list, same signature, grants preserved by `create or
+replace`. Exactly one call site (`add-to-shelf-modal.tsx`). The
+confirm/edit surface hands the edited payload to `insert_coa`, so the
+dedupe lookup runs on the payload's `lab` and `batch` -- post-edit
+values, never raw parse output -- with the hash from the parse response.
+The client's only confirmation-dialog pattern is two-button
+`Alert.alert` (`coa-detail.tsx`); the ingest modal imports no Alert
+today.
 
 ---
 
