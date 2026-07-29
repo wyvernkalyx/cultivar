@@ -167,7 +167,11 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   -- never bare identifiers: reviewed code repeats its names in
   comment prose, and a bare-identifier count misses by exactly the
   number of times the file explains itself (corrected three times,
-  2026-07-28).
+  2026-07-28). The architect does not hand-count: a predicted array
+  length or diff-aligned line count is gated by parse
+  (`... | node -e 'JSON.parse(...).<arr>.length'`) or written as
+  observed-and-reported, never asserted from the supplied text
+  (a 15-entry deny list predicted as 14, 2026-07-28).
 - **Directory listings gate on name-form counts, never bare entry
   counts.** A bare entry count cannot detect a malformed name. Standing
   form for migrations: `ls supabase/migrations/ | grep -Ec '^[0-9]{14}_'`.

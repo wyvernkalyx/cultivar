@@ -62,8 +62,12 @@ wins -- re-baseline before proceeding.
 
 ## What shipped
 
-Newest first, all pushed, sync verified at `e136103`, plus the commit
-landing this document.
+Newest first, all pushed. Post-handoff addendum: `0e64c57`
+(`chore:` enforce operator gate as policy in `.claude/settings.json`;
+15 Claude Code deny rules for push / credentialed supabase / eas /
+`.env` reads; activated and enforcement-proven -- a denied `git push
+--dry-run` was blocked, `git status` ran). Sync of `CLAUDE.md` and this
+file postdates it.
 
 - `e136103` -- `docs:` close slice 5 into the record; construct-count
   grep rule promoted to CLAUDE.md
@@ -191,8 +195,21 @@ files matched their blobs byte for byte. Testable at the next sync.
 - Q3 `tested_on` nulls on legacy rows -- hypothesis: they predate a
   parser fix; fixtures parse dates correctly and new rows should carry
   them. Verify against the two new rows, then close or escalate.
-- Numstat-prediction method (refuted item 4) -- promote on recurrence.
-- CRLF sync mechanism hypothesis (above) -- test at next sync.
+- Architect hand-counting -- PROMOTED to CLAUDE.md this session. Recurred
+a third time (a 15-entry deny list predicted as 14); the implementer
+refused to drop a rule to match the miscount and asked for ratification,
+which is the correct stop. The rule now in CLAUDE.md: array lengths and
+diff-aligned line counts are gated by parse or observation, never
+predicted from the supplied text.
+- CRLF sync mechanism -- RESOLVED 2026-07-28. Project knowledge was
+re-sourced from the GitHub connector (repo blobs), not manual worktree
+uploads. The re-synced files read LF-clean, confirming the mechanism:
+the old drift came from sync reading a mixed worktree; the blob path
+does not. Governance files (`CLAUDE.md`, `handoff-specs.md`, this file,
+two design docs) are now single-sourced from GitHub. Open sub-question,
+testable next session: whether synced files refresh on demand or cache
+at sync time -- until known, treat synced context as current-as-of-last
+-sync, operator git output still adjudicates.
 - `anon` ALL grants on the two views + `coa_retirements`; latent.
 - FK-supporting indexes on `coa_retirements` -- join the D90.1
   migration in slice 6.
@@ -203,6 +220,10 @@ files matched their blobs byte for byte. Testable at the next sync.
   column count) -- further aged by slice 5's rows; one passage,
   re-observe or mark historical, next tidying pass.
 - Prior banked UI items from `9d66c49` -- all still banked.
+- Claude Code v2.0.1 `sandbox.network.strictAllowlist` (denies
+  non-allowlisted hosts for sandboxed commands) -- a network-egress
+  primitive stronger than shell-pattern denies; future option for the
+  operator-gate policy, not this pass.
 - Doc drift: `session-logging.md` / `scoring-lexicon.md` still
   describe the eight-phase survey.
 
