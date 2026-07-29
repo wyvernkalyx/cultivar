@@ -199,3 +199,24 @@ work that falls out of that; the dashboard unblocks only when
 sessions exist. If the next session opens with another build prompt
 instead of usage findings, that is the 4.7 ratio failing and it
 belongs in that handoff's preamble.
+
+## Amended 2026-07-29 (per handoff-specs 4.5)
+
+Work continued past this handoff in the same session:
+
+- `5388b15` -- `chore:` drop dormant `coas.pdf_url` (the Runnable-now
+  item, discharged). Migration `20260729114855` applied and verified;
+  the design doc's four pending-removal passages closed in the same
+  commit. Phase A deltas: migrations name-form count is now 14, the
+  ledger 14, and `coas` has 18 columns.
+- Refuted (architect): the commit prompt claimed THREE pending-removal
+  passages; the implementer's STOP located FOUR -- the D87 body carried
+  an independent live claim. The architect had inventoried from a
+  prior flag instead of reading the document, on the very file class
+  whose sibling proved greps miss claims. The STOP, with passage
+  bytes and gate math in the report, is the discipline working.
+- The stale untracked d:/Projects/Cultivar/CLAUDE.md (parent
+  directory, old handbook copy, readable by Claude Code) was deleted
+  by the operator. Hazard closed.
+- Entry point unchanged: log real sessions. This session's ledger:
+  two build arcs, zero real sessions -- the 4.7 ratio, noted.
