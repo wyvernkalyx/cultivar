@@ -58,6 +58,27 @@ is banked, not built here.
   already a CLAUDE.md commitment, proposed for promotion to the top of the
   banked queue after this pass. Out of scope here.
 
+**Amendment, 2026-07-29 -- per-assay derivation reopened and closed
+against; D84.2 and D84.3 unchanged.** Operator lived demand (a
+future shelf freshness indicator) reopened the per-assay-date
+question. A derivation rule -- document completion date, else the
+latest per-panel Analyzed Date, else null -- was provisionally
+ratified in chat without consulting this registry; it conflicted
+with D84.2 (per-assay dates out of scope) and D84.3 (Kaycha 2025
+tested_on is null; unlabeled dates are never captured) and was void
+where it conflicted -- the ratified doc governs the prompt, not the
+reverse. Extraction recon then independently re-derived D84.3's
+grounds on the live fixture bytes: the 2025 layout renders both
+per-panel labels with empty values ("Analyzed Date : .") and strands
+the panel timestamps unlabeled in the stream, one preceding its
+label, so a labeled rule finds nothing and a label-free latest-date
+sweep selects the bare unanchored 05/12/25 that D84.3 already names
+as guessing to claim. The operator closed the question against
+derivation the same day. The freshness use case is unharmed: it
+sources tested_on ?? sampled_on, and rainbow-runtz carries
+sampled_on. Reopen trigger: a real document carrying per-assay dates
+but neither a sampled nor a completion date.
+
 ## Parser contract
 
 `CoaResult` (in `supabase/functions/_shared/coa/types.ts`) gains exactly two

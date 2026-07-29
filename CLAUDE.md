@@ -47,6 +47,12 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   routinely disagree, and a check that passes because two of them happen to agree
   has verified nothing (see **Commit conventions** on blob identity, and
   `documentation/process/handoff-specs.md`, "Acceptance criteria").
+  This includes decision numbers and passage inventories: before
+  numbering, ratifying, or enumerating anything in a document, read
+  that document end to end in the current session -- an inventory or
+  number recalled from a flag, a memory, or a prior session's read
+  is a guess (twice on 2026-07-29: a four-passage inventory claimed
+  as three, and a D-number assigned while occupied).
 - **Lived-demand.** Build what a concrete, present need requires. No speculative
   abstraction, no "we might want this later" scaffolding.
 - **Personal-empirical, never pharmacological.** Cultivar never claims a terpene causes
