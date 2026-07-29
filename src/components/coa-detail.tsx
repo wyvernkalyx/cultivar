@@ -6,6 +6,7 @@ import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { removeCoaPdf } from '@/lib/coa-pdf-storage';
+import { retireCoa } from '@/lib/coa-retire';
 import { supabase } from '@/lib/supabase';
 
 // DB shape (D45): exactly the selected columns and embeds, snake_case, as
@@ -39,6 +40,11 @@ type CoaDetailRecord = {
   // Selected for the delete path only (D87): nothing renders it — there is no
   // reader for retained PDFs yet.
   pdf_object_path: string | null;
+  // Possession and repurchase intent (D89, D91). on_shelf_count is what the
+  // retirement copy reports; favorite is three-state, and null means never
+  // asked, not "no" (D48).
+  on_shelf_count: number;
+  favorite: boolean | null;
   coa_terpenes: AnalyteRow[];
   coa_cannabinoids: AnalyteRow[];
   coa_safety: SafetyRow[];
@@ -129,7 +135,7 @@ export function CoaDetail({
       supabase
         .from('coas')
         .select(
-          'id, strain, brand, batch, lab, source_lab, total_thc, total_cbd, total_terpenes, sampled_on, tested_on, created_at, pdf_object_path, coa_terpenes(id, name, pct), coa_cannabinoids(id, name, pct), coa_safety(id, category, status)'
+          'id, strain, brand, batch, lab, source_lab, total_thc, total_cbd, total_terpenes, sampled_on, tested_on, created_at, pdf_object_path, on_shelf_count, favorite, coa_terpenes(id, name, pct), coa_cannabinoids(id, name, pct), coa_safety(id, category, status)'
         )
         .eq('id', coaId)
         .single()
@@ -183,6 +189,72 @@ export function CoaDetail({
         }
         onDeleted();
       });
+
+  /**
+   * Repurchase intent (D91), written straight to the row. No RPC: `coas`
+   * carries a single ALL policy because `favorite` is revisable state, not a
+   * record, which is the same reasoning D88.6 used for the count. The record
+   * is `coa_retirements`, and it is not updatable at all.
+   *
+   * Reloads on both arms. On success the row moved; on failure it did not,
+   * and the control renders from the stored value, so a refetch is what puts
+   * the surface back in agreement with the database either way.
+   */
+  const writeFavorite = async (next: boolean | null) => {
+    const { error: updateError } = await supabase
+      .from('coas')
+      .update({ favorite: next })
+      .eq('id', coaId);
+    if (updateError) {
+      Alert.alert('Could not save', updateError.message);
+    }
+    await load();
+  };
+
+  // Q2 of the retirement survey (D90), optional by design. Skip writes
+  // NOTHING -- favorite is left untouched, not nulled, because unanswered is
+  // not an answer (D48). Every arm reloads: Q1 already changed the count.
+  const askFavorite = () =>
+    Alert.alert('Would you buy it again?', undefined, [
+      { text: 'Yes', onPress: () => void writeFavorite(true) },
+      { text: 'No', onPress: () => void writeFavorite(false) },
+      { text: 'Skip', style: 'cancel', onPress: () => void load() },
+    ]);
+
+  // Q1 is the event (D90). One RPC, one transaction (D90.1): the reason and
+  // the decrement land together or not at all. A failure stops here -- Q2 is
+  // a question about a retirement that happened.
+  const retire = async (record: CoaDetailRecord, reason: string) => {
+    const result = await retireCoa(record.id, reason);
+    if (!result.ok) {
+      Alert.alert('Could not retire', result.message);
+      return;
+    }
+    askFavorite();
+  };
+
+  const confirmRetire = (record: CoaDetailRecord) => {
+    // The D44 identity echo again, same two rules: strain falls back to
+    // "this COA", and a blank brand omits its line rather than rendering an
+    // empty one.
+    const strain = record.strain?.trim() ? record.strain.trim() : 'this COA';
+    const brand = record.brand?.trim();
+    const identity = [strain, ...(brand ? [brand] : [])].join('\n');
+    // Exactly one outcome line, chosen by what will be left. D90's copy
+    // constraint: a card that stays on the shelf must never be told it is
+    // being taken off it.
+    const outcome =
+      record.on_shelf_count > 1
+        ? `You'll still have ${record.on_shelf_count - 1} on your shelf.`
+        : 'This takes it off your shelf.';
+    Alert.alert('Retire a package', `${identity}\n\n${outcome}`, [
+      { text: 'Smoked it all', onPress: () => void retire(record, 'Smoked it all') },
+      { text: 'Gave up on it', onPress: () => void retire(record, 'Gave up on it') },
+      // Nothing has been written at this point, so cancelling is a pure
+      // no-op -- no event, no decrement, no question.
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
 
   const confirmDelete = (record: CoaDetailRecord) => {
     // D44 line-echo body, reused verbatim (D45): echo the record's displayed
@@ -291,6 +363,58 @@ export function CoaDetail({
                     <Row key={s.id} label={s.category} value={s.status} />
                   ))}
               </View>
+
+              {/* Repurchase intent (D91), settable any time and not only at
+                  retirement: it is a verdict about the chemistry, and it has
+                  to outlive every package. Three states -- tapping the
+                  active choice clears it back to null, because "never asked"
+                  and "no" are different answers (D48). This is not Never
+                  Again, which is a display override and remains
+                  unimplemented. */}
+              <View style={styles.section}>
+                <ThemedText type="smallBold">Repurchase</ThemedText>
+                <View style={styles.row}>
+                  <ThemedText type="small" style={styles.rowLabel}>
+                    Would buy again
+                  </ThemedText>
+                  <View style={styles.choiceRow}>
+                    <Pressable
+                      onPress={() => void writeFavorite(coa.favorite === true ? null : true)}
+                      style={[
+                        styles.choice,
+                        {
+                          backgroundColor:
+                            coa.favorite === true
+                              ? theme.backgroundSelected
+                              : theme.backgroundElement,
+                        },
+                      ]}>
+                      <ThemedText
+                        type={coa.favorite === true ? 'smallBold' : 'small'}
+                        themeColor={coa.favorite === true ? 'text' : 'textSecondary'}>
+                        Yes
+                      </ThemedText>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => void writeFavorite(coa.favorite === false ? null : false)}
+                      style={[
+                        styles.choice,
+                        {
+                          backgroundColor:
+                            coa.favorite === false
+                              ? theme.backgroundSelected
+                              : theme.backgroundElement,
+                        },
+                      ]}>
+                      <ThemedText
+                        type={coa.favorite === false ? 'smallBold' : 'small'}
+                        themeColor={coa.favorite === false ? 'text' : 'textSecondary'}>
+                        No
+                      </ThemedText>
+                    </Pressable>
+                  </View>
+                </View>
+              </View>
             </ScrollView>
 
             {/* Log session (D49): launches the logging surface; the caller
@@ -300,6 +424,14 @@ export function CoaDetail({
               onPress={onLogSession}
               style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
               <ThemedText type="smallBold">Log session</ThemedText>
+            </Pressable>
+            {/* Retire (D90): a package leaves the shelf, the COA does not.
+                Between logging and deleting because that is where it sits in
+                consequence -- it changes possession, never the record. */}
+            <Pressable
+              onPress={() => confirmRetire(coa)}
+              style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+              <ThemedText type="smallBold">Retire a package</ThemedText>
             </Pressable>
             <Pressable
               onPress={() => confirmDelete(coa)}
@@ -364,6 +496,15 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   ndToggle: {
+    paddingVertical: Spacing.one,
+  },
+  choiceRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
+  choice: {
+    borderRadius: Spacing.two,
+    paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.one,
   },
   button: {

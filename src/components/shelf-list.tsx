@@ -23,6 +23,7 @@ type ShelfCoa = {
   sampled_on: string | null;
   tested_on: string | null;
   created_at: string;
+  on_shelf_count: number;
 };
 
 // Three-state invariant, same as the editor: a null total is ND / <LOQ /
@@ -82,7 +83,20 @@ function ShelfCard({
   return (
     <Pressable onPress={onOpen}>
       <ThemedView type="backgroundElement" style={styles.card}>
-        <ThemedText type="smallBold">{coa.strain}</ThemedText>
+        <View style={styles.strainRow}>
+          <ThemedText type="smallBold" style={styles.strain}>
+            {coa.strain}
+          </ThemedText>
+          {/* Quantity badge (D89): one card per COA regardless of count, so
+              the count rides the strain line. Rendered only above a single
+              package -- at one package there is no badge at all, because
+              absence says it and a stated count of one is noise. */}
+          {coa.on_shelf_count > 1 && (
+            <ThemedText type="small" themeColor="textSecondary">
+              {`x${coa.on_shelf_count}`}
+            </ThemedText>
+          )}
+        </View>
         <ThemedText type="small" themeColor="textSecondary">
           {coa.brand}
         </ThemedText>
@@ -133,8 +147,14 @@ export function ShelfList() {
         supabase
           .from('coas')
           .select(
-            'id, strain, brand, lab, total_thc, total_cbd, total_terpenes, sampled_on, tested_on, created_at'
+            'id, strain, brand, lab, total_thc, total_cbd, total_terpenes, sampled_on, tested_on, created_at, on_shelf_count'
           )
+          // Off-shelf COAs are filtered DB-side (D89). A count of 0 is a
+          // display state, never an erasure: the row, its sessions, its
+          // band, and its favorite all survive, and the query is the only
+          // thing that stops asking for them. No client-side filtering --
+          // RLS scopes the rows, the DB orders and bounds them.
+          .gt('on_shelf_count', 0)
           .order('created_at', { ascending: false }),
         supabase.from('coa_session_stats').select('coa_id, band'),
       ]).then(([coasResult, statsResult]) => {
@@ -170,6 +190,18 @@ export function ShelfList() {
   // a stale band beside a fresh entry is the defect the refetch exists for.
   const closeLadder = () => {
     setLoggingCoa(null);
+    load();
+  };
+
+  // Every detail-close path refetches, on the same D63 grounds: a retirement
+  // may have landed, and a stale card beside a fresh event is exactly the
+  // defect. The count can now change from inside the detail, and a card that
+  // went off-shelf has to stop being rendered. Wired on the buttons AND on
+  // onDismiss, because gesture dismissal reaches neither of the others; a
+  // button close therefore refetches twice on iOS, which is a duplicate read
+  // rather than a stale shelf.
+  const closeDetail = () => {
+    setDetailCoaId(null);
     load();
   };
 
@@ -233,12 +265,12 @@ export function ShelfList() {
         visible={detailCoaId !== null}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => setDetailCoaId(null)}
+        onRequestClose={closeDetail}
         // iOS gesture dismissal of a pageSheet does not reliably route
         // through onRequestClose; wiring both keeps the state in sync, and
         // closing twice is idempotent.
         onDismiss={() => {
-          setDetailCoaId(null);
+          closeDetail();
           // Chained presentation (D49): promote the pending logging row
           // only after the sheet has fully dismissed.
           if (pendingLogCoa !== null) {
@@ -250,14 +282,11 @@ export function ShelfList() {
           <CoaDetail
             key={detailCoaId}
             coaId={detailCoaId}
-            onClose={() => setDetailCoaId(null)}
-            onDeleted={() => {
-              setDetailCoaId(null);
-              load();
-            }}
+            onClose={closeDetail}
+            onDeleted={closeDetail}
             onLogSession={() => {
               setPendingLogCoa(rows.find((row) => row.id === detailCoaId) ?? null);
-              setDetailCoaId(null);
+              closeDetail();
             }}
           />
         )}
@@ -306,6 +335,15 @@ const styles = StyleSheet.create({
   },
   centered: {
     textAlign: 'center',
+  },
+  strainRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    gap: Spacing.two,
+  },
+  strain: {
+    flexShrink: 1,
   },
   card: {
     gap: Spacing.one,
