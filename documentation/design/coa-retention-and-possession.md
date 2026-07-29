@@ -96,7 +96,8 @@ upload occurs in the same user action that commits the `coas` row.
   URLs expire; a stored signed URL is a value that silently rots. The client
   mints a signed URL at read time from the stored path. The inherited
   `pdf_url` column is not reused and stays dormant; removing it is banked as
-  its own `chore:`.
+  its own `chore:`. Removed 2026-07-29 by migration `20260729114855`; the
+  client mints signed URLs from `pdf_object_path` alone.
 - **Delete must reach Storage.** D53's cascade is a foreign key; foreign
   keys do not reach Storage objects. A COA delete that removes the row and
   leaves the object is an orphan leak. The delete path removes the object
@@ -281,7 +282,9 @@ view references it, so reuse is technically available -- but a column named
 Dropping `pdf_url` in the same migration was considered and rejected: no one
 has read the client code to confirm nothing selects it, and a schema slice is
 the wrong place to carry an unverified assumption. Its removal is banked as
-its own `chore:`, gated on a grep over `src/`.
+its own `chore:`, gated on a grep over `src/`. Discharged 2026-07-29 by
+migration `20260729114855` -- both greps (src/ and supabase/functions/)
+returned 0 hits, exit 1, before it was authored.
 
 **D88.1 -- the dedupe lookup is scoped to the caller explicitly, never by
 RLS.** Parsing is server-side. If `ingest-coa` executes under the service
@@ -435,9 +438,10 @@ On `coas`:
 | `favorite` | boolean | nullable | repurchase intent (D91); null = unasked |
 
 Resolved by D87.3: `pdf_object_path` is a new column and `pdf_url` is left
-in place, dormant. Its removal is banked as its own `chore:`. Indexes and
-check constraints for these columns are specified in D88.2, D88.3 and
-D90.2, and land in the same migration.
+in place, dormant. Its removal is banked as its own `chore:`. Removed
+2026-07-29, migration `20260729114855`. Indexes and check constraints for
+these columns are specified in D88.2, D88.3 and D90.2, and land in the
+same migration.
 
 New table `coa_retirements`:
 
@@ -515,7 +519,8 @@ product-photo idea, which would trigger it.
 - Store-inventory matching against favorites. Banked; requires chemistry on
   the menu side, which no consumer channel publishes.
 - Removing the dormant `pdf_url` column. Banked as its own `chore:`, gated
-  on a grep over `src/`.
+  on a grep over `src/`. Done 2026-07-29 (migration `20260729114855`);
+  this entry stands as the record of the deferral.
 - Grant tightening on the two views (`anon` holds ALL; latent, not live).
   Already banked by the D85 implementation plan; untouched here.
 
