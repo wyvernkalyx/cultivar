@@ -28,6 +28,13 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   applies them.
 - **Push authority.** Claude Code never pushes. Claude (chat) owns the push decision
   and authorizes at a clean, gated checkpoint; Gregg executes the single `git push`.
+- **The operator gate is also enforced as policy.**
+  `.claude/settings.json` denies the always-operator-run commands
+  (`git push`, credentialed `supabase`, `eas`) and reading real `.env`
+  files. Enforcement is Claude Code's, not the model's -- a deny holds
+  even under a defective prompt. The file is the boundary; this bullet
+  is the pointer. `git add` and `git commit` stay allowed: commits run
+  under ratified commit-prompts, not autonomously.
 
 ---
 
