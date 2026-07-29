@@ -220,3 +220,78 @@ Work continued past this handoff in the same session:
   by the operator. Hazard closed.
 - Entry point unchanged: log real sessions. This session's ledger:
   two build arcs, zero real sessions -- the 4.7 ratio, noted.
+
+## Amended 2026-07-29, evening (per handoff-specs 4.5)
+
+The session continued well past the first amendment. Ruling of
+record: the operator superseded the entry point -- follow-ups and
+MVP feature work proceed BEFORE real-session logging ("the app is
+still not great"); the operator's concrete gripe list is still owed
+and remains the input the feature phase needs.
+
+Shipped since the first amendment:
+
+- `7243a44` -- `feat:` absent text fields are null, never '' (D97,
+  end to end: parser, both type mirrors, editor binding and emit
+  normalization, sentinel, tests). Deployed to ingest-coa and
+  device-gated; two pre-existing '' brand rows normalized to null
+  by operator-run UPDATE (2 rows, read back). The deployed function
+  now emits D97 nulls.
+- `925a368` -- `docs:` D84 per-assay derivation reopened and closed
+  against (the chat ratification conflicted with standing
+  D84.2/D84.3 and was void where it conflicted; extraction recon
+  re-derived grounds the registry already held); D97 ratified in
+  its own doc (text-field-absence.md); CLAUDE.md gained the
+  read-before-numbering rule.
+
+Refuted, architect, one root cause -- asserting document or file
+state without reading the artifact -- FIVE times in one day, now a
+CLAUDE.md rule: a four-passage inventory claimed as three; the
+D-number D84.5 assigned while occupied; the D97 Boundary section
+describing as pending a null contract coa-dedupe.ts already
+carried; and two more inside this very amendment's first draft,
+caught by the implementer's pre-append verification -- a stale
+line-number citation (the Parser contract passage sits at line 100
+at HEAD; it was line 79 until 925a368's own insertion moved it, so
+the citation aged inside the same commit chain being documented)
+and a wrong D68 inventory. Adjacent case: the recon "discovery"
+that the 2025 layout renders Analyzed Date empty was already
+recorded in coa-test-dates.md's Parser contract section.
+
+D68 status, correctly inventoried: D68 no longer governs anything.
+Its code citation (parseKaycha.ts) was rewritten to D97 in 7243a44;
+its one surviving mention is the supersession note at
+text-field-absence.md:26, created by 925a368.
+
+Gate-form lessons banked into working rhythm: deno eval lost its
+permission flags in Deno 2 (runs all-permissions; use deno run for
+flag-scoped work); a consuming global regex under-reports scans --
+count occurrences by indexOf; cwd-sensitive test runs use the
+subshell form (cd dir && ...) so greps after them cannot run
+against a wrong root (one corrupted grep batch, self-caught).
+
+Supabase MCP connector FAILED mid-gate and is unresolved in this
+conversation: "server isn't responding" x3, then after reconnect
+"permission denied" on a bare select 1, unchanged after a full
+re-auth whose consent screen showed the correct org and read-write
+scope. Suspected stale conversation-level binding. FIRST ACT of the
+next session: probe select 1 over MCP; if it fails on a fresh
+conversation, the grant itself is broken -- escalate at Supabase's
+authorized-apps page. Interim evidence path used and valid:
+operator-run dashboard SQL, output pasted whole.
+
+Phase A deltas: HEAD chain 7243a44 -> 925a368 -> 0acd328. Jest
+still 52 (two brand expectations flipped to null; four sentinel
+assertions added inside the existing unknown-lab test). Database:
+brand is null on Cosmic Cereal and Permanent Shade, no '' text
+fields anywhere in coas; counts unchanged 5 coas / 2 retirements /
+10 sessions. New doc: text-field-absence.md.
+
+Queue, in ratified order: Deno lockfile chore (runnable now);
+anon-grants durable fix (needs a short design ratification --
+pg_default_acl, not revoke-only); doc-drift Tier 1 pass
+(session-logging.md / scoring-lexicon.md eight-phase survey;
+stale Observed-baseline passage). Banked for the feature phase:
+shelf freshness indicator (>3 months, tested_on ?? sampled_on);
+firstMatch consolidation refactor. The off-shelf history surface
+and the 9d66c49 UI items still wait on the operator's gripe list.
