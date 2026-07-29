@@ -28,8 +28,8 @@ interface FixtureCase {
   dominant: string;
   myrcene: number;
   limonene: number | null; // null => reported ND by the lab
-  batch: string;
-  brand: string;
+  batch: string | null;
+  brand: string | null;
   sampledDate: string | null;
   testedDate: string | null;
 }
@@ -73,7 +73,7 @@ const CASES: FixtureCase[] = [
     myrcene: 0.11,
     limonene: 0.55,
     batch: 'CMC-0601-AL-0126-D-E',
-    brand: '',
+    brand: null,
     sampledDate: '2026-04-17',
     testedDate: '2026-04-28',
   },
@@ -87,7 +87,7 @@ const CASES: FixtureCase[] = [
     myrcene: 0.04,
     limonene: 0.65,
     batch: 'PMMS-0601-AL-0126-D-E',
-    brand: '',
+    brand: null,
     sampledDate: '2026-04-17',
     testedDate: '2026-04-28',
   },
@@ -165,11 +165,17 @@ describe('parseCoa on real COA fixtures', () => {
 });
 
 describe('parseCoa unknown-lab shell', () => {
-  it('sets both dates null', () => {
+  it('sets both dates and all four text fields null', () => {
     const coa = parseCoa('no recognizable lab markers in this text');
     expect(coa.sourceLab).toBe('unknown');
     expect(coa.sampledDate).toBeNull();
     expect(coa.testedDate).toBeNull();
+    // An unrecognized document is total absence (D97): the sentinel states
+    // nothing, so every text field is null rather than ''.
+    expect(coa.lab).toBeNull();
+    expect(coa.brand).toBeNull();
+    expect(coa.strain).toBeNull();
+    expect(coa.batch).toBeNull();
   });
 });
 

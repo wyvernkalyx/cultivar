@@ -2,7 +2,9 @@
 //
 // Truth rule (see CLAUDE.md): never fabricate a value. Any analyte that the lab
 // reported as ND / <LOQ / not-reported is represented as `null`, never `0` and
-// never an invented number.
+// never an invented number. The same rule governs the text fields (D97): a
+// field the document does not state is `null`, never `''` -- an empty string
+// would assert that the document says blank, which is a different claim.
 
 export type SourceLab = 'kaycha' | 'drs-confident' | 'unknown';
 
@@ -19,10 +21,14 @@ export interface SafetyRow {
 }
 
 export interface CoaResult {
-  lab: string;
-  brand: string;
-  strain: string;
-  batch: string;
+  /** Lab name as printed; null when the document does not state one. */
+  lab: string | null;
+  /** Brand as printed; null when the document does not state one. */
+  brand: string | null;
+  /** Strain as printed; null when the document does not state one. */
+  strain: string | null;
+  /** Batch as printed; null when the document does not state one. */
+  batch: string | null;
   /** ISO YYYY-MM-DD from the COA's sampled/collection date; null when absent or unparseable. */
   sampledDate: string | null;
   /** ISO YYYY-MM-DD from the COA's completed/report date; null when absent or unparseable. */

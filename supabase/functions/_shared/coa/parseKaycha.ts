@@ -29,9 +29,15 @@ const KAYCHA_CANNABINOIDS = [
   'THCV',
 ];
 
+// A capture that trims to empty is absence, not a blank value (D97). That path
+// bypasses every `?? null` at the call sites -- the coalesce only fires on a
+// failed match -- so the emptiness check belongs here. Deliberately duplicated
+// in parseDrsConfident.ts; consolidating the two copies is a banked refactor.
 function firstMatch(text: string, re: RegExp): string | null {
   const m = re.exec(text);
-  return m ? m[1].trim() : null;
+  if (!m) return null;
+  const value = m[1].trim();
+  return value === '' ? null : value;
 }
 
 // ---- Terpenes -------------------------------------------------------------
@@ -183,13 +189,13 @@ export function parseKaycha(text: string): CoaResult {
       /Strain:\s*(.+?)\s+(?:Matrix|Classification|Batch|Certificate)/,
     ) ??
     firstMatch(text, /([A-Z][A-Z]+(?: [A-Z]+)*)\s+Matrix\b/) ??
-    '';
+    null;
   const batch =
-    firstMatch(text, /Batch\s*#\s*:?\s*([A-Za-z0-9][A-Za-z0-9\-]*)/) ?? '';
+    firstMatch(text, /Batch\s*#\s*:?\s*([A-Za-z0-9][A-Za-z0-9\-]*)/) ?? null;
   // Both edges anchored on structural tokens ("dba" ... "License #") so the
   // engine cannot walk left into header sludge (D67). No dba token -> no
-  // match -> '' (D68).
-  const brand = firstMatch(text, /\bdba\b\s+(.+?)\s+License\s*#/i) ?? '';
+  // match -> null (D97): absence is null, never ''.
+  const brand = firstMatch(text, /\bdba\b\s+(.+?)\s+License\s*#/i) ?? null;
 
   // One sampled regex spans both Kaycha layouts (2026 "Sampled Date:", 2025
   // bare "Sampled:"); the date-shaped capture ignores any trailing time and

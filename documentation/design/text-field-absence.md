@@ -46,9 +46,14 @@ keeps the old contract.
 
 ## Boundary
 
-The dedupe wrapper (src/lib/coa-dedupe.ts) widens its lab/batch
-parameters to match; find_coa_duplicates already handles null keys
-(migration 20260728172153).
+The dedupe wrapper (src/lib/coa-dedupe.ts) already carried the
+null contract before D97 -- findCoaDuplicates and DuplicateMatch
+were declared string | null when the wrapper landed, and
+find_coa_duplicates treats '' as absent server-side via
+nullif(trim(...), '') (migration 20260728172153). Discovered at
+the Q4 build, 2026-07-29: this section originally described the
+widening as pending, written without reading the file -- recorded
+here rather than silently corrected.
 
 ## Known consequences
 

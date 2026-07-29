@@ -19,10 +19,13 @@ export interface CoaSafetyRow {
 }
 
 export interface CoaParseResult {
-  lab: string;
-  brand: string;
-  strain: string;
-  batch: string;
+  // Absent text is null, never '' (D97). No sync enforcement exists between
+  // this mirror and supabase/functions/_shared/coa/types.ts; they widen
+  // together or the client silently keeps the old contract.
+  lab: string | null;
+  brand: string | null;
+  strain: string | null;
+  batch: string | null;
   sampledDate: string | null;
   testedDate: string | null;
   totalThcPct: number | null;
@@ -45,10 +48,12 @@ interface DraftAnalyte {
 }
 
 interface Draft {
-  strain: string;
-  brand: string;
-  batch: string;
-  lab: string;
+  // Null carries through from the parse (D97) until the user types into the
+  // field; the binding renders it blank, and emit normalizes it back.
+  strain: string | null;
+  brand: string | null;
+  batch: string | null;
+  lab: string | null;
   // Carried through unedited (D84): dates are not editable this slice, so
   // they ride the draft like `safety` -- init copies them, emit returns them.
   sampledDate: string | null;
@@ -88,16 +93,25 @@ function initDraft(coa: CoaParseResult): Draft {
   };
 }
 
+// Metadata normalization on emit (D97): trim, and a trimmed-empty field emits
+// null. A field the user cleared and a field the document never stated are the
+// same claim -- absence -- and must leave here as the same null.
+function normalizeMeta(value: string | null): string | null {
+  if (value === null) return null;
+  const trimmed = value.trim();
+  return trimmed === '' ? null : trimmed;
+}
+
 // Emission back to parser shape (slice 6b, D40): ids and detectedAtInit are
 // stripped by constructing the mapped object; deleted rows are absent because
 // they are no longer in the draft. A null pct emits as JSON null — never 0,
 // never dropped.
 function emitDraft(draft: Draft): CoaParseResult {
   return {
-    lab: draft.lab,
-    brand: draft.brand,
-    strain: draft.strain,
-    batch: draft.batch,
+    lab: normalizeMeta(draft.lab),
+    brand: normalizeMeta(draft.brand),
+    strain: normalizeMeta(draft.strain),
+    batch: normalizeMeta(draft.batch),
     sampledDate: draft.sampledDate,
     testedDate: draft.testedDate,
     totalThcPct: draft.totalThcPct,
@@ -306,7 +320,7 @@ function MetadataField({
   onChange,
 }: {
   label: string;
-  value: string;
+  value: string | null;
   onChange: (text: string) => void;
 }) {
   const theme = useTheme();
@@ -319,7 +333,9 @@ function MetadataField({
           styles.metadataInput,
           { backgroundColor: theme.backgroundElement, color: theme.text },
         ]}
-        value={value}
+        // null is absence, not a value: it is not a valid controlled-input
+        // value, so it renders as blank here and normalizes back on emit (D97).
+        value={value ?? ''}
         onChangeText={onChange}
         autoCapitalize="none"
         autoCorrect={false}

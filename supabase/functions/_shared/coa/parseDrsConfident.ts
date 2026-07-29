@@ -58,9 +58,15 @@ function parseTerpenes(text: string): Analyte[] {
     .map((a) => ({ name: displayTerpene(a.name), pct: a.pct }));
 }
 
+// A capture that trims to empty is absence, not a blank value (D97). That path
+// bypasses every `?? null` at the call sites -- the coalesce only fires on a
+// failed match -- so the emptiness check belongs here. Deliberately duplicated
+// in parseKaycha.ts; consolidating the two copies is a banked refactor.
 function firstMatch(text: string, re: RegExp): string | null {
   const m = re.exec(text);
-  return m ? m[1].trim() : null;
+  if (!m) return null;
+  const value = m[1].trim();
+  return value === '' ? null : value;
 }
 
 export function parseDrsConfident(text: string): CoaResult {
@@ -73,12 +79,12 @@ export function parseDrsConfident(text: string): CoaResult {
     firstMatch(text, /([\d.]+)%\s+Total Terpenes\b/),
   );
 
-  const strain = firstMatch(text, /Strain:\s*(.+?)\s+Batch#/) ?? '';
-  const batch = firstMatch(text, /Batch#:\s*([^;]+?);/) ?? '';
+  const strain = firstMatch(text, /Strain:\s*(.+?)\s+Batch#/) ?? null;
+  const batch = firstMatch(text, /Batch#:\s*([^;]+?);/) ?? null;
   // Both edges anchored on structural tokens: the page counter ("1 of 8")
   // on the left, the template's "Contact Person" label on the right (D69).
   // No LLC requirement -- the capture is whatever sits between the anchors.
-  const brand = firstMatch(text, /\b\d+ of \d+\s+(.+?)\s+Contact Person/) ?? '';
+  const brand = firstMatch(text, /\b\d+ of \d+\s+(.+?)\s+Contact Person/) ?? null;
 
   // Collection is the semantic match for Kaycha's "Sampled" (D84.3); the
   // lab-intake "Sample Received:" is deliberately not consumed. The

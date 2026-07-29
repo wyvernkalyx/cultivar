@@ -19,10 +19,10 @@ export function parseCoa(text: string): CoaResult {
       return parseDrsConfident(text);
     default:
       return {
-        lab: '',
-        brand: '',
-        strain: '',
-        batch: '',
+        lab: null,
+        brand: null,
+        strain: null,
+        batch: null,
         sampledDate: null,
         testedDate: null,
         totalThcPct: null,
