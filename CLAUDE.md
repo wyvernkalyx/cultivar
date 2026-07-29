@@ -161,10 +161,15 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   (observed: 0 against live SPARK/Spark). State the case posture in the
   criterion -- `-i`, or exact-case chosen deliberately. Any pattern
   beginning with `-` is passed via `-e`; without it `grep -F` aborts
-  exit 2 before matching anything. Predicted counts against code or
-  other self-documenting files count constructs -- anchored or
-  qualified forms (`^ *security invoker$`, `phase === 'incremented'`)
-  -- never bare identifiers: reviewed code repeats its names in
+  exit 2 before matching anything. `-i` and `-F` are never combined:
+  `grep -iF` aborts (SIGABRT, exit 134) on this machine's GNU grep 3.0
+  regardless of pattern, path, or locale (isolated 2026-07-29,
+  control-paired against a known-present token) -- a case-insensitive
+  gate drops `-F` and escapes regex metacharacters instead. Predicted
+  counts against code or other self-documenting files count constructs
+  -- anchored or qualified forms (`^ *security invoker$`,
+  `phase === 'incremented'`) -- never bare identifiers: reviewed code
+  repeats its names in
   comment prose, and a bare-identifier count misses by exactly the
   number of times the file explains itself (corrected three times,
   2026-07-28). The architect does not hand-count: a predicted array

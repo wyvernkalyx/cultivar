@@ -1,9 +1,10 @@
 # COA Retention, Dedupe, and Possession -- design (D87-D91)
 
 Status: RATIFIED 2026-07-27 (D87-D91), plus the sub-decisions in
-"Ratification and amendments" (latest D88.6, 2026-07-28). Slices 1-5 are
-implemented (docs `3b08e68`, schema `bc7a91b`, bucket `0705eef`, retention
-`b669814`, dedupe `a273931` with `3336d51`/`5e7e37e`); slice 6 is not.
+"Ratification and amendments" (latest D88.6, 2026-07-28). All six slices
+are implemented (docs `3b08e68`, schema `bc7a91b`, bucket `0705eef`,
+retention `b669814`, dedupe `a273931` with `3336d51`/`5e7e37e`,
+retirement + favorite `1802dbf`).
 This status line is amended by the commit that changes its truth.
 
 North stars: `documentation/design/product-metaphor.md` (the "in stock"
@@ -560,6 +561,26 @@ read-back:
 `coa_retirements` row and count 1 and the card still present; retire again
 with the other reason, observe two rows with differing reasons and count 0
 and the card off-shelf but the COA, its sessions, and its favorite intact.
+
+**Slice 6 gate record (2026-07-29, closed at `1802dbf`).** Schema and
+behavioral gates ran over MCP, all rolled back: three consecutive
+retirements returned counts 1/0/0 (decrement, zero, floor held while
+the third event still recorded); UPDATE and DELETE on the events
+matched 0 rows with the inserting identity as positive control;
+empty reason rejected by the D90.2 check; non-owner rejected by RLS
+on the insert; retire_coa prosecdef = f with grants byte-identical to
+find_coa_duplicates -- the service_role grant arrives from
+pg_default_acl at creation, not from the migration, which is the
+banked default-ACL mechanism observed from its creation side. Device
+gate with database read-backs: two retirements on Permanent Shade
+with differing reasons, Skip-preserves-favorite control (favorite
+stayed true), cancel no-op, airplane fail-closed (the event count
+pinned at exactly 2 is the proof the offline attempt wrote nothing),
+card off-shelf at count 0 with COA, children, and the 10 session
+rows intact. Accepted implementation deltas: Q1 identity echo is
+strain and brand without the Added line (the promptDuplicate
+precedent -- retirement is not destruction); Q2 carries no body; an
+iOS button close refetches twice (duplicate read over stale shelf).
 
 ---
 
