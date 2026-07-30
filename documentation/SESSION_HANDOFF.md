@@ -295,3 +295,92 @@ stale Observed-baseline passage). Banked for the feature phase:
 shelf freshness indicator (>3 months, tested_on ?? sampled_on);
 firstMatch consolidation refactor. The off-shelf history surface
 and the 9d66c49 UI items still wait on the operator's gripe list.
+
+## Amended 2026-07-30 (per handoff-specs 4.5)
+
+The repo is authoritative over this document. Carried context was
+wrong twice this session, both architect-side: the opening Phase A
+predicted HEAD 0acd328 by misreading the prior amendment's
+newest-first chain as oldest-first (actual HEAD 57aa544, which
+reconciles exactly once the notation is read correctly); and the
+carried claim "coa-pdfs bucket has no writer yet" was refuted by
+observation -- the ingestion writer is live, 2 storage objects,
+pdf_object_path populated on 2 of 5 coas rows. Begin the next
+session with a read-only Phase A.
+
+Shipped:
+
+- `de5b71b` -- `docs:` dashboard design reference package
+  (reference/handoff/: 7 screen/flow/token PNGs,
+  cultivar-reference.html, cultivar-reference.md, design-brief.md
+  as provenance). Pushed, observed 57aa544..de5b71b, rev-list 0 0.
+
+The arc: the operator's gripe list (the owed input, superseding
+entry point per the evening ruling) named three things -- a
+dashboard with preference info and richer cards, no way to open
+the stored COA PDF, and a design pass with a user-flow diagram.
+Resolution shape: architect authored a fenced design brief
+(personal-empirical boundary, data contract from observed schema,
+D85 vocabulary verbatim, ND/null first-class, RN constraints);
+operator ratified with one amendment (survey screens restyle-only
+-- theme may change, mechanics/vocabulary/rung-order may not);
+Claude Design produced the package; architect reviewed it against
+the fences (clean) and it landed with the brief as provenance. Why
+that shape: design exploration is cheap outside the build-gate
+loop, but only inside a fence a design tool cannot cross.
+
+Ratified (grounds in de5b71b commit body): all-time session summary
+on dashboard; Sessions above Cannabinoids in detail; Safety as one
+verbatim-count line plus Show assays; sticky Log bar on detail;
+Loved-sessions lab-concentration module as v1 preference summary.
+Also ratified in chat: survey restyle-only scope;
+top-3-by-concentration as the v1 "relevant terpenes" definition;
+one-tap log lands directly on the survey verdict screen.
+
+Banked this session: retirement last-log flow step (a Claude Design
+invention; retirement stays the ratified two-question survey;
+trigger: lived demand). Binding at implementation, recorded so it
+is not lost: preference-summary ranges compute over reported values
+only -- ND is annotated alongside, never folded in as a zero lower
+bound.
+
+Open rulings the operator never answered (re-ask, do not assume):
+1. Delete COA button -- coas carries an ALL policy; delete orphans
+session history and fights the retention design. Architect
+recommends demote-to-bad-ingest or drop. 2. The operator's brief
+amendment list had an empty item 2, never filled in.
+
+Observed database state (architect, over MCP -- the grant is intact
+on a fresh conversation; the prior failure is attributed, not
+proven, to stale conversation binding): 5 coas / 2 retirements /
+session_entries 11 by per-coa sum (10 on legacy RUNTZ, 1 on hashed
+RUNTZ -- the +1 was logged by the operator at 11:21 while capturing
+screenshots; whether it was a real session or a screenshot tap is
+an open question only the operator can answer). Migrations ledger
+14. coas 18 columns, pdf_url absent. storage.objects in coa-pdfs:
+2. The RR duplicate rows are NOT a dedupe defect: the second row
+predates hashing (pdf_sha256 null) and a null hash cannot collide.
+
+Phase A for the next session: parent of the handoff commit is
+de5b71b; predict this amendment's commit subject, not its sha; if
+HEAD is neither, work continued -- reconcile first. git status
+--porcelain: silent if the operator ran the optional duplicate
+cleanup (rm of the seven NN-screens.png), else exactly those seven
+?? lines and nothing else. Jest 52 is carried from the prior
+handoff, not re-observed this session -- re-measure, don't recall.
+
+Ratio note (4.7): one docs commit, zero product code. Expected --
+this session's job was turning the gripe list into a ratified
+design direction -- but the next session must convert it.
+
+## Entry point (supersedes prior)
+
+Author the dashboard implementation design doc and slice plan from
+reference/handoff/ (design-brief.md plus cultivar-reference.md are
+the inputs), ratify, then build in slices. Natural slice seams, to
+be ratified not assumed: preference summary module; card redesign
+plus one-tap log; off-shelf surface (banked item, trigger fired);
+COA PDF viewer (read path only -- the writer is live; note the
+native-module / EAS-build split rule if a PDF view dependency is
+needed). The Delete COA ruling belongs in the same ratification
+pass.
