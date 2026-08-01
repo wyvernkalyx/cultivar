@@ -9,32 +9,25 @@ import {
   type RungWord,
 } from '@/components/preference-summary';
 import { SessionLadder } from '@/components/session-ladder';
+import {
+  ShelfCard,
+  type CardSession,
+  type CardTerpene,
+  type ShelfCoa,
+} from '@/components/shelf-card';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { RUNGS } from '@/lib/lexicon';
 import { supabase } from '@/lib/supabase';
 
-// DB shape (D41): exactly the selected columns, snake_case, as the coas
-// table stores them — not the parser shape.
-type ShelfCoa = {
-  id: string;
-  strain: string | null;
-  brand: string | null;
-  lab: string | null;
-  total_thc: number | null;
-  total_cbd: number | null;
-  total_terpenes: number | null;
-  sampled_on: string | null;
-  tested_on: string | null;
-  created_at: string;
-  on_shelf_count: number;
-};
+// The card, its date helpers, and the ShelfCoa shape live in shelf-card.tsx
+// from D99 on — the list owns fetching and the modals, the card owns display.
 
-// The preference summary's inputs (D98), each exactly the columns selected.
-// A live session is one row of session_current (D59: latest-then-filter, soft
+// The per-session inputs (D98/D99), exactly the columns selected. A live
+// session is one row of session_current (D59: latest-then-filter, soft
 // deletes already excluded), so the row count IS the all-time session count.
-type SummarySession = { overall_word: string | null; coa_id: string };
+// One fetch serves both the summary's distribution and the per-card dots.
+type SummarySession = { overall_word: string | null; coa_id: string; created_at: string };
 // Deliberately UNFILTERED by on_shelf_count: the summary is all-time,
 // including off-shelf history (D98). RLS scopes the rows.
 type SummaryCoa = {
@@ -44,12 +37,6 @@ type SummaryCoa = {
   total_cbd: number | null;
 };
 type SummaryTerpene = { coa_id: string; name: string; pct: number | null };
-
-// Three-state invariant, same as the editor: a null total is ND / <LOQ /
-// not reported and renders the literal "ND" — never 0, never blank.
-function totalLabel(value: number | null) {
-  return value === null ? 'ND' : `${value}%`;
-}
 
 // Min/max over REPORTED values only, with the unreported ones counted beside
 // them — the D98 binding, verbatim: ranges compute over reported values only;
@@ -119,98 +106,61 @@ function buildSummary(
   };
 }
 
-// A `date` column arrives as 'YYYY-MM-DD'. `new Date('YYYY-MM-DD')` parses at
-// UTC midnight, which renders as the prior day west of UTC; constructing from
-// the parts yields local midnight, so the displayed day never shifts.
-function formatIsoDate(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString();
+// This COA's live sessions, ascending by time, for the card's verdict dots
+// (D99). An absent word keeps its session — the session happened, and the
+// card renders it faint rather than dropping it, so the count stays honest.
+function groupSessionsByCoa(sessions: SummarySession[]): Map<string, CardSession[]> {
+  const byCoa = new Map<string, CardSession[]>();
+  for (const session of sessions) {
+    const existing = byCoa.get(session.coa_id);
+    const entry = { word: session.overall_word ?? '', at: session.created_at };
+    if (existing === undefined) byCoa.set(session.coa_id, [entry]);
+    else existing.push(entry);
+  }
+  for (const entries of byCoa.values()) {
+    entries.sort((a, b) => a.at.localeCompare(b.at));
+  }
+  return byCoa;
 }
 
-// Card date line (D84.4), one line by strict precedence: tested, else
-// sampled (each labeled as such), else the existing created_at provenance.
-// created_at is a timestamptz and keeps its own timezone-aware treatment.
-function cardDateLine(coa: ShelfCoa): string {
-  if (coa.tested_on) return `Tested ${formatIsoDate(coa.tested_on)}`;
-  if (coa.sampled_on) return `Sampled ${formatIsoDate(coa.sampled_on)}`;
-  return `Added ${new Date(coa.created_at).toLocaleDateString()}`;
-}
-
-function Total({ label, value }: { label: string; value: number | null }) {
-  return (
-    <View style={styles.total}>
-      <ThemedText type="small" themeColor="textSecondary">
-        {label}
-      </ThemedText>
-      <ThemedText type="small">{totalLabel(value)}</ThemedText>
-    </View>
-  );
-}
-
-// Neutral by construction (D41): every card is the same themed surface — no
-// mood, no color coding, no per-card visual variance. Scoped in the scoring
-// slice (D62/D63, documentation/design/scoring-read.md): the claim now holds
-// for untried cards only — a scored card renders its band word, looked up in
-// RUNGS by score (never a second word table), and an untried card renders
-// nothing in its place (D61: untried is absence, never a value). One
-// interaction (D45): tap opens the card detail, with no press feedback — the
-// card stays visually neutral (discipline 2). Long-press is retired; delete
-// lives on the detail view.
-function ShelfCard({
-  coa,
-  band,
-  onOpen,
-}: {
-  coa: ShelfCoa;
-  band: number | undefined;
-  onOpen: () => void;
-}) {
-  const bandWord =
-    band === undefined ? undefined : RUNGS.find((rung) => rung.score === band)?.word;
-  return (
-    <Pressable onPress={onOpen}>
-      <ThemedView type="backgroundElement" style={styles.card}>
-        <View style={styles.strainRow}>
-          <ThemedText type="smallBold" style={styles.strain}>
-            {coa.strain}
-          </ThemedText>
-          {/* Quantity badge (D89): one card per COA regardless of count, so
-              the count rides the strain line. Rendered only above a single
-              package -- at one package there is no badge at all, because
-              absence says it and a stated count of one is noise. */}
-          {coa.on_shelf_count > 1 && (
-            <ThemedText type="small" themeColor="textSecondary">
-              {`x${coa.on_shelf_count}`}
-            </ThemedText>
-          )}
-        </View>
-        <ThemedText type="small" themeColor="textSecondary">
-          {coa.brand}
-        </ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          {cardDateLine(coa)}
-        </ThemedText>
-        {bandWord !== undefined && <ThemedText type="smallBold">{bandWord}</ThemedText>}
-        <View style={styles.totalsRow}>
-          <Total label="THC" value={coa.total_thc} />
-          <Total label="CBD" value={coa.total_cbd} />
-          <Total label="Total terpenes" value={coa.total_terpenes} />
-        </View>
-      </ThemedView>
-    </Pressable>
-  );
+// Per-COA top-3 reported terpenes for the fingerprint bar, the same ranking
+// convention the slice-1 summary uses: a null pct is an unreported analyte
+// and is excluded outright, so absence can never rank as a zero; ties break
+// on name for a stable order across refetches.
+function groupTopTerpenesByCoa(rows: SummaryTerpene[]): Map<string, CardTerpene[]> {
+  const byCoa = new Map<string, CardTerpene[]>();
+  for (const row of rows) {
+    if (row.pct === null) continue;
+    const entry = { name: row.name, pct: row.pct };
+    const existing = byCoa.get(row.coa_id);
+    if (existing === undefined) byCoa.set(row.coa_id, [entry]);
+    else existing.push(entry);
+  }
+  for (const [coaId, entries] of byCoa) {
+    entries.sort((a, b) => (b.pct !== a.pct ? b.pct - a.pct : a.name.localeCompare(b.name)));
+    byCoa.set(coaId, entries.slice(0, 3));
+  }
+  return byCoa;
 }
 
 export function ShelfList() {
   const [rows, setRows] = useState<ShelfCoa[] | null>(null);
   // Band per COA (D63): absence of a key IS the untried state — a COA with
   // no live sessions has no row in coa_session_stats (D61), so it has no
-  // entry here and the card renders nothing in the band's place.
-  const [bands, setBands] = useState<Map<string, number>>(new Map());
+  // entry here. D99's display supersession took the band word off the card,
+  // so nothing READS this today; the state cell, its setter, and the
+  // coa_session_stats select all stay for the detail view and the banked
+  // consumers. Only the unused getter binding is elided, because an unread
+  // local is a lint warning and the warning baseline is a ceiling.
+  const [, setBands] = useState<Map<string, number>>(new Map());
   // The preference summary's props (D98), computed in load() from the same
   // fetch as the shelf so it has no lifecycle of its own — it refetches
   // through every existing D63 path and no other.
   const [summary, setSummary] = useState<PreferenceSummaryProps | null>(null);
+  // The cards' per-COA inputs (D99), derived in load() from the SAME fetch
+  // that feeds the summary — no second query for either.
+  const [sessionsByCoa, setSessionsByCoa] = useState<Map<string, CardSession[]>>(new Map());
+  const [terpenesByCoa, setTerpenesByCoa] = useState<Map<string, CardTerpene[]>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [detailCoaId, setDetailCoaId] = useState<string | null>(null);
@@ -240,7 +190,7 @@ export function ShelfList() {
         supabase
           .from('coas')
           .select(
-            'id, strain, brand, lab, total_thc, total_cbd, total_terpenes, sampled_on, tested_on, created_at, on_shelf_count'
+            'id, strain, brand, lab, type, favorite, total_thc, total_cbd, total_terpenes, sampled_on, tested_on, created_at, on_shelf_count'
           )
           // Off-shelf COAs are filtered DB-side (D89). A count of 0 is a
           // display state, never an erasure: the row, its sessions, its
@@ -250,11 +200,14 @@ export function ShelfList() {
           .gt('on_shelf_count', 0)
           .order('created_at', { ascending: false }),
         supabase.from('coa_session_stats').select('coa_id, band'),
-        // The summary's three (D98). session_current is the one source of
-        // per-session grain (D59); this coas select is deliberately NOT
-        // filtered by on_shelf_count, because the summary is all-time
-        // including off-shelf history, and RLS scopes the rows.
-        supabase.from('session_current').select('overall_word, coa_id'),
+        // The summary's three (D98), two of which the cards also read (D99).
+        // session_current is the one source of per-session grain (D59), and
+        // created_at joins the selection so the per-card dots and the "last
+        // X" line come from this same fetch, never a second query. This coas
+        // select is deliberately NOT filtered by on_shelf_count, because the
+        // summary is all-time including off-shelf history, and RLS scopes
+        // the rows.
+        supabase.from('session_current').select('overall_word, coa_id, created_at'),
         supabase.from('coas').select('id, favorite, total_thc, total_cbd'),
         supabase.from('coa_terpenes').select('coa_id, name, pct'),
       ]).then(([coasResult, statsResult, sessionsResult, allCoasResult, terpenesResult]) => {
@@ -283,13 +236,11 @@ export function ShelfList() {
             ])
           )
         );
-        setSummary(
-          buildSummary(
-            sessionsResult.data as SummarySession[],
-            allCoasResult.data as SummaryCoa[],
-            terpenesResult.data as SummaryTerpene[]
-          )
-        );
+        const sessions = sessionsResult.data as SummarySession[];
+        const terpenes = terpenesResult.data as SummaryTerpene[];
+        setSummary(buildSummary(sessions, allCoasResult.data as SummaryCoa[], terpenes));
+        setSessionsByCoa(groupSessionsByCoa(sessions));
+        setTerpenesByCoa(groupTopTerpenesByCoa(terpenes));
       }),
     []
   );
@@ -358,7 +309,17 @@ export function ShelfList() {
         data={rows}
         keyExtractor={(coa) => coa.id}
         renderItem={({ item }) => (
-          <ShelfCard coa={item} band={bands.get(item.id)} onOpen={() => setDetailCoaId(item.id)} />
+          <ShelfCard
+            coa={item}
+            sessions={sessionsByCoa.get(item.id) ?? []}
+            topTerpenes={terpenesByCoa.get(item.id) ?? []}
+            onOpen={() => setDetailCoaId(item.id)}
+            // One tap straight to the verdict screen (D99). The direct path,
+            // not the pending chain: that chain exists only because the
+            // detail pageSheet must finish dismissing before a second modal
+            // can present (D49), and there is no sheet open here.
+            onLog={() => setLoggingCoa(item)}
+          />
         )}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
         // The summary rides the list's own header (D98), so it refetches on
@@ -451,29 +412,5 @@ const styles = StyleSheet.create({
   },
   centered: {
     textAlign: 'center',
-  },
-  strainRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    gap: Spacing.two,
-  },
-  strain: {
-    flexShrink: 1,
-  },
-  card: {
-    gap: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderRadius: Spacing.four,
-  },
-  totalsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: Spacing.three,
-    marginTop: Spacing.one,
-  },
-  total: {
-    gap: Spacing.half,
   },
 });

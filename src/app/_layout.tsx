@@ -1,4 +1,10 @@
-import { Sora_400Regular, Sora_500Medium, Sora_600SemiBold, Sora_700Bold } from '@expo-google-fonts/sora';
+import {
+  Sora_400Regular,
+  Sora_500Medium,
+  Sora_600SemiBold,
+  Sora_700Bold,
+  Sora_800ExtraBold,
+} from '@expo-google-fonts/sora';
 import * as Newsreader from '@expo-google-fonts/newsreader';
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
@@ -26,6 +32,10 @@ export default function RootLayout() {
     Sora_500Medium,
     Sora_600SemiBold,
     Sora_700Bold,
+    // The reference's display role (shelf-card strain line, D99). Deferred
+    // from slice 1, which had no display-type surface. A font weight is JS
+    // only -- no native module, so no EAS rebuild.
+    Sora_800ExtraBold,
     Newsreader_400Regular_Italic: Newsreader.Newsreader_400Regular_Italic,
   });
   // Three states so a cold-start session restore does not flash sign-in: the
