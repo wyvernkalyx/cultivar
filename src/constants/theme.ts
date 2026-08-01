@@ -86,3 +86,50 @@ export const Spacing = {
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
+
+/**
+ * The dashboard's fixed palette, from the ratified design reference
+ * (`reference/handoff/cultivar-reference.md`, Tokens). A third named token set
+ * beside `Colors` and `Survey`, on the same grounds `Survey` earned one: the
+ * dashboard commits to a single dark surface regardless of scheme and carries
+ * tokens (verdict band, terpene identity hues) the general theme has no place
+ * for. Values are the reference's hex verbatim.
+ *
+ * Type roles stay out of this set: the summary references the loaded font
+ * families by name (Sora_400Regular/500/600/700,
+ * Newsreader_400Regular_Italic) exactly as session-ladder.tsx does. The
+ * reference's Sora 800 display role is not among the loaded weights.
+ */
+export const Dash = {
+  bg: '#0B0F0C',
+  surface: '#131A15',
+  surface2: '#171C19',
+  text: '#F2F5F1',
+  textBody: '#AEBBB1',
+  textMuted: '#8FA093',
+  textFaint: '#5E6B61',
+  accent: '#7ED99B',
+  // Verdict band identity, keyed by the D85 rung words, fixed order.
+  verdict: {
+    Loved: '#7ED99B',
+    Liked: '#C9D96E',
+    Neutral: '#E8C86E',
+    Disliked: '#E89A62',
+    Hated: '#E0685E',
+  },
+  // Terpene identity hues — identity only, consistent per terpene, no
+  // meaning (D99). Keys are the lab-reported names lowercased.
+  terpene: {
+    caryophyllene: '#DBA96F',
+    limonene: '#E4D07A',
+    bisabolol: '#B4A8DC',
+    'beta-pinene': '#8FC79B',
+    terpinolene: '#8FBFD6',
+    ocimene: '#D68FA8',
+    linalool: '#C7A8D6',
+    myrcene: '#9BCF8E',
+    'alpha-pinene': '#7AB8A0',
+    camphene: '#B8C78F',
+  },
+  radius: { badge: 8, row: 12, card: 16 },
+} as const;

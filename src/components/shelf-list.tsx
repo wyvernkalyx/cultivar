@@ -3,6 +3,11 @@ import { FlatList, Modal, Pressable, RefreshControl, StyleSheet, View } from 're
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { CoaDetail } from '@/components/coa-detail';
+import {
+  PreferenceSummary,
+  type PreferenceSummaryProps,
+  type RungWord,
+} from '@/components/preference-summary';
 import { SessionLadder } from '@/components/session-ladder';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -26,10 +31,92 @@ type ShelfCoa = {
   on_shelf_count: number;
 };
 
+// The preference summary's inputs (D98), each exactly the columns selected.
+// A live session is one row of session_current (D59: latest-then-filter, soft
+// deletes already excluded), so the row count IS the all-time session count.
+type SummarySession = { overall_word: string | null; coa_id: string };
+// Deliberately UNFILTERED by on_shelf_count: the summary is all-time,
+// including off-shelf history (D98). RLS scopes the rows.
+type SummaryCoa = {
+  id: string;
+  favorite: boolean | null;
+  total_thc: number | null;
+  total_cbd: number | null;
+};
+type SummaryTerpene = { coa_id: string; name: string; pct: number | null };
+
 // Three-state invariant, same as the editor: a null total is ND / <LOQ /
 // not reported and renders the literal "ND" — never 0, never blank.
 function totalLabel(value: number | null) {
   return value === null ? 'ND' : `${value}%`;
+}
+
+// Min/max over REPORTED values only, with the unreported ones counted beside
+// them — the D98 binding, verbatim: ranges compute over reported values only;
+// ND is annotated alongside, never folded in as a zero lower bound. No COA
+// reporting the analyte at all yields null, not a range of zeros.
+function analyteRange(values: (number | null)[]): PreferenceSummaryProps['loved']['thc'] {
+  const reported = values.filter((value): value is number => value !== null);
+  if (reported.length === 0) return null;
+  return {
+    min: Math.min(...reported),
+    max: Math.max(...reported),
+    ndCount: values.length - reported.length,
+  };
+}
+
+// Top 3 terpenes by concentration across the Loved COAs (the ratified v1
+// "relevant terpenes" definition). Per name, the maximum reported pct; a null
+// pct is an unreported analyte and is excluded from the ranking outright, so
+// absence can never rank as a zero. Ties break on name for a stable order.
+function rankLovedTerpenes(rows: SummaryTerpene[], lovedCoaIds: Set<string>) {
+  const best = new Map<string, number>();
+  for (const row of rows) {
+    if (row.pct === null || !lovedCoaIds.has(row.coa_id)) continue;
+    const current = best.get(row.name);
+    if (current === undefined || row.pct > current) best.set(row.name, row.pct);
+  }
+  return [...best.entries()]
+    .map(([name, pct]) => ({ name, pct }))
+    .sort((a, b) => (b.pct !== a.pct ? b.pct - a.pct : a.name.localeCompare(b.name)))
+    .slice(0, 3);
+}
+
+// The whole summary, computed client-side over session_current merged with the
+// unfiltered catalog (D98: no new view, no migration — session_current is
+// already the one source of per-session grain, and this is that consumer).
+function buildSummary(
+  sessions: SummarySession[],
+  coas: SummaryCoa[],
+  terpenes: SummaryTerpene[]
+): PreferenceSummaryProps {
+  const distribution = Object.fromEntries(RUNGS.map((rung) => [rung.word, 0])) as Record<
+    RungWord,
+    number
+  >;
+  for (const session of sessions) {
+    // A word outside RUNGS (or a null) counts toward the all-time total but
+    // has no rung to land on; it is never coerced into one.
+    if (session.overall_word !== null && session.overall_word in distribution) {
+      distribution[session.overall_word as RungWord] += 1;
+    }
+  }
+
+  const lovedSessions = sessions.filter((session) => session.overall_word === 'Loved');
+  const lovedCoaIds = new Set(lovedSessions.map((session) => session.coa_id));
+  const lovedCoas = coas.filter((coa) => lovedCoaIds.has(coa.id));
+
+  return {
+    sessionCount: sessions.length,
+    distribution,
+    buyAgainCount: coas.filter((coa) => coa.favorite === true).length,
+    loved: {
+      terpenes: rankLovedTerpenes(terpenes, lovedCoaIds),
+      thc: analyteRange(lovedCoas.map((coa) => coa.total_thc)),
+      cbd: analyteRange(lovedCoas.map((coa) => coa.total_cbd)),
+      lovedSessionCount: lovedSessions.length,
+    },
+  };
 }
 
 // A `date` column arrives as 'YYYY-MM-DD'. `new Date('YYYY-MM-DD')` parses at
@@ -120,6 +207,10 @@ export function ShelfList() {
   // no live sessions has no row in coa_session_stats (D61), so it has no
   // entry here and the card renders nothing in the band's place.
   const [bands, setBands] = useState<Map<string, number>>(new Map());
+  // The preference summary's props (D98), computed in load() from the same
+  // fetch as the shelf so it has no lifecycle of its own — it refetches
+  // through every existing D63 path and no other.
+  const [summary, setSummary] = useState<PreferenceSummaryProps | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [detailCoaId, setDetailCoaId] = useState<string | null>(null);
@@ -142,7 +233,9 @@ export function ShelfList() {
     () =>
       // Two queries, merged client-side by a coa_id Map (D63) — not an
       // embedded join: PostgREST relationship inference across a two-level
-      // view is not a guarantee worth betting the shelf on.
+      // view is not a guarantee worth betting the shelf on. D98 adds three
+      // more parallel selects for the preference summary; the shelf's own two
+      // and their merge are untouched.
       Promise.all([
         supabase
           .from('coas')
@@ -157,10 +250,22 @@ export function ShelfList() {
           .gt('on_shelf_count', 0)
           .order('created_at', { ascending: false }),
         supabase.from('coa_session_stats').select('coa_id, band'),
-      ]).then(([coasResult, statsResult]) => {
-        // One error state: either query's failure surfaces through the
+        // The summary's three (D98). session_current is the one source of
+        // per-session grain (D59); this coas select is deliberately NOT
+        // filtered by on_shelf_count, because the summary is all-time
+        // including off-shelf history, and RLS scopes the rows.
+        supabase.from('session_current').select('overall_word, coa_id'),
+        supabase.from('coas').select('id, favorite, total_thc, total_cbd'),
+        supabase.from('coa_terpenes').select('coa_id, name, pct'),
+      ]).then(([coasResult, statsResult, sessionsResult, allCoasResult, terpenesResult]) => {
+        // One error state: any query's failure surfaces through the
         // existing path, no second banner.
-        const queryError = coasResult.error ?? statsResult.error;
+        const queryError =
+          coasResult.error ??
+          statsResult.error ??
+          sessionsResult.error ??
+          allCoasResult.error ??
+          terpenesResult.error;
         if (queryError) {
           setError(queryError.message);
           return;
@@ -176,6 +281,13 @@ export function ShelfList() {
               stat.coa_id,
               stat.band,
             ])
+          )
+        );
+        setSummary(
+          buildSummary(
+            sessionsResult.data as SummarySession[],
+            allCoasResult.data as SummaryCoa[],
+            terpenesResult.data as SummaryTerpene[]
           )
         );
       }),
@@ -249,6 +361,10 @@ export function ShelfList() {
           <ShelfCard coa={item} band={bands.get(item.id)} onOpen={() => setDetailCoaId(item.id)} />
         )}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+        // The summary rides the list's own header (D98), so it refetches on
+        // every ladder/detail close through the existing load() paths (D63)
+        // and never grows a second fetch lifecycle.
+        ListHeaderComponent={summary === null ? null : <PreferenceSummary {...summary} />}
         ListEmptyComponent={
           <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
             Nothing on your shelf yet
