@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -8,6 +8,15 @@ import { useTheme } from '@/hooks/use-theme';
 import { removeCoaPdf } from '@/lib/coa-pdf-storage';
 import { retireCoa } from '@/lib/coa-retire';
 import { supabase } from '@/lib/supabase';
+
+// Explainer voice, same family name the survey and the shelf card load
+// (`src/app/_layout.tsx`). Used for the one absent-state line below.
+const SERIF_ITALIC = 'Newsreader_400Regular_Italic';
+
+// How long a signed COA-PDF link lives, in seconds. The URL's whole job is a
+// single handoff to Safari, so it expires almost immediately after that: a
+// long-lived link out of a private bucket is a bucket that is not private.
+const PdfLinkTtlSeconds = 300;
 
 // DB shape (D45): exactly the selected columns and embeds, snake_case, as
 // the tables store them — not the parser shape. The first client read of the
@@ -37,8 +46,10 @@ type CoaDetailRecord = {
   sampled_on: string | null;
   tested_on: string | null;
   created_at: string;
-  // Selected for the delete path only (D87): nothing renders it — there is no
-  // reader for retained PDFs yet.
+  // The retained source document (D87), now read as well as deleted: it
+  // drives the D100 open-PDF row, and the delete path removes the object it
+  // names. Null is a COA saved without a retained PDF, which the row states
+  // rather than hides.
   pdf_object_path: string | null;
   // Possession and repurchase intent (D89, D91). on_shelf_count is what the
   // retirement copy reports; favorite is three-state, and null means never
@@ -126,6 +137,16 @@ export function CoaDetail({
   const theme = useTheme();
   const [coa, setCoa] = useState<CoaDetailRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // One PDF request on the wire at a time (the D54 posture): signing is a
+  // round trip, and a second tap would open a second Safari handoff for the
+  // same document.
+  const [pdfInFlight, setPdfInFlight] = useState(false);
+
+  // Read off the record so the narrowing survives into the press handler: a
+  // property access on state is re-widened inside a closure, a const local is
+  // not. Null here is a genuinely absent document, never a loading state --
+  // this whole branch renders only once `coa` is loaded.
+  const pdfObjectPath = coa?.pdf_object_path ?? null;
 
   // One embedded select, one consistent snapshot (D45). Promise-callback
   // form, not an async body: setState stays out of the synchronous effect
@@ -189,6 +210,36 @@ export function CoaDetail({
         }
         onDeleted();
       });
+
+  /**
+   * Open the retained source document (D100). v1 hands a short-lived signed
+   * URL to Safari: the bucket is private, so the object is unreachable
+   * without one, and signing is the whole mechanism -- no viewer, no new
+   * dependency, no native module.
+   *
+   * Both failure arms land on the detail's own error state rather than an
+   * Alert: the message is a fact about this record's surface, and the state
+   * already carries a Retry that reloads the record.
+   */
+  const openPdf = async (objectPath: string) => {
+    setPdfInFlight(true);
+    const { data, error: signError } = await supabase.storage
+      .from('coa-pdfs')
+      .createSignedUrl(objectPath, PdfLinkTtlSeconds);
+    if (signError !== null || data === null) {
+      setError(signError?.message ?? 'Could not create a link to the stored PDF.');
+      setPdfInFlight(false);
+      return;
+    }
+    try {
+      await Linking.openURL(data.signedUrl);
+    } catch (err) {
+      setError(
+        `Could not open the PDF: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+    setPdfInFlight(false);
+  };
 
   /**
    * Repurchase intent (D91), written straight to the row. No RPC: `coas`
@@ -433,6 +484,25 @@ export function CoaDetail({
               style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
               <ThemedText type="smallBold">Retire a package</ThemedText>
             </Pressable>
+            {/* The retained source document (D100). A record with no stored
+                PDF says so in one line and offers nothing to press: a button
+                that cannot do its job is worse than an honest sentence. */}
+            {pdfObjectPath === null ? (
+              <ThemedText type="small" themeColor="textSecondary" style={styles.pdfAbsent}>
+                {"Original COA PDF wasn't retained."}
+              </ThemedText>
+            ) : (
+              <Pressable
+                onPress={() => void openPdf(pdfObjectPath)}
+                disabled={pdfInFlight}
+                style={[
+                  styles.button,
+                  { backgroundColor: theme.backgroundElement },
+                  pdfInFlight && styles.buttonDisabled,
+                ]}>
+                <ThemedText type="smallBold">Open original COA (PDF)</ThemedText>
+              </Pressable>
+            )}
             <Pressable
               onPress={() => confirmDelete(coa)}
               style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
@@ -511,6 +581,17 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     alignItems: 'center',
     borderRadius: Spacing.three,
+    paddingVertical: Spacing.three,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+  },
+  pdfAbsent: {
+    fontFamily: SERIF_ITALIC,
+    // The loaded face is the 400 italic; leaving `small`'s 500 in place would
+    // ask iOS to synthesize a weight this family has no file for.
+    fontWeight: '400',
+    textAlign: 'center',
     paddingVertical: Spacing.three,
   },
   deleteLabel: {
