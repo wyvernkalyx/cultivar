@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Dash } from '@/constants/theme';
+import { Dash, terpeneHue } from '@/constants/theme';
 import { RUNGS } from '@/lib/lexicon';
 
 // Font families registered app-wide in the root layout (D83 Decision 1),
@@ -56,13 +56,6 @@ function formatRange(range: AnalyteRange): string {
       ? `${truncate2(range.min)}%`
       : `${truncate2(range.min)}% – ${truncate2(range.max)}%`;
   return range.ndCount > 0 ? `${span} · ${range.ndCount} ND` : span;
-}
-
-// Identity only, consistent per terpene, no meaning (D99). An unlisted lab
-// name gets the muted text color rather than an invented hue.
-function terpeneHue(name: string): string {
-  const hues = Dash.terpene as Record<string, string>;
-  return hues[name.toLowerCase()] ?? Dash.textMuted;
 }
 
 const BAR_MAX_HEIGHT = 56;

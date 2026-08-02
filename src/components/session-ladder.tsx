@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Dash, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Dash, MaxContentWidth, Spacing, verdictHue } from '@/constants/theme';
 import { GLOSSARY, type GlossaryEntry, LEXICON_VERSION, RUNGS } from '@/lib/lexicon';
 import { supabase } from '@/lib/supabase';
 
@@ -75,15 +75,6 @@ const SERIF_ITALIC = 'Newsreader_400Regular_Italic';
 // move unchanged; the literal-hex precedent is sign-in.tsx.
 const ERROR_BORDER = '#d6725d';
 const ERROR_DOT = '#eb8656';
-
-// The rung's band hue, keyed by its word — the green->red identity retuned to
-// the reference values, which is the one band change D103 allows. One source
-// with the shelf's verdict dots and the summary's bars, never a second table.
-// A word the token set does not carry renders faint rather than uncolored.
-function verdictHue(word: string): string {
-  const hues = Dash.verdict as Record<string, string>;
-  return hues[word] ?? Dash.textFaint;
-}
 
 // One explainer line per screen (D83 Decision 2), verbatim from
 // documentation/design/art-direction.md — personal, observational, zero

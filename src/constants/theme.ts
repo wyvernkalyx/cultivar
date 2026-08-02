@@ -110,3 +110,20 @@ export const Dash = {
   },
   radius: { badge: 8, row: 12, card: 16 },
 } as const;
+
+// Identity only, consistent per terpene, no meaning (D99). An unlisted lab
+// name gets the muted text color rather than an invented hue.
+export function terpeneHue(name: string): string {
+  const hues = Dash.terpene as Record<string, string>;
+  return hues[name.toLowerCase()] ?? Dash.textMuted;
+}
+
+// A verdict word the token set does not carry -- including a session whose
+// word is absent -- renders faint rather than being dropped or uncolored:
+// the session happened. One source for the card's dots, the summary's bars,
+// the ladder's tier stripes, and the detail's session rows.
+export function verdictHue(word: string | null): string {
+  if (word === null) return Dash.textFaint;
+  const hues = Dash.verdict as Record<string, string>;
+  return hues[word] ?? Dash.textFaint;
+}

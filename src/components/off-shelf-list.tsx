@@ -209,7 +209,6 @@ export function OffShelfList({ visible, onClose }: { visible: boolean; onClose: 
               key={detailCoaId}
               coaId={detailCoaId}
               onClose={closeDetail}
-              onDeleted={closeDetail}
             />
           )}
         </Modal>

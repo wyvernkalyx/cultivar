@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Dash } from '@/constants/theme';
+import { Dash, terpeneHue, verdictHue } from '@/constants/theme';
 
 // Font families registered app-wide in the root layout (D83 Decision 1),
 // referenced by name; an unloaded family falls back to the system font rather
@@ -90,21 +90,6 @@ function truncate2(value: number): string {
 // not reported and renders the literal "ND" — never 0, never blank.
 function totalLabel(value: number | null): string {
   return value === null ? 'ND' : `${truncate2(value)}%`;
-}
-
-// Identity only, consistent per terpene, no meaning (D99) — the slice-1
-// convention: Dash.terpene by lowercased lab name, muted for a name the token
-// set does not carry, never an invented hue.
-function terpeneHue(name: string): string {
-  const hues = Dash.terpene as Record<string, string>;
-  return hues[name.toLowerCase()] ?? Dash.textMuted;
-}
-
-// A verdict word the token set does not carry (including a session whose word
-// is absent) renders faint rather than being dropped: the session happened.
-function verdictHue(word: string): string {
-  const hues = Dash.verdict as Record<string, string>;
-  return hues[word] ?? Dash.textFaint;
 }
 
 // At most eight dots, the MOST RECENT eight — the oldest drop off the left.

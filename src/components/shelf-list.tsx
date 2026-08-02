@@ -118,14 +118,6 @@ function buildSummary(
 
 export function ShelfList() {
   const [rows, setRows] = useState<ShelfCoa[] | null>(null);
-  // Band per COA (D63): absence of a key IS the untried state — a COA with
-  // no live sessions has no row in coa_session_stats (D61), so it has no
-  // entry here. D99's display supersession took the band word off the card,
-  // so nothing READS this today; the state cell, its setter, and the
-  // coa_session_stats select all stay for the detail view and the banked
-  // consumers. Only the unused getter binding is elided, because an unread
-  // local is a lint warning and the warning baseline is a ceiling.
-  const [, setBands] = useState<Map<string, number>>(new Map());
   // The preference summary's props (D98), computed in load() from the same
   // fetch as the shelf so it has no lifecycle of its own — it refetches
   // through every existing D63 path and no other.
@@ -159,11 +151,11 @@ export function ShelfList() {
   // getSession().then() pattern on the home screen.
   const load = useCallback(
     () =>
-      // Two queries, merged client-side by a coa_id Map (D63) — not an
-      // embedded join: PostgREST relationship inference across a two-level
-      // view is not a guarantee worth betting the shelf on. D98 adds three
-      // more parallel selects for the preference summary; the shelf's own two
-      // and their merge are untouched.
+      // One coas select for the shelf rows, plus D98's three parallel
+      // selects for the preference summary and the cards. Merges are
+      // client-side coa_id Maps, never an embedded join: PostgREST
+      // relationship inference across a two-level view is not a guarantee
+      // worth betting the shelf on.
       Promise.all([
         supabase
           .from('coas')
@@ -177,7 +169,6 @@ export function ShelfList() {
           // RLS scopes the rows, the DB orders and bounds them.
           .gt('on_shelf_count', 0)
           .order('created_at', { ascending: false }),
-        supabase.from('coa_session_stats').select('coa_id, band'),
         // The summary's three (D98), two of which the cards also read (D99).
         // session_current is the one source of per-session grain (D59), and
         // created_at joins the selection so the per-card dots and the "last
@@ -188,12 +179,11 @@ export function ShelfList() {
         supabase.from('session_current').select('overall_word, coa_id, created_at'),
         supabase.from('coas').select('id, favorite, total_thc, total_cbd, on_shelf_count'),
         supabase.from('coa_terpenes').select('coa_id, name, pct'),
-      ]).then(([coasResult, statsResult, sessionsResult, allCoasResult, terpenesResult]) => {
+      ]).then(([coasResult, sessionsResult, allCoasResult, terpenesResult]) => {
         // One error state: any query's failure surfaces through the
         // existing path, no second banner.
         const queryError =
           coasResult.error ??
-          statsResult.error ??
           sessionsResult.error ??
           allCoasResult.error ??
           terpenesResult.error;
@@ -206,14 +196,6 @@ export function ShelfList() {
         // the selected-columns shapes. Runtime validation remains the
         // accepted debt.
         setRows(coasResult.data as ShelfCoa[]);
-        setBands(
-          new Map(
-            (statsResult.data as { coa_id: string; band: number }[]).map((stat) => [
-              stat.coa_id,
-              stat.band,
-            ])
-          )
-        );
         const sessions = sessionsResult.data as SummarySession[];
         const terpenes = terpenesResult.data as SummaryTerpene[];
         const allCoas = allCoasResult.data as SummaryCoa[];
@@ -353,7 +335,6 @@ export function ShelfList() {
             key={detailCoaId}
             coaId={detailCoaId}
             onClose={closeDetail}
-            onDeleted={closeDetail}
             onLogSession={() => {
               setPendingLogCoa(rows.find((row) => row.id === detailCoaId) ?? null);
               closeDetail();

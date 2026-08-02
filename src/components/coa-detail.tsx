@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Dash } from '@/constants/theme';
+import { Dash, verdictHue } from '@/constants/theme';
 import { retireCoa } from '@/lib/coa-retire';
 import { supabase } from '@/lib/supabase';
 
@@ -94,15 +94,6 @@ function ndLabel(value: number | null): string {
 function formatIsoDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString();
-}
-
-// A verdict word the token set does not carry — including a session whose word
-// is absent — renders faint rather than being dropped: the session happened.
-// Same convention as the card's dots.
-function verdictHue(word: string | null): string {
-  if (word === null) return Dash.textFaint;
-  const hues = Dash.verdict as Record<string, string>;
-  return hues[word] ?? Dash.textFaint;
 }
 
 // Reported rows first, descending by concentration; unreported rows after,
@@ -260,10 +251,6 @@ export function CoaDetail({
 }: {
   coaId: string;
   onClose: () => void;
-  // Still accepted because both callers pass it: the shelf and the archive
-  // each wire it to their own close-and-refetch. Nothing in this component
-  // calls it — D104 removed the only affordance that ever did.
-  onDeleted: () => void;
   // Absent on the off-shelf archive (D101), which hosts no logging surface.
   // Optional rather than a no-op handler: a button whose press does nothing
   // is the inert affordance the ruling rules out.
