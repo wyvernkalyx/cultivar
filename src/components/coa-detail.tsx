@@ -477,7 +477,11 @@ export function CoaDetail({
         {/* 1. Header. The display face without the card's uppercase: the detail
             is the full record, the card is the poster. */}
         <View style={styles.header}>
-          <Text style={styles.strain}>{coa.strain}</Text>
+          {/* Null or whitespace-only strain is stated, not left as a blank
+              line (D97, the same treatment brand gets directly below). */}
+          <Text style={coa.strain?.trim() ? styles.strain : styles.strainAbsent}>
+            {coa.strain?.trim() ? coa.strain : 'Strain not reported'}
+          </Text>
           {/* Null brand is stated, not left as an empty-looking gap (D97). */}
           <Text style={coa.brand === null ? styles.brandAbsent : styles.brand}>
             {coa.brand ?? 'Brand not reported'}
@@ -707,6 +711,12 @@ const styles = StyleSheet.create({
     fontSize: 28,
     lineHeight: 31,
     color: Dash.text,
+  },
+  strainAbsent: {
+    fontFamily: SORA_DISPLAY,
+    fontSize: 28,
+    lineHeight: 31,
+    color: Dash.textMuted,
   },
   brand: {
     fontFamily: SORA_REGULAR,

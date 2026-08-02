@@ -163,8 +163,12 @@ export function ShelfCard({
     <Pressable onPress={onOpen}>
       <View style={styles.card}>
         <View style={styles.strainRow}>
-          <Text style={styles.strain} numberOfLines={2}>
-            {coa.strain}
+          {/* Null or whitespace-only strain is stated, not left as a blank
+              title line (D97, the same treatment brand gets below). */}
+          <Text
+            style={coa.strain?.trim() ? styles.strain : styles.strainAbsent}
+            numberOfLines={2}>
+            {coa.strain?.trim() ? coa.strain : 'Strain not reported'}
           </Text>
           {/* Quantity badge (D89): one card per COA regardless of count, so
               the count rides the strain line. Rendered only above a single
@@ -277,6 +281,14 @@ const styles = StyleSheet.create({
     lineHeight: 31,
     textTransform: 'uppercase',
     color: Dash.text,
+  },
+  strainAbsent: {
+    flexShrink: 1,
+    fontFamily: SORA_DISPLAY,
+    fontSize: 28,
+    lineHeight: 31,
+    textTransform: 'uppercase',
+    color: Dash.textMuted,
   },
   badge: {
     fontFamily: SORA_BOLD,
