@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
-import { removeCoaPdf } from '@/lib/coa-pdf-storage';
+import { Dash } from '@/constants/theme';
 import { retireCoa } from '@/lib/coa-retire';
 import { supabase } from '@/lib/supabase';
 
-// Explainer voice, same family name the survey and the shelf card load
-// (`src/app/_layout.tsx`). Used for the one absent-state line below.
+// Font families registered app-wide in the root layout (D83 Decision 1),
+// referenced by name exactly as the shelf card and the archive do; an unloaded
+// family falls back to the system font rather than blocking the render.
+const SORA_REGULAR = 'Sora_400Regular';
+const SORA_SEMIBOLD = 'Sora_600SemiBold';
+const SORA_BOLD = 'Sora_700Bold';
+const SORA_DISPLAY = 'Sora_800ExtraBold';
 const SERIF_ITALIC = 'Newsreader_400Regular_Italic';
 
 // How long a signed COA-PDF link lives, in seconds. The URL's whole job is a
@@ -18,9 +20,18 @@ const SERIF_ITALIC = 'Newsreader_400Regular_Italic';
 // long-lived link out of a private bucket is a bucket that is not private.
 const PdfLinkTtlSeconds = 300;
 
+// How many terpene rows stand before the expand control. A display bound only
+// -- every row is one tap away, and no value on this surface is ever shortened
+// (D102: the detail shows full lab precision, the card is where two decimals
+// live).
+const TERPENE_PREVIEW = 5;
+
+// Vertical room the sticky bar occupies, so the last section can scroll clear
+// of it. Applied only when the bar renders.
+const LOG_BAR_CLEARANCE = 96;
+
 // DB shape (D45): exactly the selected columns and embeds, snake_case, as
-// the tables store them — not the parser shape. The first client read of the
-// child analyte tables.
+// the tables store them — not the parser shape.
 type AnalyteRow = {
   id: string;
   name: string;
@@ -31,6 +42,15 @@ type SafetyRow = {
   id: string;
   category: string;
   status: string;
+};
+
+// One live session of this COA, at session_current grain (D59:
+// latest-then-filter, soft deletes already excluded). `notes` is the user's own
+// words (D95) and is rendered verbatim or not at all.
+type DetailSession = {
+  overall_word: string | null;
+  created_at: string;
+  notes: string | null;
 };
 
 type CoaDetailRecord = {
@@ -46,14 +66,13 @@ type CoaDetailRecord = {
   sampled_on: string | null;
   tested_on: string | null;
   created_at: string;
-  // The retained source document (D87), now read as well as deleted: it
-  // drives the D100 open-PDF row, and the delete path removes the object it
-  // names. Null is a COA saved without a retained PDF, which the row states
+  // The retained source document (D87), read here to drive the D100 open-PDF
+  // row. Null is a COA saved without a retained PDF, which the row states
   // rather than hides.
   pdf_object_path: string | null;
   // Possession and repurchase intent (D89, D91). on_shelf_count is what the
-  // retirement copy reports; favorite is three-state, and null means never
-  // asked, not "no" (D48).
+  // retirement copy reports and what gates the sticky bar (D101); favorite is
+  // three-state, and null means never asked, not "no" (D48).
   on_shelf_count: number;
   favorite: boolean | null;
   coa_terpenes: AnalyteRow[];
@@ -62,10 +81,10 @@ type CoaDetailRecord = {
 };
 
 // Three-state invariant, same as the shelf card: a null value is ND / <LOQ /
-// not reported and renders the literal "ND" — never 0, never blank. The
-// invariant follows the data wherever it is displayed (D45): the three
-// totals and every analyte pct.
-function ndLabel(value: number | null) {
+// not reported and renders the literal "ND" — never 0, never blank. The value
+// itself is the stored number verbatim, at full lab precision (D102): this
+// surface never truncates and never rounds.
+function ndLabel(value: number | null): string {
   return value === null ? 'ND' : `${value}%`;
 }
 
@@ -77,68 +96,182 @@ function formatIsoDate(iso: string): string {
   return new Date(y, m - 1, d).toLocaleDateString();
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+// A verdict word the token set does not carry — including a session whose word
+// is absent — renders faint rather than being dropped: the session happened.
+// Same convention as the card's dots.
+function verdictHue(word: string | null): string {
+  if (word === null) return Dash.textFaint;
+  const hues = Dash.verdict as Record<string, string>;
+  return hues[word] ?? Dash.textFaint;
+}
+
+// Reported rows first, descending by concentration; unreported rows after,
+// alphabetical. A named divergence (D45) from the editor's emission order —
+// the child tables carry no position column, so that order is unrecoverable at
+// the DB seam. Ranking reported values against each other is the detail's own
+// reading order (reference 02) and never moves an ND row into the ranking,
+// because absence has no magnitude to rank.
+function orderAnalytes(rows: AnalyteRow[]): AnalyteRow[] {
+  const reported = rows
+    .filter((row): row is AnalyteRow & { pct: number } => row.pct !== null)
+    .sort((a, b) => (b.pct !== a.pct ? b.pct - a.pct : a.name.localeCompare(b.name)));
+  const absent = rows
+    .filter((row) => row.pct === null)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return [...reported, ...absent];
+}
+
+// Safety as one line: counts grouped by the VERBATIM stored status strings,
+// lowercased only for reading. No mapping, no second vocabulary, no invented
+// pass/fail category — a status this app has never seen still counts and still
+// prints itself. Largest group first, ties alphabetical, so the line is stable
+// across refetches.
+function safetySummary(rows: SafetyRow[]): string {
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    counts.set(row.status, (counts.get(row.status) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .sort((a, b) => (b[1] !== a[1] ? b[1] - a[1] : a[0].localeCompare(b[0])))
+    .map(([status, count]) => `${count} ${status.toLowerCase()}`)
+    .join(' · ');
+}
+
+function Row({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
   return (
     <View style={styles.row}>
-      <ThemedText type="small" style={styles.rowLabel}>
-        {label}
-      </ThemedText>
-      <ThemedText type="small" themeColor="textSecondary" style={styles.rowValue}>
-        {value}
-      </ThemedText>
+      <Text style={styles.rowLabel}>{label}</Text>
+      <Text style={[styles.rowValue, muted === true && styles.rowValueMuted]}>{value}</Text>
     </View>
   );
 }
 
-// Detected rows first; ND rows collapse under an always-present
-// "Not detected (N)" control, every row individually visible on expand.
-// Alphabetical within each group is a named divergence (D45) from the
-// editor's emission order — the child tables carry no position column, so
-// that order is unrecoverable at the DB seam. Grouping is recomputed from
-// current values on every render: there is no draft and no editing here.
-function AnalytePanel({ title, rows }: { title: string; rows: AnalyteRow[] }) {
-  const [ndOpen, setNdOpen] = useState(false);
-  const detected = rows.filter((r) => r.pct !== null).sort((a, b) => a.name.localeCompare(b.name));
-  const nd = rows.filter((r) => r.pct === null).sort((a, b) => a.name.localeCompare(b.name));
+// The full terpene list at full lab precision, standing at five rows until
+// asked. Expansion is display only: nothing is fetched, and nothing that was
+// hidden was ever shortened.
+function TerpeneList({ rows }: { rows: AnalyteRow[] }) {
+  const [expanded, setExpanded] = useState(false);
+  if (rows.length === 0) {
+    return <Text style={styles.absent}>Terpenes not reported by lab.</Text>;
+  }
+  const ordered = orderAnalytes(rows);
+  const visible = expanded ? ordered : ordered.slice(0, TERPENE_PREVIEW);
   return (
-    <View style={styles.section}>
-      <ThemedText type="smallBold">{title}</ThemedText>
-      {detected.map((r) => (
-        <Row key={r.id} label={r.name} value={ndLabel(r.pct)} />
+    <>
+      {visible.map((row) => (
+        <Row key={row.id} label={row.name} value={ndLabel(row.pct)} muted={row.pct === null} />
       ))}
-      <Pressable onPress={() => setNdOpen((open) => !open)} style={styles.ndToggle}>
-        <ThemedText type="small" themeColor="textSecondary">
-          Not detected ({nd.length})
-        </ThemedText>
-      </Pressable>
-      {ndOpen && nd.map((r) => <Row key={r.id} label={r.name} value={ndLabel(r.pct)} />)}
+      {ordered.length > TERPENE_PREVIEW && (
+        <Pressable
+          onPress={() => setExpanded((open) => !open)}
+          style={styles.toggle}
+          accessibilityRole="button">
+          <Text style={styles.toggleText}>
+            {expanded ? 'Show fewer' : `Show all (${ordered.length})`}
+          </Text>
+        </Pressable>
+      )}
+    </>
+  );
+}
+
+// Reported cannabinoids stand; the unreported ones collapse behind one line.
+// Every row is individually visible on expand — the collapse hides names, never
+// values, and a section whose analytes were all unreported is that one line and
+// nothing else, because there is no reported row to lead with.
+function CannabinoidSection({ rows }: { rows: AnalyteRow[] }) {
+  const [ndOpen, setNdOpen] = useState(false);
+  const reported = orderAnalytes(rows).filter((row) => row.pct !== null);
+  const absent = rows.filter((row) => row.pct === null).sort((a, b) => a.name.localeCompare(b.name));
+  return (
+    <View style={styles.card}>
+      <Text style={styles.label}>Cannabinoids</Text>
+      {rows.length === 0 && <Text style={styles.absent}>Cannabinoids not reported by lab.</Text>}
+      {reported.map((row) => (
+        <Row key={row.id} label={row.name} value={ndLabel(row.pct)} />
+      ))}
+      {absent.length > 0 && (
+        <>
+          <Pressable
+            onPress={() => setNdOpen((open) => !open)}
+            style={styles.toggle}
+            accessibilityRole="button">
+            <Text style={styles.toggleText}>
+              {`Not detected (${absent.length}) · ${ndOpen ? 'Hide' : 'Show'}`}
+            </Text>
+          </Pressable>
+          {ndOpen &&
+            absent.map((row) => (
+              <Row key={row.id} label={row.name} value={ndLabel(row.pct)} muted />
+            ))}
+        </>
+      )}
+    </View>
+  );
+}
+
+// Safety collapses to its count line; the per-assay list is one tap under it,
+// each assay's status printed as the lab stored it.
+function SafetySection({ rows }: { rows: SafetyRow[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <View style={styles.card}>
+      <Text style={styles.label}>Safety</Text>
+      {rows.length === 0 ? (
+        <Text style={styles.absent}>No safety assays reported by lab.</Text>
+      ) : (
+        <>
+          <Text style={styles.summaryLine}>{safetySummary(rows)}</Text>
+          <Pressable
+            onPress={() => setOpen((shown) => !shown)}
+            style={styles.toggle}
+            accessibilityRole="button">
+            <Text style={styles.toggleText}>{open ? 'Hide assays' : 'Show assays'}</Text>
+          </Pressable>
+          {open &&
+            [...rows]
+              .sort((a, b) => a.category.localeCompare(b.category))
+              .map((assay) => <Row key={assay.id} label={assay.category} value={assay.status} />)}
+        </>
+      )}
     </View>
   );
 }
 
 /**
- * Full record of one COA (slice 9, D45): the shelf's second read surface.
- * Fetches its own consistent snapshot — the list row is never passed down,
- * because the detail shows columns the list never selected. Hosts the
- * shelf's only delete affordance; the caller owns the modal and the
- * post-delete refetch.
+ * Full record of one COA (D45, redesigned in D102): the shelf's second read
+ * surface, on the dashboard's tokens and in reference 02's order — header,
+ * totals and the full terpene list, sessions, cannabinoids, safety and the
+ * retained PDF, repurchase intent, retirement — with a sticky logging bar that
+ * exists only while a package is on the shelf (D101).
+ *
+ * Fetches its own consistent snapshot: the list row is never passed down,
+ * because the detail shows columns the list never selected.
+ *
+ * No delete affordance ships (D104). `coas` carries an ALL policy so a client
+ * delete is possible, and D53's cascade makes it destructive — it takes logged
+ * session history with it, which is the product. Retirement (D87–D91) is the
+ * designed path off the shelf; a bad ingest is operator-SQL.
  */
 export function CoaDetail({
   coaId,
   onClose,
-  onDeleted,
   onLogSession,
 }: {
   coaId: string;
   onClose: () => void;
+  // Still accepted because both callers pass it: the shelf and the archive
+  // each wire it to their own close-and-refetch. Nothing in this component
+  // calls it — D104 removed the only affordance that ever did.
   onDeleted: () => void;
   // Absent on the off-shelf archive (D101), which hosts no logging surface.
   // Optional rather than a no-op handler: a button whose press does nothing
   // is the inert affordance the ruling rules out.
   onLogSession?: () => void;
 }) {
-  const theme = useTheme();
+  const insets = useSafeAreaInsets();
   const [coa, setCoa] = useState<CoaDetailRecord | null>(null);
+  const [sessions, setSessions] = useState<DetailSession[]>([]);
   const [error, setError] = useState<string | null>(null);
   // One PDF request on the wire at a time (the D54 posture): signing is a
   // round trip, and a second tap would open a second Safari handoff for the
@@ -151,68 +284,51 @@ export function CoaDetail({
   // this whole branch renders only once `coa` is loaded.
   const pdfObjectPath = coa?.pdf_object_path ?? null;
 
-  // One embedded select, one consistent snapshot (D45). Promise-callback
-  // form, not an async body: setState stays out of the synchronous effect
-  // path (react-hooks/set-state-in-effect), matching the shelf list's load.
+  // The record stays ONE embedded select, one consistent snapshot (D45); the
+  // session history rides beside it as a parallel select, the shelf's own
+  // convention (D63) rather than a second embed. Promise-callback form, not an
+  // async body: setState stays out of the synchronous effect path
+  // (react-hooks/set-state-in-effect), matching the shelf list's load.
   const load = useCallback(
     () =>
-      supabase
-        .from('coas')
-        .select(
-          'id, strain, brand, batch, lab, source_lab, total_thc, total_cbd, total_terpenes, sampled_on, tested_on, created_at, pdf_object_path, on_shelf_count, favorite, coa_terpenes(id, name, pct), coa_cannabinoids(id, name, pct), coa_safety(id, category, status)'
-        )
-        .eq('id', coaId)
-        .single()
-        .then(({ data, error: queryError }) => {
-          // .single() errors on zero rows, so a record deleted underneath
-          // lands here as the error state.
-          if (queryError) {
-            setError(queryError.message);
-            return;
-          }
-          setError(null);
-          // The client is untyped (no generated DB types); this cast asserts
-          // the selected-columns-and-embeds shape. Runtime validation remains
-          // the accepted debt.
-          setCoa(data as CoaDetailRecord);
-        }),
+      Promise.all([
+        supabase
+          .from('coas')
+          .select(
+            'id, strain, brand, batch, lab, source_lab, total_thc, total_cbd, total_terpenes, sampled_on, tested_on, created_at, pdf_object_path, on_shelf_count, favorite, coa_terpenes(id, name, pct), coa_cannabinoids(id, name, pct), coa_safety(id, category, status)'
+          )
+          .eq('id', coaId)
+          .single(),
+        // Newest first: history on this surface reads downward in time. RLS
+        // scopes the rows and the view has already dropped soft-deleted chains
+        // (D59), so the query carries no predicate beyond this COA.
+        supabase
+          .from('session_current')
+          .select('overall_word, created_at, notes')
+          .eq('coa_id', coaId)
+          .order('created_at', { ascending: false }),
+      ]).then(([coaResult, sessionsResult]) => {
+        // One error state: either query's failure surfaces through the existing
+        // path, no second banner. .single() errors on zero rows, so a record
+        // deleted underneath lands here too.
+        const queryError = coaResult.error ?? sessionsResult.error;
+        if (queryError) {
+          setError(queryError.message);
+          return;
+        }
+        setError(null);
+        // The client is untyped (no generated DB types); these casts assert the
+        // selected-columns-and-embeds shapes. Runtime validation remains the
+        // accepted debt.
+        setCoa(coaResult.data as CoaDetailRecord);
+        setSessions(sessionsResult.data as DetailSession[]);
+      }),
     [coaId]
   );
 
   useEffect(() => {
     load();
   }, [load]);
-
-  // Client delete, no RPC (D42 mechanism, unchanged): the child analyte rows
-  // are the schema's on-delete-cascade concern, not the client's; RLS scopes
-  // the delete. Success is the caller's to handle — close and refetch.
-  const deleteCoa = (objectPath: string | null) =>
-    supabase
-      .from('coas')
-      .delete()
-      .eq('id', coaId)
-      .then(async ({ error: deleteError }) => {
-        if (deleteError) {
-          Alert.alert('Delete failed', deleteError.message);
-          return;
-        }
-        // Row first, then the Storage object (D87.4 observed constraints).
-        // D53's cascade is a foreign key and foreign keys do not reach
-        // Storage, so the removal is explicit. A failure here leaves a
-        // detectable orphan; object-first would leave a row pointing at a
-        // document that no longer exists. Surfaced, never swallowed — and
-        // never a reason to withhold onDeleted(), since the row is gone.
-        if (objectPath !== null) {
-          const removed = await removeCoaPdf(objectPath);
-          if (!removed.ok) {
-            Alert.alert(
-              'PDF not removed',
-              `This COA was deleted, but its stored PDF was not removed.\n\n${removed.message}`
-            );
-          }
-        }
-        onDeleted();
-      });
 
   /**
    * Open the retained source document (D100). v1 hands a short-lived signed
@@ -237,9 +353,7 @@ export function CoaDetail({
     try {
       await Linking.openURL(data.signedUrl);
     } catch (err) {
-      setError(
-        `Could not open the PDF: ${err instanceof Error ? err.message : String(err)}`
-      );
+      setError(`Could not open the PDF: ${err instanceof Error ? err.message : String(err)}`);
     }
     setPdfInFlight(false);
   };
@@ -310,307 +424,513 @@ export function CoaDetail({
     ]);
   };
 
-  const confirmDelete = (record: CoaDetailRecord) => {
-    // D44 line-echo body, reused verbatim (D45): echo the record's displayed
-    // identity (strain, brand, added date), then the destruction sentence.
-    // Never render a blank where a name should be: strain falls back to
-    // "this COA"; a null/blank brand omits its line entirely. The identity
-    // echo is redundant in a single-card context but harmless.
-    const strain = record.strain?.trim() ? record.strain.trim() : 'this COA';
-    const brand = record.brand?.trim();
-    const identity = [
-      strain,
-      ...(brand ? [brand] : []),
-      `Added ${new Date(record.created_at).toLocaleDateString()}`,
-    ].join('\n');
-    Alert.alert(
-      'Delete COA?',
-      `${identity}\n\nDeletes this COA, all of its lab data (terpene, cannabinoid, and safety rows), and its logged sessions. This cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => deleteCoa(record.pdf_object_path),
-        },
-      ]
+  if (error !== null) {
+    return (
+      <View style={styles.screen}>
+        <View style={styles.topBar}>
+          <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button">
+            <Text style={styles.close}>Close</Text>
+          </Pressable>
+        </View>
+        <View style={styles.messageContainer}>
+          <Text style={styles.message}>{error}</Text>
+          <Pressable onPress={load} accessibilityRole="button">
+            <Text style={styles.retry}>Retry</Text>
+          </Pressable>
+        </View>
+      </View>
     );
-  };
+  }
+
+  if (coa === null) {
+    return (
+      <View style={styles.screen}>
+        <View style={styles.topBar}>
+          <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button">
+            <Text style={styles.close}>Close</Text>
+          </Pressable>
+        </View>
+        <View style={styles.messageContainer}>
+          <Text style={styles.message}>Loading…</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // The sticky bar exists only where a logging path exists AND a package is on
+  // the shelf (D101): a session against a finished package is more often a
+  // data-entry error than an event. The record drives the first half, the
+  // caller the second. The scroll's bottom clearance follows the bar, so an
+  // archived record gains no dead space under its last section.
+  const showLogBar = coa.on_shelf_count > 0 && onLogSession !== undefined;
+  // Batch and lab on one line, each omitted when blank rather than rendering a
+  // label over nothing.
+  const labLine = [coa.batch?.trim(), coa.lab?.trim()].filter(Boolean).join(' · ');
 
   return (
-    <ThemedView style={styles.container}>
-      <ThemedView style={styles.content}>
-        {error !== null ? (
-          <View style={styles.messageContainer}>
-            <ThemedText type="small" style={styles.centered}>
-              {error}
-            </ThemedText>
-            <Pressable onPress={load}>
-              <ThemedText type="smallBold" style={styles.centered}>
-                Retry
-              </ThemedText>
-            </Pressable>
-            <Pressable
-              onPress={onClose}
-              style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
-              <ThemedText type="smallBold">Close</ThemedText>
-            </Pressable>
-          </View>
-        ) : coa === null ? (
-          <View style={styles.messageContainer}>
-            <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
-              Loading…
-            </ThemedText>
-          </View>
-        ) : (
-          // Fixed-footer column (the 6c lesson): the sections scroll; the
-          // delete and close controls are the scroll's siblings, visible at
-          // rest without scrolling. The dialog guards accidental taps.
-          <>
-            <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-              <View style={styles.section}>
-                <ThemedText type="subtitle">{coa.strain}</ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {coa.brand}
-                </ThemedText>
-                {/* Whichever lab dates exist (D84.4), honestly labeled;
-                    Added stays as provenance, never relabeled. */}
-                {coa.sampled_on ? (
-                  <ThemedText type="small" themeColor="textSecondary">
-                    Sampled {formatIsoDate(coa.sampled_on)}
-                  </ThemedText>
-                ) : null}
-                {coa.tested_on ? (
-                  <ThemedText type="small" themeColor="textSecondary">
-                    Tested {formatIsoDate(coa.tested_on)}
-                  </ThemedText>
-                ) : null}
-                <ThemedText type="small" themeColor="textSecondary">
-                  Added {new Date(coa.created_at).toLocaleDateString()}
-                </ThemedText>
-                {coa.batch?.trim() ? <Row label="Batch" value={coa.batch.trim()} /> : null}
-                {coa.lab?.trim() ? <Row label="Lab" value={coa.lab.trim()} /> : null}
-                {coa.source_lab?.trim() ? (
-                  // Subordinate secondary text (D45): a system identifier,
-                  // not user-facing vocabulary.
-                  <ThemedText type="code" themeColor="textSecondary">
-                    {coa.source_lab.trim()}
-                  </ThemedText>
-                ) : null}
-              </View>
-
-              <View style={styles.section}>
-                <ThemedText type="smallBold">Totals</ThemedText>
-                <Row label="THC" value={ndLabel(coa.total_thc)} />
-                <Row label="CBD" value={ndLabel(coa.total_cbd)} />
-                <Row label="Total terpenes" value={ndLabel(coa.total_terpenes)} />
-              </View>
-
-              <AnalytePanel title="Terpenes" rows={coa.coa_terpenes} />
-              <AnalytePanel title="Cannabinoids" rows={coa.coa_cannabinoids} />
-
-              <View style={styles.section}>
-                <ThemedText type="smallBold">Safety</ThemedText>
-                {[...coa.coa_safety]
-                  .sort((a, b) => a.category.localeCompare(b.category))
-                  .map((s) => (
-                    <Row key={s.id} label={s.category} value={s.status} />
-                  ))}
-              </View>
-
-              {/* Repurchase intent (D91), settable any time and not only at
-                  retirement: it is a verdict about the chemistry, and it has
-                  to outlive every package. Three states -- tapping the
-                  active choice clears it back to null, because "never asked"
-                  and "no" are different answers (D48). This is not Never
-                  Again, which is a display override and remains
-                  unimplemented. */}
-              <View style={styles.section}>
-                <ThemedText type="smallBold">Repurchase</ThemedText>
-                <View style={styles.row}>
-                  <ThemedText type="small" style={styles.rowLabel}>
-                    Would buy again
-                  </ThemedText>
-                  <View style={styles.choiceRow}>
-                    <Pressable
-                      onPress={() => void writeFavorite(coa.favorite === true ? null : true)}
-                      style={[
-                        styles.choice,
-                        {
-                          backgroundColor:
-                            coa.favorite === true
-                              ? theme.backgroundSelected
-                              : theme.backgroundElement,
-                        },
-                      ]}>
-                      <ThemedText
-                        type={coa.favorite === true ? 'smallBold' : 'small'}
-                        themeColor={coa.favorite === true ? 'text' : 'textSecondary'}>
-                        Yes
-                      </ThemedText>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => void writeFavorite(coa.favorite === false ? null : false)}
-                      style={[
-                        styles.choice,
-                        {
-                          backgroundColor:
-                            coa.favorite === false
-                              ? theme.backgroundSelected
-                              : theme.backgroundElement,
-                        },
-                      ]}>
-                      <ThemedText
-                        type={coa.favorite === false ? 'smallBold' : 'small'}
-                        themeColor={coa.favorite === false ? 'text' : 'textSecondary'}>
-                        No
-                      </ThemedText>
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
-            </ScrollView>
-
-            {/* Log session (D49): launches the logging surface; the caller
-                owns the modal chaining. First in the footer — the most
-                common action does not sit under the destructive one.
-                Off the shelf it does not render at all (D101): a session
-                against a finished package is more often a data-entry error
-                than an event. The record drives this, not a caller's flag --
-                the same on_shelf_count the card reads. Revisable on lived
-                demand; the cost of being wrong is this one conditional. */}
-            {coa.on_shelf_count > 0 && onLogSession !== undefined && (
-              <Pressable
-                onPress={onLogSession}
-                style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
-                <ThemedText type="smallBold">Log session</ThemedText>
-              </Pressable>
-            )}
-            {/* Retire (D90): a package leaves the shelf, the COA does not.
-                Between logging and deleting because that is where it sits in
-                consequence -- it changes possession, never the record. At
-                count 0 there is nothing left to retire, and the confirm
-                copy's arithmetic presumes a package exists. */}
-            {coa.on_shelf_count > 0 && (
-              <Pressable
-                onPress={() => confirmRetire(coa)}
-                style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
-                <ThemedText type="smallBold">Retire a package</ThemedText>
-              </Pressable>
-            )}
-            {/* The retained source document (D100). A record with no stored
-                PDF says so in one line and offers nothing to press: a button
-                that cannot do its job is worse than an honest sentence. */}
-            {pdfObjectPath === null ? (
-              <ThemedText type="small" themeColor="textSecondary" style={styles.pdfAbsent}>
-                {"Original COA PDF wasn't retained."}
-              </ThemedText>
-            ) : (
-              <Pressable
-                onPress={() => void openPdf(pdfObjectPath)}
-                disabled={pdfInFlight}
-                style={[
-                  styles.button,
-                  { backgroundColor: theme.backgroundElement },
-                  pdfInFlight && styles.buttonDisabled,
-                ]}>
-                <ThemedText type="smallBold">Open original COA (PDF)</ThemedText>
-              </Pressable>
-            )}
-            <Pressable
-              onPress={() => confirmDelete(coa)}
-              style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
-              <ThemedText type="smallBold" style={styles.deleteLabel}>
-                Delete COA
-              </ThemedText>
-            </Pressable>
-            <Pressable
-              onPress={onClose}
-              style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
-              <ThemedText type="smallBold">Close</ThemedText>
-            </Pressable>
-          </>
+    <View style={styles.screen}>
+      <View style={styles.topBar}>
+        <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button">
+          <Text style={styles.close}>Close</Text>
+        </Pressable>
+        {/* Quantity badge (D89): rendered only above a single package -- at one
+            package there is no badge at all, because absence says it and a
+            stated count of one is noise. */}
+        {coa.on_shelf_count > 1 && (
+          <Text style={styles.badge}>{`x${coa.on_shelf_count} on shelf`}</Text>
         )}
-      </ThemedView>
-    </ThemedView>
+      </View>
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.scrollContent,
+          showLogBar && { paddingBottom: LOG_BAR_CLEARANCE },
+        ]}>
+        {/* 1. Header. The display face without the card's uppercase: the detail
+            is the full record, the card is the poster. */}
+        <View style={styles.header}>
+          <Text style={styles.strain}>{coa.strain}</Text>
+          {/* Null brand is stated, not left as an empty-looking gap (D97). */}
+          <Text style={coa.brand === null ? styles.brandAbsent : styles.brand}>
+            {coa.brand ?? 'Brand not reported'}
+          </Text>
+          {labLine !== '' && <Text style={styles.meta}>{labLine}</Text>}
+          {coa.source_lab?.trim() ? (
+            // Subordinate secondary text (D45): a system identifier, not
+            // user-facing vocabulary.
+            <Text style={styles.sourceLab}>{coa.source_lab.trim()}</Text>
+          ) : null}
+          {/* Whichever lab dates exist (D84.4), honestly labeled; Added stays
+              as provenance, never relabeled. */}
+          {coa.sampled_on ? (
+            <Text style={styles.meta}>{`Sampled ${formatIsoDate(coa.sampled_on)}`}</Text>
+          ) : null}
+          {coa.tested_on ? (
+            <Text style={styles.meta}>{`Tested ${formatIsoDate(coa.tested_on)}`}</Text>
+          ) : null}
+          <Text style={styles.meta}>
+            {`Added ${new Date(coa.created_at).toLocaleDateString()}`}
+          </Text>
+        </View>
+
+        {/* 2. Totals and the FULL terpene list, every value at full lab
+            precision (D102). Nothing on this surface is truncated. */}
+        <View style={styles.card}>
+          <Text style={styles.label}>Totals · as reported</Text>
+          <View style={styles.totalsRow}>
+            <View style={styles.total}>
+              <Text style={styles.totalLabel}>THC</Text>
+              <Text style={[styles.totalValue, coa.total_thc === null && styles.totalValueNd]}>
+                {ndLabel(coa.total_thc)}
+              </Text>
+            </View>
+            <View style={styles.total}>
+              <Text style={styles.totalLabel}>CBD</Text>
+              <Text style={[styles.totalValue, coa.total_cbd === null && styles.totalValueNd]}>
+                {ndLabel(coa.total_cbd)}
+              </Text>
+            </View>
+            <View style={styles.total}>
+              <Text style={styles.totalLabel}>Total terpenes</Text>
+              <Text style={[styles.totalValue, coa.total_terpenes === null && styles.totalValueNd]}>
+                {ndLabel(coa.total_terpenes)}
+              </Text>
+            </View>
+          </View>
+          <TerpeneList rows={coa.coa_terpenes} />
+        </View>
+
+        {/* 3. Sessions, promoted above Cannabinoids (operator-ratified
+            2026-07-30). The user's own history against this chemistry: the
+            verdict word as recorded, the date it landed, and the note in the
+            user's own words (D95) -- verbatim, never paraphrased, never
+            summarized into something it did not say. */}
+        <View style={styles.card}>
+          <Text style={styles.label}>Sessions</Text>
+          {sessions.length === 0 ? (
+            <Text style={styles.absent}>No sessions yet</Text>
+          ) : (
+            sessions.map((session, index) => (
+              <View key={`${session.created_at}-${index}`} style={styles.session}>
+                <View style={styles.sessionHead}>
+                  <View
+                    style={[styles.dot, { backgroundColor: verdictHue(session.overall_word) }]}
+                  />
+                  <Text
+                    style={
+                      session.overall_word === null ? styles.sessionWordAbsent : styles.sessionWord
+                    }>
+                    {session.overall_word ?? 'Verdict not recorded'}
+                  </Text>
+                  <Text style={styles.sessionDate}>
+                    {new Date(session.created_at).toLocaleDateString()}
+                  </Text>
+                </View>
+                {session.notes !== null && session.notes !== '' && (
+                  <Text style={styles.sessionNote}>{session.notes}</Text>
+                )}
+              </View>
+            ))
+          )}
+        </View>
+
+        {/* 4. Cannabinoids. */}
+        <CannabinoidSection rows={coa.coa_cannabinoids} />
+
+        {/* 5. Safety, then the retained source document. */}
+        <SafetySection rows={coa.coa_safety} />
+
+        {/* The retained source document (D100). A record with no stored PDF
+            says so in one line and offers nothing to press: a button that
+            cannot do its job is worse than an honest sentence. */}
+        {pdfObjectPath === null ? (
+          <Text style={styles.pdfAbsent}>{"Original COA PDF wasn't retained."}</Text>
+        ) : (
+          <Pressable
+            onPress={() => void openPdf(pdfObjectPath)}
+            disabled={pdfInFlight}
+            accessibilityRole="button"
+            style={[styles.actionRow, pdfInFlight && styles.actionRowDisabled]}>
+            <Text style={styles.actionLabel}>Open original COA (PDF)</Text>
+          </Pressable>
+        )}
+
+        {/* 6. Repurchase intent (D91), settable any time and not only at
+            retirement: it is a verdict about the chemistry, and it has to
+            outlive every package. Three states -- tapping the active choice
+            clears it back to null, because "never asked" and "no" are
+            different answers (D48), and an unanswered control says so in
+            words rather than resting on "No". This is not Never Again, which
+            is a display override and remains unimplemented. */}
+        <View style={styles.card}>
+          <Text style={styles.label}>Would buy again</Text>
+          <View style={styles.choiceRow}>
+            <Pressable
+              onPress={() => void writeFavorite(coa.favorite === true ? null : true)}
+              accessibilityRole="button"
+              style={[styles.choice, coa.favorite === true && styles.choiceYes]}>
+              <Text style={[styles.choiceText, coa.favorite === true && styles.choiceYesText]}>
+                Yes
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => void writeFavorite(coa.favorite === false ? null : false)}
+              accessibilityRole="button"
+              style={[styles.choice, coa.favorite === false && styles.choiceNo]}>
+              <Text style={[styles.choiceText, coa.favorite === false && styles.choiceNoText]}>
+                No
+              </Text>
+            </Pressable>
+          </View>
+          {coa.favorite === null && <Text style={styles.absent}>Not answered yet</Text>}
+        </View>
+
+        {/* 7. Retire (D90): a package leaves the shelf, the COA does not. At
+            count 0 there is nothing left to retire, and the confirm copy's
+            arithmetic presumes a package exists. */}
+        {coa.on_shelf_count > 0 && (
+          <Pressable
+            onPress={() => confirmRetire(coa)}
+            accessibilityRole="button"
+            style={styles.actionRow}>
+            <Text style={styles.actionLabel}>Retire a package</Text>
+          </Pressable>
+        )}
+      </ScrollView>
+
+      {/* 8. The sticky bar (D102): an absolute view over the ScrollView. Its
+          solid background is the reference's scrim rendered without a
+          gradient -- expo-linear-gradient would be a new dependency and a new
+          EAS build, which one bar's edge does not buy. */}
+      {showLogBar && (
+        <View style={[styles.logBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+          <Pressable onPress={onLogSession} accessibilityRole="button" style={styles.logButton}>
+            <Text style={styles.logLabel}>Log a session</Text>
+          </Pressable>
+        </View>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  screen: {
     flex: 1,
-    justifyContent: 'center',
+    backgroundColor: Dash.bg,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    gap: 16,
+  },
+  topBar: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
   },
-  content: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.four,
-    gap: Spacing.three,
-    maxWidth: MaxContentWidth,
+  close: {
+    fontFamily: SORA_BOLD,
+    fontSize: 11.5,
+    color: Dash.accent,
   },
-  centered: {
-    textAlign: 'center',
+  badge: {
+    fontFamily: SORA_BOLD,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    fontVariant: ['tabular-nums'],
+    color: Dash.textMuted,
+    backgroundColor: Dash.surface,
+    borderRadius: Dash.radius.badge,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    overflow: 'hidden',
   },
   messageContainer: {
     flex: 1,
     alignSelf: 'stretch',
     justifyContent: 'center',
-    gap: Spacing.two,
+    gap: 8,
+  },
+  message: {
+    fontFamily: SORA_REGULAR,
+    fontSize: 11.5,
+    color: Dash.textMuted,
+    textAlign: 'center',
+  },
+  retry: {
+    fontFamily: SORA_BOLD,
+    fontSize: 11.5,
+    color: Dash.accent,
+    textAlign: 'center',
   },
   scroll: {
     flex: 1,
     alignSelf: 'stretch',
   },
   scrollContent: {
-    gap: Spacing.four,
+    gap: 16,
+    paddingBottom: 16,
   },
-  section: {
-    gap: Spacing.one,
+  header: {
+    gap: 4,
+  },
+  strain: {
+    fontFamily: SORA_DISPLAY,
+    fontSize: 28,
+    lineHeight: 31,
+    color: Dash.text,
+  },
+  brand: {
+    fontFamily: SORA_REGULAR,
+    fontSize: 11.5,
+    color: Dash.textBody,
+  },
+  brandAbsent: {
+    fontFamily: SORA_REGULAR,
+    fontSize: 11.5,
+    color: Dash.textMuted,
+  },
+  meta: {
+    fontFamily: SORA_REGULAR,
+    fontSize: 11.5,
+    color: Dash.textFaint,
+  },
+  sourceLab: {
+    fontFamily: SORA_REGULAR,
+    fontSize: 10,
+    color: Dash.textFaint,
+  },
+  card: {
+    backgroundColor: Dash.surface,
+    borderRadius: Dash.radius.card,
+    padding: 16,
+    gap: 8,
+  },
+  label: {
+    fontFamily: SORA_BOLD,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: Dash.textMuted,
+  },
+  totalsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  total: {
+    flexShrink: 1,
+    gap: 2,
+  },
+  totalLabel: {
+    fontFamily: SORA_BOLD,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: Dash.textFaint,
+  },
+  totalValue: {
+    fontFamily: SORA_SEMIBOLD,
+    fontSize: 15,
+    fontVariant: ['tabular-nums'],
+    color: Dash.text,
+  },
+  totalValueNd: {
+    color: Dash.textMuted,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: Spacing.three,
+    alignItems: 'baseline',
+    gap: 16,
   },
   rowLabel: {
     flexShrink: 1,
+    fontFamily: SORA_REGULAR,
+    fontSize: 11.5,
+    color: Dash.textBody,
   },
   rowValue: {
+    fontFamily: SORA_SEMIBOLD,
+    fontSize: 11.5,
+    fontVariant: ['tabular-nums'],
+    color: Dash.text,
     textAlign: 'right',
   },
-  ndToggle: {
-    paddingVertical: Spacing.one,
+  rowValueMuted: {
+    color: Dash.textMuted,
   },
-  choiceRow: {
+  toggle: {
+    paddingVertical: 4,
+  },
+  toggleText: {
+    fontFamily: SORA_BOLD,
+    fontSize: 11.5,
+    color: Dash.accent,
+  },
+  summaryLine: {
+    fontFamily: SORA_SEMIBOLD,
+    fontSize: 11.5,
+    fontVariant: ['tabular-nums'],
+    color: Dash.text,
+  },
+  absent: {
+    fontFamily: SORA_REGULAR,
+    fontSize: 11.5,
+    color: Dash.textMuted,
+  },
+  session: {
+    gap: 4,
+    backgroundColor: Dash.surface2,
+    borderRadius: Dash.radius.row,
+    padding: 12,
+  },
+  sessionHead: {
     flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  choice: {
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.one,
-  },
-  button: {
-    alignSelf: 'stretch',
     alignItems: 'center',
-    borderRadius: Spacing.three,
-    paddingVertical: Spacing.three,
+    gap: 8,
   },
-  buttonDisabled: {
-    opacity: 0.5,
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  sessionWord: {
+    flex: 1,
+    fontFamily: SORA_SEMIBOLD,
+    fontSize: 11.5,
+    color: Dash.text,
+  },
+  sessionWordAbsent: {
+    flex: 1,
+    fontFamily: SORA_REGULAR,
+    fontSize: 11.5,
+    color: Dash.textMuted,
+  },
+  sessionDate: {
+    fontFamily: SORA_REGULAR,
+    fontSize: 11.5,
+    fontVariant: ['tabular-nums'],
+    color: Dash.textFaint,
+  },
+  sessionNote: {
+    fontFamily: SERIF_ITALIC,
+    // The loaded face is the 400 italic; leaving a heavier weight in place
+    // would ask iOS to synthesize one this family has no file for.
+    fontWeight: '400',
+    fontSize: 14.5,
+    color: Dash.textBody,
   },
   pdfAbsent: {
     fontFamily: SERIF_ITALIC,
-    // The loaded face is the 400 italic; leaving `small`'s 500 in place would
-    // ask iOS to synthesize a weight this family has no file for.
     fontWeight: '400',
+    fontSize: 14.5,
+    color: Dash.textMuted,
     textAlign: 'center',
-    paddingVertical: Spacing.three,
+    paddingVertical: 8,
   },
-  deleteLabel: {
-    // No error token exists in Colors; literal color follows the sign-in
-    // precedent. Legible on both light and dark backgrounds.
-    color: '#e5484d',
+  actionRow: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    backgroundColor: Dash.surface,
+    borderRadius: Dash.radius.card,
+    paddingVertical: 16,
+  },
+  actionRowDisabled: {
+    opacity: 0.5,
+  },
+  actionLabel: {
+    fontFamily: SORA_BOLD,
+    fontSize: 11.5,
+    color: Dash.text,
+  },
+  choiceRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  choice: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: Dash.surface2,
+  },
+  choiceYes: {
+    backgroundColor: 'rgba(126, 217, 155, 0.14)',
+  },
+  choiceNo: {
+    backgroundColor: 'rgba(224, 104, 94, 0.14)',
+  },
+  choiceText: {
+    fontFamily: SORA_SEMIBOLD,
+    fontSize: 11.5,
+    color: Dash.textMuted,
+  },
+  choiceYesText: {
+    color: Dash.accent,
+  },
+  choiceNoText: {
+    color: Dash.verdict.Hated,
+  },
+  logBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: Dash.bg,
+    paddingTop: 16,
+    paddingHorizontal: 16,
+  },
+  logButton: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    borderRadius: 999,
+    paddingVertical: 16,
+    backgroundColor: Dash.accent,
+  },
+  logLabel: {
+    fontFamily: SORA_BOLD,
+    fontSize: 11.5,
+    color: Dash.bg,
   },
 });
