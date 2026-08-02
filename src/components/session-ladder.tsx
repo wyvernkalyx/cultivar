@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing, Survey } from '@/constants/theme';
+import { Dash, MaxContentWidth, Spacing } from '@/constants/theme';
 import { GLOSSARY, type GlossaryEntry, LEXICON_VERSION, RUNGS } from '@/lib/lexicon';
 import { supabase } from '@/lib/supabase';
 
@@ -65,7 +65,25 @@ type Phase = 'ladder' | 'closing';
 const SORA_MEDIUM = 'Sora_500Medium';
 const SORA_SEMIBOLD = 'Sora_600SemiBold';
 const SORA_BOLD = 'Sora_700Bold';
+const SORA_DISPLAY = 'Sora_800ExtraBold';
 const SERIF_ITALIC = 'Newsreader_400Regular_Italic';
+
+// The inline save-error banner's two hues (D54's error state). The reference
+// token set carries no error color: its verdict band is a band identity, and
+// borrowing a rung's hue here would make a failed insert read as a verdict.
+// These are the values the banner already rendered, carried across the token
+// move unchanged; the literal-hex precedent is sign-in.tsx.
+const ERROR_BORDER = '#d6725d';
+const ERROR_DOT = '#eb8656';
+
+// The rung's band hue, keyed by its word — the green->red identity retuned to
+// the reference values, which is the one band change D103 allows. One source
+// with the shelf's verdict dots and the summary's bars, never a second table.
+// A word the token set does not carry renders faint rather than uncolored.
+function verdictHue(word: string): string {
+  const hues = Dash.verdict as Record<string, string>;
+  return hues[word] ?? Dash.textFaint;
+}
 
 // One explainer line per screen (D83 Decision 2), verbatim from
 // documentation/design/art-direction.md — personal, observational, zero
@@ -112,13 +130,23 @@ function SavingSpinner({ color }: { color: string }) {
   );
 }
 
-// The completion bloom (D83 Unfurl 2a, per reference/claude-design-survey mock):
-// six petals unfurl from a rooted calyx, then the "Logged." caption rises. All
-// motion is passed in as native-driven Animated.Values owned by SessionLadder,
-// so a Back-and-return to closing shows the held (settled) bloom rather than
-// replaying it. Each petal wrapper carries a static 60deg rotation; the inner
-// petal scales up from its base (transformOrigin 50% 100%). The glow halo
-// approximates the mock's filter:blur — RN core has no blur (see report).
+// The completion bloom (D83 Unfurl 2a), redrawn to reference 05: a bloom mark
+// of rounded bars over a center dot, accent on a 14%-accent circle. Reference
+// 05 describes the mark as THREE rotated bars; a bar spans the full diameter,
+// so three bars at 60deg apart and six center-rooted arms at 60deg apart are
+// the same six-fold figure. The six-arm form is what is drawn here, because it
+// is the form the six ratified Animated.Values already drive — the motion
+// budget, count, stagger, timings, and the held-settled latch are untouched
+// (D83), and only the art they animate is redrawn.
+//
+// The value names (petalAnims, calyxAnim) keep their ratified spelling for the
+// same reason: the values are the ratified thing. The style keys below carry
+// the reference's vocabulary.
+//
+// All motion is passed in as native-driven Animated.Values owned by
+// SessionLadder, so a Back-and-return to closing shows the held (settled)
+// bloom rather than replaying it. Each arm wrapper carries a static 60deg
+// rotation; the inner bar scales up from its base (transformOrigin 50% 100%).
 function CompletionBloom({
   petalAnims,
   calyxAnim,
@@ -131,12 +159,12 @@ function CompletionBloom({
   return (
     <View style={styles.bloomWrap}>
       <View style={styles.bloomArt}>
-        <View style={styles.bloomGlow} />
+        <View style={styles.bloomCircle} />
         {petalAnims.map((anim, i) => (
-          <View key={i} style={[styles.petalRoot, { transform: [{ rotate: `${i * 60}deg` }] }]}>
+          <View key={i} style={[styles.bloomBarRoot, { transform: [{ rotate: `${i * 60}deg` }] }]}>
             <Animated.View
               style={[
-                styles.petal,
+                styles.bloomBar,
                 {
                   opacity: anim.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 1, 1] }),
                   transform: [
@@ -149,7 +177,7 @@ function CompletionBloom({
         ))}
         <Animated.View
           style={[
-            styles.calyx,
+            styles.bloomDot,
             {
               opacity: calyxAnim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 1, 1] }),
               transform: [
@@ -328,10 +356,10 @@ function PillScreen({
         <ThemedText style={styles.explainer}>{explainer}</ThemedText>
       </View>
       <View style={styles.pillStack}>
-        {values.map((value, index) => {
+        {values.map((value) => {
           const isSelected = value === selected;
           const isPending = value === pendingValue;
-          const labelColor = isSelected ? Survey.background : Survey.text;
+          const labelColor = isSelected ? Dash.bg : Dash.text;
           return (
             <Pressable
               key={value}
@@ -340,16 +368,25 @@ function PillScreen({
               onPress={() => onSelect(value)}
               style={[
                 styles.pill,
-                { backgroundColor: isSelected ? Survey.text : Survey.surface },
+                // Selection inverts (the unchanged D57/D80 chip grammar,
+                // restyled): a rung card is a surface until it is the answer.
+                // The inversion is not decoration -- it is the only thing that
+                // renders the confirmed selection on a Back-and-retap revisit,
+                // so it survives the restyle rather than being dropped for the
+                // reference's resting state.
+                { backgroundColor: isSelected ? Dash.text : Dash.surface },
                 // Saving state (D83 Layer 1): siblings of the tapped pill dim to
                 // 32%; the tapped pill stays lit and shows the spinner below.
                 saving && !isPending && styles.chipDim,
               ]}>
-              {/* Score-pill tier stripe (D83): only the stripe is colored, the
-                  body stays surface. Absolute so it never shifts the centered
-                  label; order best -> worst by pill index (Elite -> Trash). */}
+              {/* The rung's leading band (D83's stripe, retuned by D103 to the
+                  reference's verdict hues): only the band is colored, the body
+                  stays surface. Absolute so it never shifts the centered label.
+                  Keyed by the rung WORD through the one hue source, not by pill
+                  index -- an index-keyed ramp reads correctly only for as long
+                  as nobody reorders the array. */}
               {tierStripe && (
-                <View style={[styles.tierStripe, { backgroundColor: Survey.tier[index] }]} />
+                <View style={[styles.tierStripe, { backgroundColor: verdictHue(value) }]} />
               )}
               {/* D83 Layer 1 saving treatment: the tapped pill swaps its label
                   for a 20pt spinner + "Saving…" while its insert is on the wire
@@ -706,7 +743,7 @@ export function SessionLadder({
           <PillScreen
             brand={coa.brand}
             strain={coa.strain}
-            title="Rate this Session"
+            title="Rate this session"
             explainer={EXPLAINERS.ladder}
             glossary={GLOSSARY.ladder}
             values={RUNG_WORDS}
@@ -797,7 +834,7 @@ export function SessionLadder({
                 editable={!inFlight}
                 multiline
                 placeholder="Add a note"
-                placeholderTextColor={Survey.subtext}
+                placeholderTextColor={Dash.textMuted}
               />
               <Pressable disabled={inFlight} onPress={closeWithNote} style={styles.closeButton}>
                 <ThemedText style={styles.closeLabel}>Close</ThemedText>
@@ -816,7 +853,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     flexDirection: 'row',
-    backgroundColor: Survey.background,
+    backgroundColor: Dash.bg,
   },
   content: {
     flex: 1,
@@ -825,7 +862,7 @@ const styles = StyleSheet.create({
     paddingBottom: 38,
     gap: Spacing.three,
     maxWidth: MaxContentWidth,
-    backgroundColor: Survey.background,
+    backgroundColor: Dash.bg,
   },
   // Siblings of the tapped pill dim during a save (D83 Layer 1); the tapped
   // pill stays lit and carries the spinner.
@@ -871,26 +908,29 @@ const styles = StyleSheet.create({
   headerSaving: {
     opacity: 0.4,
   },
-  // The control chip (D83 item 9): 44pt tall, r22, surface, a leading glyph +
-  // label, sized to its content and pinned left.
+  // The control chip (D83 item 9), now the reference's pill: 44pt tall, pill
+  // radius, surface fill, a leading glyph + label, sized to its content.
   controlChip: {
     height: 44,
-    borderRadius: 22,
+    borderRadius: 999,
     paddingHorizontal: Spacing.three,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Survey.surface,
+    backgroundColor: Dash.surface,
   },
   controlChipLabel: {
     fontFamily: SORA_SEMIBOLD,
     fontSize: 16,
-    color: Survey.text,
+    color: Dash.text,
   },
   headerBlock: {
     alignSelf: 'stretch',
     gap: Spacing.two,
   },
+  // The brand eyebrow above the strain. Rendered only when the COA carries a
+  // brand AND a strain (see SequenceHeader) -- never an empty eyebrow, and
+  // never a lonely label over a promoted brand.
   brandLabel: {
     fontFamily: SORA_MEDIUM,
     fontSize: 15,
@@ -898,19 +938,23 @@ const styles = StyleSheet.create({
     letterSpacing: 2.1,
     textTransform: 'uppercase',
     lineHeight: 20,
-    color: Survey.subtext,
+    color: Dash.textMuted,
   },
+  // The display role (Sora 800, uppercase strain names) at D83's ratified
+  // survey size: the survey's product line is the screen's dominant element
+  // and keeps its 38pt, where the card's poster treatment sits at 28.
   productLine: {
-    fontFamily: SORA_BOLD,
+    fontFamily: SORA_DISPLAY,
     fontSize: 38,
     lineHeight: 39,
-    color: Survey.text,
+    textTransform: 'uppercase',
+    color: Dash.text,
   },
   question: {
-    fontFamily: SORA_MEDIUM,
+    fontFamily: SORA_BOLD,
     fontSize: 23,
     lineHeight: 30,
-    color: Survey.accent,
+    color: Dash.accent,
   },
   // The empty middle is the reading surface (D83): the explainer centered in it.
   explainerWrap: {
@@ -922,22 +966,25 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     fontSize: 18,
     lineHeight: 28,
-    color: Survey.subtext,
+    color: Dash.textBody,
   },
   pillStack: {
     gap: Spacing.two,
   },
+  // A rung card (reference 04): 56pt tall, radius 15, surface. Fixed height
+  // rather than vertical padding, so the five cards are one rhythm regardless
+  // of what a label does.
   pill: {
     alignSelf: 'stretch',
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: Spacing.four,
-    paddingVertical: Spacing.three,
-    // Clips the tier stripe to the pill's rounded leading edge.
+    borderRadius: 15,
+    // Clips the leading band to the card's rounded leading edge.
     overflow: 'hidden',
   },
   pillLabel: {
-    fontFamily: SORA_MEDIUM,
+    fontFamily: SORA_SEMIBOLD,
     fontSize: 16,
   },
   // The tapped pill's saving row (D83 Layer 1): spinner beside "Saving…".
@@ -954,8 +1001,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 2.5,
   },
-  // The score-pill tier stripe (D83): a 5pt colored bar on the leading edge,
-  // clipped to the pill radius by the pill's overflow:hidden.
+  // The rung's leading band (D83's stripe, D103's hue retune): a 5pt colored
+  // bar on the leading edge, clipped to the card radius by overflow:hidden.
   tierStripe: {
     position: 'absolute',
     left: 0,
@@ -963,8 +1010,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: 5,
   },
-  // The inline save-error banner (D54 error, D83 treatment): surface-hi with a
-  // 1px error border, a round badge, and the message.
+  // The inline save-error banner (D54 error, D83 treatment): the raised
+  // surface with a 1px error border, a round badge, and the message.
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -973,8 +1020,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: Survey.errorBorder,
-    backgroundColor: Survey.surfaceHi,
+    borderColor: ERROR_BORDER,
+    backgroundColor: Dash.surface2,
   },
   errorBadge: {
     width: 20,
@@ -982,38 +1029,41 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Survey.errorDot,
+    backgroundColor: ERROR_DOT,
   },
   errorBadgeGlyph: {
     fontFamily: SORA_SEMIBOLD,
     fontSize: 13,
-    color: Survey.onAccent,
+    color: Dash.bg,
   },
   errorText: {
     flex: 1,
     fontFamily: SORA_MEDIUM,
     fontSize: 15,
     lineHeight: 20,
-    color: Survey.text,
+    color: Dash.text,
   },
   closingActions: {
     gap: Spacing.two,
   },
-  // The note field (D95): the answer stack's pill grammar reused — same radius,
-  // same surface fill, same width — so the one typed field reads as part of the
-  // survey rather than a form control bolted on. multiline needs an explicit
+  // The note field (D95, restyled only): the reference's nested-row surface and
+  // radius, and the serif italic the explainer voice already uses — what the
+  // user types is their own words, so it reads in the voice the survey reserves
+  // for them. D95's semantics are untouched: same state, same one write on
+  // Close, same normalization, same placeholder. multiline needs an explicit
   // minHeight and top-aligned text; it stays a note-sized box, not an essay.
   noteInput: {
     alignSelf: 'stretch',
     minHeight: 88,
-    borderRadius: Spacing.four,
+    borderRadius: 12,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,
-    backgroundColor: Survey.surface,
-    fontFamily: SORA_MEDIUM,
+    backgroundColor: Dash.surface2,
+    fontFamily: SERIF_ITALIC,
+    fontStyle: 'italic',
     fontSize: 16,
     lineHeight: 22,
-    color: Survey.text,
+    color: Dash.text,
     textAlignVertical: 'top',
   },
   // The closing Close (D83): the confirm treatment — accent-filled, dark text.
@@ -1022,64 +1072,62 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: Spacing.four,
     paddingVertical: Spacing.three,
-    backgroundColor: Survey.accent,
+    backgroundColor: Dash.accent,
   },
   closeLabel: {
     fontFamily: SORA_SEMIBOLD,
     fontSize: 16,
-    color: Survey.onAccent,
+    color: Dash.bg,
   },
   // The completion bloom (D83 Unfurl 2a). Art box over caption, centered.
   bloomWrap: {
     alignItems: 'center',
     gap: Spacing.five,
   },
-  // The bloom art field; petals root at its center and overflow it.
+  // The bloom art field; the bars root at its center and overflow it.
   bloomArt: {
     width: 140,
     height: 140,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // The glow halo (D83): a soft accent disc centered behind the petals. RN
-  // core has no blur, so this translucent disc approximates the mock's
-  // filter:blur(26px) (see report item 5).
-  bloomGlow: {
+  // The 14%-accent circle the mark sits on (reference 05). It replaces the
+  // former blur-approximating glow disc: the reference names a defined circle,
+  // which RN core draws exactly, so nothing here is an approximation any more.
+  bloomCircle: {
     position: 'absolute',
-    top: 10,
-    left: 10,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: Survey.accent,
-    opacity: 0.3,
+    top: 14,
+    left: 14,
+    width: 112,
+    height: 112,
+    borderRadius: 56,
+    backgroundColor: 'rgba(126, 217, 155, 0.14)',
   },
-  // A petal's 0x0 root at the art center; its static 60deg rotation is applied
-  // inline per index, and the animated petal hangs off it.
-  petalRoot: {
+  // One arm's 0x0 root at the art center; its static 60deg rotation is applied
+  // inline per index, and the animated bar hangs off it.
+  bloomBarRoot: {
     position: 'absolute',
     left: '50%',
     top: '50%',
     width: 0,
     height: 0,
   },
-  // One petal (D83): 24x48, rounded (RN circular radii approximate the mock's
-  // elliptical border-radius), rooted at its base so scaleY unfurls upward.
-  petal: {
+  // One arm of the mark (reference 05): a fully rounded 22x46 bar running from
+  // the center outward, rooted at its base so scaleY unfurls outward. Six of
+  // these at 60deg is the reference's three rotated bars; the inner ends meet
+  // under the center dot.
+  bloomBar: {
     position: 'absolute',
-    left: -12,
-    top: -56,
-    width: 24,
-    height: 48,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-    borderBottomLeftRadius: 9,
-    borderBottomRightRadius: 9,
-    backgroundColor: Survey.accent,
+    left: -11,
+    top: -46,
+    width: 22,
+    height: 46,
+    borderRadius: 11,
+    backgroundColor: Dash.accent,
     transformOrigin: '50% 100%',
   },
-  // The calyx dot (D83): 22pt, white, at the art center beneath the petals.
-  calyx: {
+  // The center dot (reference 05): 22pt at the art center, over the bars.
+  bloomDot: {
     position: 'absolute',
     left: '50%',
     top: '50%',
@@ -1088,30 +1136,32 @@ const styles = StyleSheet.create({
     marginLeft: -11,
     marginTop: -11,
     borderRadius: 11,
-    backgroundColor: Survey.text,
+    backgroundColor: Dash.text,
   },
-  // "Logged." (D83): 26/600, calm.
+  // "Logged." in the reference's display role (Sora 800, 28/1.1).
   loggedText: {
-    fontFamily: SORA_SEMIBOLD,
-    fontSize: 26,
+    fontFamily: SORA_DISPLAY,
+    fontSize: 28,
+    lineHeight: 31,
     textAlign: 'center',
-    color: Survey.text,
+    color: Dash.text,
   },
-  // The serif-italic completion line (D83).
+  // The serif-italic completion line (D83), reference 05's copy.
   loggedSub: {
     fontFamily: SERIF_ITALIC,
     fontStyle: 'italic',
     fontSize: 15,
     marginTop: Spacing.half,
     textAlign: 'center',
-    color: Survey.subtext,
+    color: Dash.textMuted,
   },
-  // The glossary sheet (D86): a read-only pageSheet. Its container carries the
-  // survey background and the D83 side margins; the pageSheet supplies its own
-  // top offset from the notch.
+  // The glossary sheet (D86): a read-only pageSheet, re-themed only. Its
+  // entries, its trigger, and its read-only nature are untouched (D96). Its
+  // container carries the survey background and the D83 side margins; the
+  // pageSheet supplies its own top offset from the notch.
   glossarySheet: {
     flex: 1,
-    backgroundColor: Survey.background,
+    backgroundColor: Dash.bg,
     paddingHorizontal: 26,
     paddingTop: Spacing.four,
     paddingBottom: 38,
@@ -1135,12 +1185,12 @@ const styles = StyleSheet.create({
     fontFamily: SORA_SEMIBOLD,
     fontSize: 18,
     lineHeight: 24,
-    color: Survey.accent,
+    color: Dash.accent,
   },
   glossaryDef: {
     fontFamily: SORA_MEDIUM,
     fontSize: 15,
     lineHeight: 21,
-    color: Survey.text,
+    color: Dash.text,
   },
 });
