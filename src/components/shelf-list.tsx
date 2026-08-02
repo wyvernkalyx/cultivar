@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FlatList, Modal, Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { FlatList, Modal, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { CoaDetail } from '@/components/coa-detail';
+import { OffShelfList } from '@/components/off-shelf-list';
 import {
   PreferenceSummary,
   type PreferenceSummaryProps,
@@ -16,27 +17,36 @@ import {
   type ShelfCoa,
 } from '@/components/shelf-card';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Dash, Spacing } from '@/constants/theme';
+import {
+  groupSessionsByCoa,
+  groupTopTerpenesByCoa,
+  type SummarySession,
+  type SummaryTerpene,
+} from '@/lib/card-data';
 import { RUNGS } from '@/lib/lexicon';
 import { supabase } from '@/lib/supabase';
 
 // The card, its date helpers, and the ShelfCoa shape live in shelf-card.tsx
 // from D99 on — the list owns fetching and the modals, the card owns display.
+// The per-COA grouping conventions moved to src/lib/card-data.ts in D101,
+// where the off-shelf archive reads them too.
 
-// The per-session inputs (D98/D99), exactly the columns selected. A live
-// session is one row of session_current (D59: latest-then-filter, soft
-// deletes already excluded), so the row count IS the all-time session count.
-// One fetch serves both the summary's distribution and the per-card dots.
-type SummarySession = { overall_word: string | null; coa_id: string; created_at: string };
+// Font family for the footer link, registered app-wide in the root layout
+// (D83 Decision 1) and referenced by name as the card does.
+const SORA_REGULAR = 'Sora_400Regular';
+
 // Deliberately UNFILTERED by on_shelf_count: the summary is all-time,
-// including off-shelf history (D98). RLS scopes the rows.
+// including off-shelf history (D98). RLS scopes the rows. on_shelf_count
+// joins the selection in D101 so the off-shelf count comes from data already
+// fetched -- the archive's own query belongs to the archive, not the shelf.
 type SummaryCoa = {
   id: string;
   favorite: boolean | null;
   total_thc: number | null;
   total_cbd: number | null;
+  on_shelf_count: number;
 };
-type SummaryTerpene = { coa_id: string; name: string; pct: number | null };
 
 // Min/max over REPORTED values only, with the unreported ones counted beside
 // them — the D98 binding, verbatim: ranges compute over reported values only;
@@ -106,43 +116,6 @@ function buildSummary(
   };
 }
 
-// This COA's live sessions, ascending by time, for the card's verdict dots
-// (D99). An absent word keeps its session — the session happened, and the
-// card renders it faint rather than dropping it, so the count stays honest.
-function groupSessionsByCoa(sessions: SummarySession[]): Map<string, CardSession[]> {
-  const byCoa = new Map<string, CardSession[]>();
-  for (const session of sessions) {
-    const existing = byCoa.get(session.coa_id);
-    const entry = { word: session.overall_word ?? '', at: session.created_at };
-    if (existing === undefined) byCoa.set(session.coa_id, [entry]);
-    else existing.push(entry);
-  }
-  for (const entries of byCoa.values()) {
-    entries.sort((a, b) => a.at.localeCompare(b.at));
-  }
-  return byCoa;
-}
-
-// Per-COA top-3 reported terpenes for the fingerprint bar, the same ranking
-// convention the slice-1 summary uses: a null pct is an unreported analyte
-// and is excluded outright, so absence can never rank as a zero; ties break
-// on name for a stable order across refetches.
-function groupTopTerpenesByCoa(rows: SummaryTerpene[]): Map<string, CardTerpene[]> {
-  const byCoa = new Map<string, CardTerpene[]>();
-  for (const row of rows) {
-    if (row.pct === null) continue;
-    const entry = { name: row.name, pct: row.pct };
-    const existing = byCoa.get(row.coa_id);
-    if (existing === undefined) byCoa.set(row.coa_id, [entry]);
-    else existing.push(entry);
-  }
-  for (const [coaId, entries] of byCoa) {
-    entries.sort((a, b) => (b.pct !== a.pct ? b.pct - a.pct : a.name.localeCompare(b.name)));
-    byCoa.set(coaId, entries.slice(0, 3));
-  }
-  return byCoa;
-}
-
 export function ShelfList() {
   const [rows, setRows] = useState<ShelfCoa[] | null>(null);
   // Band per COA (D63): absence of a key IS the untried state — a COA with
@@ -161,6 +134,11 @@ export function ShelfList() {
   // that feeds the summary — no second query for either.
   const [sessionsByCoa, setSessionsByCoa] = useState<Map<string, CardSession[]>>(new Map());
   const [terpenesByCoa, setTerpenesByCoa] = useState<Map<string, CardTerpene[]>>(new Map());
+  // How many COAs sit at count 0 (D101), computed in load() from the summary's
+  // unfiltered catalog select — the footer link needs a count, not the rows,
+  // and the archive fetches its own when it opens.
+  const [offShelfCount, setOffShelfCount] = useState(0);
+  const [offShelfVisible, setOffShelfVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [detailCoaId, setDetailCoaId] = useState<string | null>(null);
@@ -208,7 +186,7 @@ export function ShelfList() {
         // summary is all-time including off-shelf history, and RLS scopes
         // the rows.
         supabase.from('session_current').select('overall_word, coa_id, created_at'),
-        supabase.from('coas').select('id, favorite, total_thc, total_cbd'),
+        supabase.from('coas').select('id, favorite, total_thc, total_cbd, on_shelf_count'),
         supabase.from('coa_terpenes').select('coa_id, name, pct'),
       ]).then(([coasResult, statsResult, sessionsResult, allCoasResult, terpenesResult]) => {
         // One error state: any query's failure surfaces through the
@@ -238,9 +216,11 @@ export function ShelfList() {
         );
         const sessions = sessionsResult.data as SummarySession[];
         const terpenes = terpenesResult.data as SummaryTerpene[];
-        setSummary(buildSummary(sessions, allCoasResult.data as SummaryCoa[], terpenes));
+        const allCoas = allCoasResult.data as SummaryCoa[];
+        setSummary(buildSummary(sessions, allCoas, terpenes));
         setSessionsByCoa(groupSessionsByCoa(sessions));
         setTerpenesByCoa(groupTopTerpenesByCoa(terpenes));
+        setOffShelfCount(allCoas.filter((coa) => coa.on_shelf_count === 0).length);
       }),
     []
   );
@@ -326,6 +306,19 @@ export function ShelfList() {
         // every ladder/detail close through the existing load() paths (D63)
         // and never grows a second fetch lifecycle.
         ListHeaderComponent={summary === null ? null : <PreferenceSummary {...summary} />}
+        // The archive's entry point (D101), below the shelf because that is
+        // where history sits. At zero it renders NOTHING: a link into an
+        // empty archive is noise, and absence says it already.
+        ListFooterComponent={
+          offShelfCount === 0 ? null : (
+            <Pressable
+              onPress={() => setOffShelfVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Open off-shelf list">
+              <Text style={styles.offShelfLink}>{`Off-shelf (${offShelfCount}) ›`}</Text>
+            </Pressable>
+          )
+        }
         ListEmptyComponent={
           <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
             Nothing on your shelf yet
@@ -368,6 +361,18 @@ export function ShelfList() {
           />
         )}
       </Modal>
+      {/* The archive (D101): a sibling modal owning its own fetch, so the
+          shelf gains no second lifecycle for rows it does not render.
+          Closing refetches on the D63 grounds — a COA can be deleted from
+          the archive's detail, and both the summary and this footer's count
+          are computed from the catalog that delete changed. */}
+      <OffShelfList
+        visible={offShelfVisible}
+        onClose={() => {
+          setOffShelfVisible(false);
+          load();
+        }}
+      />
       {/* The ladder (D50/D51): full-screen sibling modal; gestures inside
           an RN Modal are inert without their own root view. Closing
           returns to the shelf, not the detail sheet — accepted behavior
@@ -411,6 +416,13 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   centered: {
+    textAlign: 'center',
+  },
+  offShelfLink: {
+    fontFamily: SORA_REGULAR,
+    fontSize: 11.5,
+    color: Dash.textMuted,
+    paddingVertical: Spacing.three,
     textAlign: 'center',
   },
 });

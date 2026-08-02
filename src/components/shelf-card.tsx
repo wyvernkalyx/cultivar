@@ -40,12 +40,22 @@ export type CardSession = { word: string; at: string };
 // analytes are excluded upstream, so every entry here is a lab-reported value.
 export type CardTerpene = { name: string; pct: number };
 
+// The retirement event that took the last package off the shelf (D90's
+// record, D101's display). `reason` is the stored text, rendered verbatim --
+// never paraphrased, never mapped through a second vocabulary.
+export type CardRetirement = { reason: string; at: string };
+
 export type ShelfCardProps = {
   coa: ShelfCoa;
   sessions: CardSession[];
   topTerpenes: CardTerpene[];
   onOpen: () => void;
-  onLog: () => void;
+  // Absent on the off-shelf archive (D101): a surface with no logging path
+  // renders no Log button at all. Not a disabled one -- an affordance that
+  // can never act on this surface is absence, not a disabled state.
+  onLog?: () => void;
+  // Present only off the shelf, where it is the archive marker.
+  retirement?: CardRetirement;
 };
 
 // A `date` column arrives as 'YYYY-MM-DD'. `new Date('YYYY-MM-DD')` parses at
@@ -149,7 +159,14 @@ function Fingerprint({ total, terpenes }: { total: number; terpenes: CardTerpene
  * session count, display only; D59/D61 semantics are untouched, and an
  * untried COA still renders no verdict, only the ratified honesty line.
  */
-export function ShelfCard({ coa, sessions, topTerpenes, onOpen, onLog }: ShelfCardProps) {
+export function ShelfCard({
+  coa,
+  sessions,
+  topTerpenes,
+  onOpen,
+  onLog,
+  retirement,
+}: ShelfCardProps) {
   // Reported AND non-zero: a zero total has no share to divide, so there is
   // no fingerprint to draw and the ND line carries the truth instead.
   const hasFingerprint =
@@ -190,6 +207,17 @@ export function ShelfCard({ coa, sessions, topTerpenes, onOpen, onLog }: ShelfCa
         </Text>
         <Text style={styles.meta}>{meta}</Text>
 
+        {/* The archive marker (D101), and the ONLY thing that distinguishes an
+            off-shelf card: the reason verbatim from coa_retirements, beside
+            the date the event was recorded. Everything else on the card is
+            unchanged, because an off-shelf COA's chemistry and its logged
+            history did not change when its package emptied. */}
+        {retirement !== undefined && (
+          <Text style={styles.retired}>
+            {`Retired ${new Date(retirement.at).toLocaleDateString()} · ${retirement.reason}`}
+          </Text>
+        )}
+
         <View style={styles.totalsRow}>
           <Total label="THC" value={coa.total_thc} />
           <Total label="CBD" value={coa.total_cbd} />
@@ -225,15 +253,19 @@ export function ShelfCard({ coa, sessions, topTerpenes, onOpen, onLog }: ShelfCa
           {/* One tap from every shelf card, landing directly on the verdict
               screen (D99). Nested inside the card's Pressable: RN grants the
               responder to the innermost view that wants it, so a Log press
-              does not also open the detail. */}
-          <Pressable
-            style={styles.logButton}
-            hitSlop={8}
-            onPress={onLog}
-            accessibilityRole="button"
-            accessibilityLabel="Log a session">
-            <Text style={styles.logLabel}>Log</Text>
-          </Pressable>
+              does not also open the detail. Rendered only where a logging
+              path exists (D101): the footer's left side keeps its layout, and
+              nothing takes the button's place. */}
+          {onLog !== undefined && (
+            <Pressable
+              style={styles.logButton}
+              hitSlop={8}
+              onPress={onLog}
+              accessibilityRole="button"
+              accessibilityLabel="Log a session">
+              <Text style={styles.logLabel}>Log</Text>
+            </Pressable>
+          )}
         </View>
       </View>
     </Pressable>
@@ -305,6 +337,11 @@ const styles = StyleSheet.create({
     fontFamily: SORA_REGULAR,
     fontSize: 11.5,
     color: Dash.textFaint,
+  },
+  retired: {
+    fontFamily: SORA_REGULAR,
+    fontSize: 11.5,
+    color: Dash.textMuted,
   },
   totalsRow: {
     flexDirection: 'row',

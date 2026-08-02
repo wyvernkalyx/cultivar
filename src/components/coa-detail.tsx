@@ -132,7 +132,10 @@ export function CoaDetail({
   coaId: string;
   onClose: () => void;
   onDeleted: () => void;
-  onLogSession: () => void;
+  // Absent on the off-shelf archive (D101), which hosts no logging surface.
+  // Optional rather than a no-op handler: a button whose press does nothing
+  // is the inert affordance the ruling rules out.
+  onLogSession?: () => void;
 }) {
   const theme = useTheme();
   const [coa, setCoa] = useState<CoaDetailRecord | null>(null);
@@ -470,20 +473,31 @@ export function CoaDetail({
 
             {/* Log session (D49): launches the logging surface; the caller
                 owns the modal chaining. First in the footer — the most
-                common action does not sit under the destructive one. */}
-            <Pressable
-              onPress={onLogSession}
-              style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
-              <ThemedText type="smallBold">Log session</ThemedText>
-            </Pressable>
+                common action does not sit under the destructive one.
+                Off the shelf it does not render at all (D101): a session
+                against a finished package is more often a data-entry error
+                than an event. The record drives this, not a caller's flag --
+                the same on_shelf_count the card reads. Revisable on lived
+                demand; the cost of being wrong is this one conditional. */}
+            {coa.on_shelf_count > 0 && onLogSession !== undefined && (
+              <Pressable
+                onPress={onLogSession}
+                style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+                <ThemedText type="smallBold">Log session</ThemedText>
+              </Pressable>
+            )}
             {/* Retire (D90): a package leaves the shelf, the COA does not.
                 Between logging and deleting because that is where it sits in
-                consequence -- it changes possession, never the record. */}
-            <Pressable
-              onPress={() => confirmRetire(coa)}
-              style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
-              <ThemedText type="smallBold">Retire a package</ThemedText>
-            </Pressable>
+                consequence -- it changes possession, never the record. At
+                count 0 there is nothing left to retire, and the confirm
+                copy's arithmetic presumes a package exists. */}
+            {coa.on_shelf_count > 0 && (
+              <Pressable
+                onPress={() => confirmRetire(coa)}
+                style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+                <ThemedText type="smallBold">Retire a package</ThemedText>
+              </Pressable>
+            )}
             {/* The retained source document (D100). A record with no stored
                 PDF says so in one line and offers nothing to press: a button
                 that cannot do its job is worse than an honest sentence. */}
