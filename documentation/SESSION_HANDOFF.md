@@ -138,3 +138,54 @@ operator's lived use of the shipped dashboard surfaces as the next
 gripe list — the arc just closed is the first time the app matches
 the product on the operator's phone, and lived demand has been the
 best prioritizer this project has.
+
+## Amendment -- 2026-08-02, tidy slice (appended after push of d0fb55c)
+
+All four carried defects above are DISCHARGED:
+
+- ad59087  refactor: retire dead prop, dead stats select, consolidate
+           hue helpers
+- d0fb55c  feat: state absent strain on the card and detail header
+
+Corrections to the text above, which stands as written for the record:
+
+- The terpeneHue consolidation landed in src/constants/theme.ts, not
+  card-data.ts -- destination re-ratified 2026-08-02 (both helpers
+  are pure Dash token lookups; verdictHue, found triplicated during
+  the slice audit, consolidated with it).
+- The null-strain remedy suggested above (adopt the survey's
+  strain ?? brand precedence) was REFUTED: both surfaces already
+  render brand on their own line, so the fallback would print it
+  twice. Ruling 1a instead: D97 parity -- 'Strain not reported' in
+  an absent style differing from the present style only in color.
+
+Refutation record, this session -- all three the architect's:
+
+1. The null-strain remedy premise above, as recorded.
+2. The commit A build prompt omitted off-shelf-list.tsx from its
+   change list while its own preconditions and criteria required
+   editing it; the implementer resolved it from the criteria and
+   flagged it.
+3. The commit B prompt (first issue) gated on a bare token
+   (color: Dash.textMuted) that shelf-card's stylesheet trips
+   eight times; the implementer STOPped at the precondition.
+   Fourth recorded instance of the non-discriminating-form class;
+   the rule already stands in CLAUDE.md -- an application failure,
+   not a missing rule.
+
+Also removed with the dead select: its comment's false claim that
+the coa_session_stats select stayed for the detail view (the detail
+fetches session_current itself). The false claim predated this
+session.
+
+The absent-strain device gate ran on a probe row: one COA's strain
+flipped to null and restored through the architect's MCP channel,
+both updates value-predicated, one row returned each. DB counts
+after restore are identical to this handoff's Phase A values:
+coas 5, session_entries 21 raw / 11 current, retirements 2,
+storage objects 2, favorites 2.
+
+Entry point unchanged in kind: the anon-grants durable fix is the
+top remaining banked item, or whatever the operator's next lived-use
+gripe list surfaces. The dashboard arc's debts are cleared; nothing
+stacks on this amendment.
