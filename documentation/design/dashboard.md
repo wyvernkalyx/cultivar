@@ -187,3 +187,32 @@ iPhone. No slice touches schema.
 - In-app PDF viewer (D100; native-module split rule applies).
 - Log on off-shelf detail, if the gate argues for it (D101).
 - `preference_summary` view, on measured render cost only (D98).
+
+## Amendments — 2026-08-02
+
+All six slices shipped: dae626b (D98), bf8e213 (D99), 8686729
+(D100), 165eff4 (D101), 00a6e9c (D102/D104), 814eaef (D103).
+Corrections recorded after implementation, each ratified in chat:
+
+1. D101, archive treatment: reference 03's dashed-border/translucent
+   card styling is superseded. The archive marker is the retirement
+   line plus the surface's own header, operator-ratified at the
+   device gate 2026-08-02. The quiet footer link likewise stands.
+2. Slice plan item 1 named `src/lib/theme.ts` as the conditional
+   token path. False as written: a shared token module already
+   existed at `src/constants/theme.ts`, and the reference tokens
+   landed there as the `Dash` export (slice 1). The `Survey` set
+   was deleted in slice 6 with its last consumer restyled.
+3. D104's premise was wrong as authored: a Delete COA affordance
+   already existed on the detail view (D42/D45 lineage), and the
+   2026-07-30 open ruling referred to it. The operator ruled remove
+   on 2026-08-02; slice 5 removed the flow. `removeCoaPdf` remains
+   in the retention module as the documented deletion path with no
+   client caller. `onDeleted` is a vestigial prop pending a
+   two-line retirement in both callers.
+4. Reference 04's "Skip below" is a reference defect: D92 ratified
+   the survey with no Skip, and D103's fence forbids adding one.
+   Not added; ratified mechanics govern the reference here.
+5. The verdict screen title is "Rate this session" (lowercase s),
+   per reference 04; the prior capital-S string was corrected in
+   slice 6.
