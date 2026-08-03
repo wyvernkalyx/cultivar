@@ -1,6 +1,6 @@
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useState } from 'react';
-import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AddToShelfModal from '@/components/add-to-shelf-modal';
@@ -9,6 +9,7 @@ import { ShelfList } from '@/components/shelf-list';
 import { ThemedText } from '@/components/themed-text';
 import { WebBadge } from '@/components/web-badge';
 import { BottomTabInset, Dash, MaxContentWidth, Spacing } from '@/constants/theme';
+import { exportProfile } from '@/lib/export';
 import { supabase } from '@/lib/supabase';
 
 // Font families registered app-wide in the root layout (D83 Decision 1),
@@ -25,6 +26,9 @@ export default function HomeScreen() {
   // The gear's surface (D107.1). It owns no shelf state: nothing behind it
   // can change a COA, so closing it deliberately does NOT bump shelfVersion.
   const [settingsVisible, setSettingsVisible] = useState(false);
+  // The export's in-flight flag (D111). It gates the row against a second
+  // tap while the selects and the file write are outstanding.
+  const [exporting, setExporting] = useState(false);
   // Bumped on every modal close and used as ShelfList's key, so closing
   // after a save remounts the list and refetches (the pickId pattern). A
   // close without a save refetching too is accepted.
@@ -45,6 +49,22 @@ export default function HomeScreen() {
       setEmail(data.session?.user.email ?? null);
     });
   }, []);
+
+  // The sheet stays open across the export: the share sheet presents over
+  // it, and dismissing the surface the user acted on would lose the error
+  // path's only place to report. Nothing here mutates, so shelfVersion is
+  // deliberately untouched -- the account sheet's no-refresh-on-close
+  // property (D107.1) is unaffected by a read.
+  const runExport = async () => {
+    setExporting(true);
+    try {
+      await exportProfile();
+    } catch (e) {
+      Alert.alert('Export failed', e instanceof Error ? e.message : String(e));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const signOut = async () => {
     // The root-layout gate observes the auth change and swaps to sign-in on
@@ -133,6 +153,19 @@ export default function HomeScreen() {
           <Text style={styles.sheetEmail} numberOfLines={1}>
             {email ?? '…'}
           </Text>
+          {/* D111. Copy and placement are operator-gated and may change at
+              the device gate; the row matches the sheet's existing type
+              treatment so only the wording is in question. */}
+          <Pressable
+            onPress={runExport}
+            disabled={exporting}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: exporting }}
+            accessibilityLabel="Export data">
+            <Text style={[styles.sheetAction, exporting && styles.sheetActionBusy]}>
+              {exporting ? 'Preparing export...' : 'Export data'}
+            </Text>
+          </Pressable>
           <Pressable onPress={signOut} accessibilityRole="button" accessibilityLabel="Sign out">
             <Text style={styles.signOut}>Sign out</Text>
           </Pressable>
@@ -238,6 +271,18 @@ const styles = StyleSheet.create({
     fontFamily: SORA_REGULAR,
     fontSize: 14.5,
     color: Dash.textBody,
+  },
+  // Same treatment as Sign out below -- both are sheet actions, and giving
+  // the export its own weight would rank two peers that are not ranked.
+  sheetAction: {
+    fontFamily: SORA_BOLD,
+    fontSize: 14.5,
+    color: Dash.accent,
+  },
+  // The only in-flight signal the row carries: no spinner, since the row
+  // also swaps its own label.
+  sheetActionBusy: {
+    color: Dash.textMuted,
   },
   signOut: {
     fontFamily: SORA_BOLD,
