@@ -1,9 +1,11 @@
 # Schema grants posture -- anon and authenticated across public (D87)
 
-Status: D87 ratified by the operator 2026-07-25 (option A: record the finding,
-bank the DDL). No migration ships with this doc. The commit that applies the
-revoke DDL amends this status line; until then the posture described below is
-the live one.
+Status: D87 ratified by the operator 2026-07-25 (option A: record the
+finding, bank the DDL). D105 ratified 2026-08-03: the revoke ships in
+migration 20260803000000_revoke_anon_public_d105.sql, this commit. The
+observed-state and ruling sections below describe the pre-D105 posture
+and stand as the record D87 was ruled against; the live posture is
+D105's, at the foot of this doc.
 
 ## Why this exists
 
@@ -168,3 +170,45 @@ recollection.
 North stars: `documentation/design/session-entries-schema.md` (the table whose
 policies carry the load), `documentation/design/coa-insert.md` (the earlier
 schema-gate observation record this one extends).
+
+---
+
+## D105 -- the revoke ships (2026-08-03)
+
+Ratified by the operator 2026-08-03, items D105.1-D105.5, superseding
+the "banked" ruling above by operator choice. None of the "what would
+change this ruling" triggers fired; the rank changed, not the facts.
+
+- **D105.1 -- scope.** anon loses ALL privileges on all tables, views,
+  sequences, and functions in schema public. authenticated is untouched
+  this slice.
+- **D105.2 -- durable half.** ALTER DEFAULT PRIVILEGES FOR ROLE
+  postgres IN SCHEMA public REVOKE, for tables, sequences, and
+  functions. Future relations created through the migration path (role
+  postgres) are born without the anon grant. This answers D87.4's rot
+  finding directly.
+- **D105.3 -- named residual.** supabase_admin's default ACL in public
+  also grants anon and is unreachable: observed 2026-08-03,
+  supabase_admin has zero members, so no held role can run ALTER
+  DEFAULT PRIVILEGES FOR ROLE supabase_admin. A platform-created
+  relation in public would still carry the anon grant. Recorded here
+  per D87.4's own instruction.
+- **D105.4 -- gate.** Control-paired behavioral probe through the
+  architect's MCP channel: pre-migration, SET LOCAL ROLE anon then
+  SELECT on coas succeeds with zero rows (RLS holds, grant present);
+  post-migration the same probe fails 42501 permission denied. A
+  durability probe creates a throwaway table as postgres and observes
+  its relacl carries no anon entry, then drops it. Device gate: full
+  authenticated app pass on the operator's iPhone.
+- **D105.5 -- application path.** The operator applies via supabase db
+  push. One application path; the ledger stays in step with the
+  directory.
+
+Banked with this ruling, not in scope: authenticated holds TRUNCATE on
+all seven base tables and TRUNCATE is not gated by RLS -- unreachable
+via PostgREST today, same wrong-shaped-grant class. storage schema
+grants are platform-managed and untouched.
+
+Registry note: D87 as used in this doc (2026-07-25) collides with the
+retention arc's D87-D91 range (2026-07-27). Cite this doc's rulings by
+doc name and section, not bare number.
