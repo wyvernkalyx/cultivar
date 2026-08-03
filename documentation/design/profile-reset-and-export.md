@@ -95,11 +95,15 @@ across M products") and offers export first (D111).
 
 A settings-menu action, also offered on the reset confirm screen.
 
-- **Scope:** the user's rows from `coas`, `coa_cannabinoids`,
-  `coa_terpenes`, `coa_safety`, `coa_retirements`, `profile_resets`,
-  and **raw** `session_entries` including soft-deleted entries. The raw
-  chain is the record; exporting only `session_current` would ship the
-  view and lose the history.
+- **Scope:** the user's rows from `profiles`, `coas`,
+  `coa_cannabinoids`, `coa_terpenes`, `coa_safety`, `coa_retirements`,
+  `profile_resets`, and **raw** `session_entries` including
+  soft-deleted entries. The raw chain is the record; exporting only
+  `session_current` would ship the view and lose the history.
+  `profiles` is included because `handle` and `display_name` are
+  user-authored and recoverable from no other exported table (omission
+  caught at the 654806a commit review, amended 2026-08-03; columns
+  observed via MCP: id, handle, display_name, created_at).
 - **Format:** one JSON document, envelope
   `{format: "cultivar-export", version: 1, exported_at, user_id, data}`.
   Versioned so a future import can refuse what it does not understand.
