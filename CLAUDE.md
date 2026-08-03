@@ -52,7 +52,10 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   that document end to end in the current session -- an inventory or
   number recalled from a flag, a memory, or a prior session's read
   is a guess (twice on 2026-07-29: a four-passage inventory claimed
-  as three, and a D-number assigned while occupied).
+  as three, and a D-number assigned while occupied). D87 is occupied
+  twice (schema-grants-posture, 2026-07-25; the retention arc's
+  D87-D91, 2026-07-27): cite those rulings by doc name and section,
+  never bare number.
 - **Lived-demand.** Build what a concrete, present need requires. No speculative
   abstraction, no "we might want this later" scaffolding.
 - **Personal-empirical, never pharmacological.** Cultivar never claims a terpene causes
@@ -182,7 +185,11 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   length or diff-aligned line count is gated by parse
   (`... | node -e 'JSON.parse(...).<arr>.length'`) or written as
   observed-and-reported, never asserted from the supplied text
-  (a 15-entry deny list predicted as 14, 2026-07-28).
+  (a 15-entry deny list predicted as 14, 2026-07-28). The rule covers
+  the architect's own authored text and any file it has read: a number
+  recalled from a view is not a number observed (a doc's line count
+  stated as 171, measured 170, 2026-08-03; two self-authored-text
+  counts refuted 2026-08-02).
 - **Directory listings gate on name-form counts, never bare entry
   counts.** A bare entry count cannot detect a malformed name. Standing
   form for migrations: `ls supabase/migrations/ | grep -Ec '^[0-9]{14}_'`.
@@ -236,6 +243,11 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   default; a deparser's omission is never evidence. Standing form:
   `select proname, prosecdef from pg_proc where pronamespace =
   'public'::regnamespace and proname = '<fn>'` → `prosecdef = f`.
+- **MCP `execute_sql` returns only the last statement's result set.**
+  In a multi-statement call every earlier select is silently dropped:
+  place the observation as the final statement of its own call, or it
+  was never observed (a durability probe's ACL read vanished mid-batch,
+  2026-08-03).
 
 ---
 
@@ -259,6 +271,9 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
    `--experimental-vm-modules`, which bare `npx jest` drops (observed: 48
    spurious failures against a 52-test suite).
    **Always install Expo-managed deps with `npx expo install`** (not bare `npm install`).
+   **The Supabase CLI is `npx supabase ...`** -- no standalone binary is
+   installed; bare `supabase` is command-not-found (observed 2026-08-03,
+   npx resolves 2.111.0). Credentialed subcommands stay operator-run.
 2. **Repo / handbook / docs.** Repo root: `D:\Projects\Cultivar\cultivar`.
    Handbook: `CLAUDE.md`. Docs: `documentation/`. App source lives under `src/`
    (Expo Router routes in `src/app/`). Shared client code in `src/lib/`, importable
