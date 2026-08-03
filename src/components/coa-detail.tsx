@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import CoaPdfViewer from '@/components/coa-pdf-viewer';
 import { Dash, verdictHue } from '@/constants/theme';
 import { retireCoa } from '@/lib/coa-retire';
 import { supabase } from '@/lib/supabase';
@@ -16,8 +17,9 @@ const SORA_DISPLAY = 'Sora_800ExtraBold';
 const SERIF_ITALIC = 'Newsreader_400Regular_Italic';
 
 // How long a signed COA-PDF link lives, in seconds. The URL's whole job is a
-// single handoff to Safari, so it expires almost immediately after that: a
-// long-lived link out of a private bucket is a bucket that is not private.
+// single load in the in-app viewer, so it expires almost immediately after
+// that: a long-lived link out of a private bucket is a bucket that is not
+// private.
 const PdfLinkTtlSeconds = 300;
 
 // How many terpene rows stand before the expand control. A display bound only
@@ -261,9 +263,12 @@ export function CoaDetail({
   const [sessions, setSessions] = useState<DetailSession[]>([]);
   const [error, setError] = useState<string | null>(null);
   // One PDF request on the wire at a time (the D54 posture): signing is a
-  // round trip, and a second tap would open a second Safari handoff for the
-  // same document.
+  // round trip, and a second tap would sign the same document twice before
+  // the first URL ever reached the viewer.
   const [pdfInFlight, setPdfInFlight] = useState(false);
+  // The signed URL currently being viewed, and the viewer's open state in one
+  // value (D106.2): null is closed, so clearing it is how the viewer closes.
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   // Read off the record so the narrowing survives into the press handler: a
   // property access on state is re-widened inside a closure, a const local is
@@ -318,14 +323,15 @@ export function CoaDetail({
   }, [load]);
 
   /**
-   * Open the retained source document (D100). v1 hands a short-lived signed
-   * URL to Safari: the bucket is private, so the object is unreachable
-   * without one, and signing is the whole mechanism -- no viewer, no new
-   * dependency, no native module.
+   * Open the retained source document (D100). Signing is unchanged: the
+   * bucket is private, so the object is unreachable without a short-lived
+   * signed URL, and creating one is still the whole mechanism here. What the
+   * URL feeds changed -- it opens the in-app viewer (D106), not Safari.
    *
-   * Both failure arms land on the detail's own error state rather than an
+   * The signing failure lands on the detail's own error state rather than an
    * Alert: the message is a fact about this record's surface, and the state
-   * already carries a Retry that reloads the record.
+   * already carries a Retry that reloads the record. A document that fails to
+   * render is the viewer's own arm, stated inline there.
    */
   const openPdf = async (objectPath: string) => {
     setPdfInFlight(true);
@@ -337,11 +343,7 @@ export function CoaDetail({
       setPdfInFlight(false);
       return;
     }
-    try {
-      await Linking.openURL(data.signedUrl);
-    } catch (err) {
-      setError(`Could not open the PDF: ${err instanceof Error ? err.message : String(err)}`);
-    }
+    setPdfUrl(data.signedUrl);
     setPdfInFlight(false);
   };
 
@@ -641,6 +643,10 @@ export function CoaDetail({
           </Pressable>
         </View>
       )}
+
+      {/* 9. The in-app viewer (D106), last so its Modal sits over everything
+          this surface draws. It renders nothing until a signed URL exists. */}
+      <CoaPdfViewer url={pdfUrl} onClose={() => setPdfUrl(null)} />
     </View>
   );
 }
