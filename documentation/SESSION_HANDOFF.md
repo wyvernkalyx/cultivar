@@ -1,191 +1,162 @@
-# Session handoff — written 2026-08-02, sessions of 2026-08-01/02
+# Session handoff -- written 2026-08-03, session of 2026-08-03
 
-Write-last: this file was committed only after every commit below was
-pushed and sync-confirmed by the operator. The repo adjudicates all
+Write-last: this file is committed only after every commit below was
+pushed and sync-confirmed by the operator, with origin independently
+verified through the architect's mirror. The repo adjudicates all
 state claims; this file predicts, it does not testify.
 
-## What shipped — the dashboard arc, complete
+Carried-context refutations from this session, so the next one
+calibrates: the architect stated schema-grants-posture.md at 171
+lines (it was 170, never observed, caught by the implementer's own
+arithmetic); pinned the hand-count rule to Commit conventions on
+first attempt (it lives in Prompt conventions; the pre-ship gate
+execution caught it); and shipped a worktree-sha256 criterion that
+cannot pass on a tracked CRLF checkout (details below). Begin with a
+read-only Phase A audit.
 
-Eight commits, each pushed with `0 0` sync observed by the operator:
+## What shipped -- five commits, each pushed with 0 0 observed
 
-- d3d34b0  docs: dashboard design and slice plan (D98-D104)
-- dae626b  feat: dashboard preference summary (D98, slice 1)
-- bf8e213  feat: shelf card redesign and one-tap log (D99, slice 2)
-- 8686729  feat: open retained COA PDF via signed URL (D100, slice 3)
-- 165eff4  feat: off-shelf history surface (D101, slice 4)
-- 00a6e9c  feat: COA detail redesign, sessions section, no delete
-           (D102/D104, slice 5)
-- 814eaef  feat: survey restyle onto Dash tokens (D103, slice 6)
-- 82b0276  docs: dashboard arc amendments (HEAD at handoff time)
+- a5a7229  feat: in-app COA PDF viewer (D106 slice B)
+- dbfe1cc  chore: add react-native-webview 13.16.1 (D106 slice A)
+- 4ce82cd  docs: ratify D106, the in-app PDF viewer
+- 70d394c  docs: promote four standing rules to CLAUDE.md
+- 79fd962  feat: revoke anon from public, durably (D105)
 
-All three of the operator's original gripes are discharged: the
-dashboard with preference info and richer cards, the PDF open path,
-and the design pass converted to shipped UI. Zero schema changes in
-the entire arc. Every slice device-gated on the physical iPhone;
-slices 4-6 gated under the mechanical per-step regime.
+## The arcs
 
-## Operator rulings this session
+**D105, anon revoked durably.** The banked D87.4 rot finding is
+discharged: anon holds zero privileges on everything in public, and
+postgres's default ACL there no longer grants it, so future
+migration-created relations are born locked. supabase_admin's
+default ACL is the recorded, unreachable residual (zero members --
+observed, not assumed). Gates were control-paired through the
+architect's MCP channel: anon SELECT succeeded with zero rows
+before, failed 42501 after; a probe table was born without an anon
+ACL entry. Migration operator-applied; ledger 15/15 with the
+directory. The migration SQL was dry-run against the live database
+inside BEGIN/ROLLBACK before the prompt shipped -- a form worth
+reusing.
 
-- All database session data is test data ("don't worry about test
-  data", 2026-08-01). The real-session milestone remains UNFIRED
-  until the operator declares otherwise — no session in the DB is
-  evidence of it.
-- Slice order, PDF-open-v1 (signed URL to Safari), client-side
-  preference summary, and no-delete were ratified 2026-08-01; D104's
-  removal ruling and the archive treatment (line-only marker, quiet
-  footer link) 2026-08-02. All recorded in dashboard.md's Amendments.
+**The promotion pass.** Four rules into CLAUDE.md, each having cost
+real session time: hand-count coverage of the architect's own text,
+npx supabase as the CLI form, MCP execute_sql's last-result-only
+behavior, and the doubled-D87 citation rule.
 
-## Refutation record — read before trusting this architect
+**D106, in-app PDF viewer.** Split slices per the native-module
+rule: manifest chore, operator's EAS build (npx eas-cli build
+--platform ios --profile development), then the viewer feat.
+WKWebView rendered the PDF on the first binary -- the named
+react-native-pdf fallback was not needed. Safari hop deleted;
+absent state unchanged; mechanical three-step device gate.
 
-Seven architect claims or predictions were refuted this session, all
-caught by gates, the implementer, or the database:
+## Refuted hypotheses / corrections -- read before trusting anyone
 
-1. session_entries predicted 11, observed 12 (mooted by the
-   test-data ruling, but the prediction was wrong).
-2. shelf-list.tsx predicted 487 lines; 479. Derived from the --stat
-   histogram (insertions PLUS deletions) instead of observed.
-3. The slice 2 prompt omitted D102's card truncation requirement;
-   the implementer caught it by reading the governing docs.
-4. D104 was authored and ratified on the false premise that no
-   delete UI existed. It did (detail view, D42/D45 lineage).
-5. The slice 4 prompt silently overrode reference 03's ratified
-   archive styling; implementer flagged; operator re-ratified the
-   prompt's version at the gate.
-6. The slice 6 prompt said "Dash untouched" while a criterion
-   required editing Dash's own comment; the comment also carried a
-   false claim about Sora 800 (fixed).
-7. The amendment prompt predicted 10 headings from a hand-count of
-   nine prior sections; the doc has twelve. Second hand-count
-   failure in one session.
+Architect's, five:
+1. The 171-line count (above).
+2. The wrong section pin (above).
+3. The worktree-sha criterion: sha256sum against a TRACKED file's
+   worktree can never equal the blob hash on the operator's
+   autocrlf=true checkout. The D105 files passed it only because
+   they were freshly created LF. Identity criteria for tracked
+   files read `git show :<path>` or `HEAD:<path>`, or normalize
+   with `tr -d '\r'`. PROMOTION CANDIDATE, one instance.
+4. A grep -rc criterion predicted "0" as its output shape; the tool
+   emits one path:count line per file. Property held; shape wrong.
+5. Slice B's criteria named two false Safari comments; the file
+   held a third (pdfInFlight). The implementer's end-to-end read
+   caught it -- a grep proves a token absent, never a claim absent,
+   exactly as the handbook says.
 
-The byte-identity sha gates caught nothing because they never had
-to: both times a count failed, the sha over architect-materialized
-bytes was right. Hand-counts over the architect's OWN authored text
-are the open hole; see promotion candidate below.
+Implementer conduct, two contrasting cases, both accepted:
+- It proceeded PAST a failed criterion (the sha above) on its own
+  three-hash parse evidence. The result was correct; the deviation
+  from STOP-on-failure is recorded as a rule tension, not resolved.
+  The architect's lean: the rule stays absolute.
+- It STOPped correctly on a stray untracked 0-byte file named
+  `main` at repo root (a refname/path ambiguity hazard); the
+  operator confirmed empty and removed it. Origin unknown; the
+  shape of a stray shell redirect.
 
-Operator-side: a fourth collapsed gate verdict occurred (slice 2,
-"all passed" including a step the database showed never ran). The
-banked tripwire fired: **device gates are now mechanical — one step
-per message, each requiring an operator paste before the next.**
-This regime ran slices 4-6 and stands.
+Operator-side: a fifth collapsed gate verdict ("all gates passed"
+at D105 device step 2, while the database showed the log step had
+not run -- session_entries still 21). The mechanical one-step
+regime held; the log landed only when its step was actually issued.
+
+## Ratified decisions
+
+- D105.1-.5 (grounds in schema-grants-posture.md, D105 section).
+- D106.1-.4 (grounds in dashboard.md, Amendments 2026-08-03).
+- Banked with D105: authenticated's TRUNCATE on all seven tables
+  (not RLS-gated; unreachable via PostgREST today).
+
+## Open items
+
+**Runnable next (design first, nothing drafted):** the operator's
+dashboard gripe list -- see Entry point.
+
+**Blocked:** none.
+
+**Banked:** open-in-browser affordance in the viewer (D106.3);
+blob-hash identity criteria promotion (one instance; below the
+corrected-twice bar); D-registry renumber for the doubled D87 (the
+citation rule is the standing workaround); authenticated TRUNCATE;
+off-shelf log (D101); preference_summary view (D98, render cost
+only); never_again; retirement last-log step; third retirement
+reason; Android (now carrying D106.1's named WebView-PDF cost);
+app-code test wiring (when a slice needs it).
+
+**Milestone:** real-session remains UNFIRED. All 23 raw entries are
+test data per the standing ruling until the operator declares
+otherwise.
 
 ## New standing facts
 
-- Architect evidence channel: the GitHub mirror is cloned in the
-  architect's container (repo synced to project knowledge). It
-  observes origin and blob content only — never worktree, index, or
-  unpushed state, which remain operator-paste territory. Jest was
-  re-measured there (52 passing at every slice), Node 22/Linux —
-  evidence about the code, weaker evidence about the operator's
-  machine.
-- Supabase MCP stable all session; all row counts and gate
-  predictions were architect-side reads.
-- CLAUDE.md promotion candidate, strengthened by refutations 2 and
-  7: "the architect does not hand-count" must explicitly cover
-  counts derived from the architect's own authored or supplied
-  text — both failures were self-authored-text counts.
+- EAS dev build form that worked: `npx eas-cli build --platform ios
+  --profile development` (the CLI, like supabase, is npx-only).
+- The Supabase CLI access token had expired (401); `npx supabase
+  login` + `link` restored it. Environmental, not a rule.
+- The seven reference/handoff/0N-screens.png files remain untracked
+  in the operator's worktree; the next arc's design references live
+  partly in them. Committing the relevant one(s) to reference/ is
+  the next session's call.
 
-## Carried defects and vestiges (not banked — these are debts)
+## Phase A for the next session -- falsifiable, observed 2026-08-03
 
-- `onDeleted` is a vestigial required prop on CoaDetail; two-line
-  retirement in shelf-list.tsx and off-shelf-list.tsx.
-- `coa_session_stats` is still fetched by shelf-list's load() and
-  read by nothing (bands getter elided in slice 2). Next detail or
-  stats consumer reads it or the select is dropped.
-- `terpeneHue` exists as two identical file-local copies
-  (preference-summary.tsx, shelf-card.tsx). Consolidation target:
-  beside the grouping functions in src/lib/card-data.ts.
-- A null strain renders a blank line on TWO surfaces: shelf-card.tsx
-  and coa-detail.tsx (the latter introduced in slice 5, carrying the
-  old header's behavior forward; caught at handoff audit). The survey
-  already holds the right precedence (strain ?? brand ?? ''); the
-  pending copy decision should adopt it rather than invent a second
-  rule.
+- HEAD: this handoff's own docs commit; its parent is a5a7229
+  (feat: in-app COA PDF viewer). Predict the subject: "docs: session
+  handoff 2026-08-03 -- D105, promotions, D106". Sync 0 0 after the
+  operator's push. If HEAD is neither, work continued -- reconcile.
+- git status --porcelain: the seven ?? reference/handoff lines, or
+  fewer if the operator prunes them.
+- Migrations: 15 on disk (name-form count), 15 in the ledger.
+- Jest: 52 (architect re-measures against origin; the operator
+  machine is a prediction).
+- CLAUDE.md: 322 lines. dashboard.md: 247 lines, 14 headings.
+- DB at close: coas 5, session_entries 23 raw / 12 current,
+  retirements 2, storage objects 2, favorites 2, anon grants in
+  public 0. Growth is a finding, not an error; all test data.
 
-## Banked (unchanged unless noted)
+## Entry point -- the operator's design gripe list, 2026-08-03
 
-- In-app PDF viewer (D100; native-module/EAS split rule applies).
-- Log on off-shelf detail, on lived demand (D101).
-- preference_summary view, on measured render cost only (D98).
-- Anon-grants durable fix: its own slice, never a rider; the
-  pg_default_acl rot finding stands.
-- Retirement last-log step; never_again; Android layouts.
+Lived demand fired for the first time since the dashboard arc
+closed: the operator compared production against the designer
+reference (annotated screenshots, green = target, red = current)
+and named two changes plus one wording rule. Next session ratifies
+the design (D107 is believed next-free -- verify by reading, not
+by this claim), then slices:
 
-## Phase A for the next session — falsifiable, observed 2026-08-02
+1. **Header redesign.** Replace the email row and the "Add to
+   shelf" button with the designer's compact header: CULTIVAR
+   wordmark left, pill button right. The pill's label is "Add" or
+   "Add Flower" -- operator to rule; "Add COA" is rejected. Open
+   sub-question: where sign-out lands (the settings gear is the
+   natural candidate; production already renders one).
+2. **Shelf section row.** An "ON SHELF - N" / "Off-shelf (N) >"
+   row directly under Your Preferences and above the first card.
+   This supersedes the quiet-footer placement ratified in the D101
+   amendment -- the supersession must be recorded in dashboard.md
+   when ratified, not silently.
 
-- HEAD: this handoff's own docs commit; its parent is 82b0276
-  (docs: dashboard arc amendments). Predict the subject:
-  "docs: session handoff 2026-08-02 -- dashboard arc closed".
-  Sync 0 0 after the operator's push.
-- `git status --porcelain`: EITHER the seven
-  `?? reference/handoff/0N-screens.png` lines OR silent if the
-  operator runs the optional `rm reference/handoff/0?-screens.png`.
-- dashboard.md: 218 lines, 13 `^## ` headings.
-- Migrations: 14 on disk, 14 in the ledger.
-- Jest: 52 (architect re-measures against origin; operator-machine
-  state is a prediction, not an observation).
-- DB at handoff time: coas 5, session_entries 21 raw / 11 current,
-  retirements 2, storage objects 2, favorites 2. Growth is a
-  finding, not an error; all of it is test data per the ruling.
-
-## Next entry point — operator's choice, no arc committed
-
-Candidates, in the architect's recommended order: (1) a small
-`chore:` tidying slice discharging the carried defects above in one
-commit — the null-strain copy decision split out so it never blocks
-the other three; (2) the anon-grants durable fix; (3) whatever the
-operator's lived use of the shipped dashboard surfaces as the next
-gripe list — the arc just closed is the first time the app matches
-the product on the operator's phone, and lived demand has been the
-best prioritizer this project has.
-
-## Amendment -- 2026-08-02, tidy slice (appended after push of d0fb55c)
-
-All four carried defects above are DISCHARGED:
-
-- ad59087  refactor: retire dead prop, dead stats select, consolidate
-           hue helpers
-- d0fb55c  feat: state absent strain on the card and detail header
-
-Corrections to the text above, which stands as written for the record:
-
-- The terpeneHue consolidation landed in src/constants/theme.ts, not
-  card-data.ts -- destination re-ratified 2026-08-02 (both helpers
-  are pure Dash token lookups; verdictHue, found triplicated during
-  the slice audit, consolidated with it).
-- The null-strain remedy suggested above (adopt the survey's
-  strain ?? brand precedence) was REFUTED: both surfaces already
-  render brand on their own line, so the fallback would print it
-  twice. Ruling 1a instead: D97 parity -- 'Strain not reported' in
-  an absent style differing from the present style only in color.
-
-Refutation record, this session -- all three the architect's:
-
-1. The null-strain remedy premise above, as recorded.
-2. The commit A build prompt omitted off-shelf-list.tsx from its
-   change list while its own preconditions and criteria required
-   editing it; the implementer resolved it from the criteria and
-   flagged it.
-3. The commit B prompt (first issue) gated on a bare token
-   (color: Dash.textMuted) that shelf-card's stylesheet trips
-   eight times; the implementer STOPped at the precondition.
-   Fourth recorded instance of the non-discriminating-form class;
-   the rule already stands in CLAUDE.md -- an application failure,
-   not a missing rule.
-
-Also removed with the dead select: its comment's false claim that
-the coa_session_stats select stayed for the detail view (the detail
-fetches session_current itself). The false claim predated this
-session.
-
-The absent-strain device gate ran on a probe row: one COA's strain
-flipped to null and restored through the architect's MCP channel,
-both updates value-predicated, one row returned each. DB counts
-after restore are identical to this handoff's Phase A values:
-coas 5, session_entries 21 raw / 11 current, retirements 2,
-storage objects 2, favorites 2.
-
-Entry point unchanged in kind: the anon-grants durable fix is the
-top remaining banked item, or whatever the operator's next lived-use
-gripe list surfaces. The dashboard arc's debts are cleared; nothing
-stacks on this amendment.
+Both are UI-visible Tier 2 slices behind one docs commit; no schema,
+no native modules, no EAS cycle. The screenshots are the spec until
+the docs commit lands.
