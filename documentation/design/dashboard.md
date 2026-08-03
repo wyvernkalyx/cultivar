@@ -293,3 +293,30 @@ modules, no EAS cycle. Named non-goal: the mock's status-bar chrome
 
 Slice order: D107 -> D108 -> D109, each its own feat: commit, Tier 2,
 device-gated on the physical iPhone.
+
+### Post-implementation record -- 2026-08-03 (D107-D109 shipped)
+
+Shipped: 108f934 (D107/D107.1), 234fe8e (D108), df0eb62 (D109).
+Corrections, each the Amendment 3 form -- a ratified premise refuted
+by observation, recorded rather than silently repaired:
+
+1. D107.1's parenthetical "(already rendered, bottom right)" was
+   false: no gear existed anywhere in app code. The control the
+   operator saw on device was the Expo dev-client's floating
+   dev-menu button, which a production build will not carry --
+   confirmed at the device gate. The gear was built net-new in the
+   header row per operator ruling (option 1a); the sheet carries the
+   signed-in email and Sign out.
+2. D109's "display-only restyle" of "the D98 card" undersold the
+   ratified mock-faithful subtitle placement (option a): the slice
+   touched three files. ShelfList gained an optional onSummary
+   callback fired from the same load() as the card -- no second
+   query -- with a useCallback-stable handler in HomeScreen so
+   load()'s dependency on it cannot refetch the shelf on unrelated
+   renders. Computation was untouched: formatRange, truncate2,
+   analyteRange, and buildSummary shipped byte-identical to their
+   pre-slice blobs, diff-gated.
+3. Gate rulings absorbed as shipped state: both D108 section-row
+   labels render Dash.accent (the muted default was overruled on
+   device); the D109 mini bars drop the rung words, with hue and
+   dimming carrying identity.

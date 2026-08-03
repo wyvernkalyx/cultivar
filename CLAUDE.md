@@ -220,6 +220,13 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   closing quote, a blob's final period). Applied twice since -- one
   real truncation caught, one clean pass. The artifact settles it,
   never the paste.
+- **Authored text must not quote a gated string.** Implementer comments
+  and accessibility labels, and the architect's own criterion prose, may
+  describe a gated token but never quote it: a bare-token count that the
+  file's own prose can trip is malformed from either side (a D107
+  accessibilityLabel, a D108 comment, and an architect-authored D109
+  criterion, all corrected 2026-08-03). Describe the construct; count
+  the construct form.
 
 ---
 
