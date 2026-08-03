@@ -32,9 +32,10 @@ import { supabase } from '@/lib/supabase';
 // The per-COA grouping conventions moved to src/lib/card-data.ts in D101,
 // where the off-shelf archive reads them too.
 
-// Font family for the footer link, registered app-wide in the root layout
+// Font families for the section row, registered app-wide in the root layout
 // (D83 Decision 1) and referenced by name as the card does.
 const SORA_REGULAR = 'Sora_400Regular';
+const SORA_BOLD = 'Sora_700Bold';
 
 // Deliberately UNFILTERED by on_shelf_count: the summary is all-time,
 // including off-shelf history (D98). RLS scopes the rows. on_shelf_count
@@ -286,20 +287,31 @@ export function ShelfList() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
         // The summary rides the list's own header (D98), so it refetches on
         // every ladder/detail close through the existing load() paths (D63)
-        // and never grows a second fetch lifecycle.
-        ListHeaderComponent={summary === null ? null : <PreferenceSummary {...summary} />}
-        // The archive's entry point (D101), below the shelf because that is
-        // where history sits. At zero it renders NOTHING: a link into an
-        // empty archive is noise, and absence says it already.
-        ListFooterComponent={
-          offShelfCount === 0 ? null : (
-            <Pressable
-              onPress={() => setOffShelfVisible(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Open off-shelf list">
-              <Text style={styles.offShelfLink}>{`Off-shelf (${offShelfCount}) ›`}</Text>
-            </Pressable>
-          )
+        // and never grows a second fetch lifecycle. The section row (D108)
+        // sits beneath it and is deliberately NOT conditional on the
+        // summary: it labels the cards below it, which render whether or not
+        // the summary has computed yet. Named, accepted cost -- a zero
+        // on-shelf count can flash for the width of the first load.
+        ListHeaderComponent={
+          <>
+            {summary !== null && <PreferenceSummary {...summary} />}
+            {/* The archive's entry point (D108), superseding D101's quiet
+                footer link: it sits with the shelf it is the complement of,
+                not below the last card. At zero the right half renders
+                NOTHING, on D101's own grounds -- a link into an empty
+                archive is noise, and absence says it already. */}
+            <View style={styles.sectionRow}>
+              <Text style={styles.sectionLabel}>{`ON SHELF · ${rows.length}`}</Text>
+              {offShelfCount > 0 && (
+                <Pressable
+                  onPress={() => setOffShelfVisible(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Open off-shelf list">
+                  <Text style={styles.offShelfLabel}>{`Off-shelf (${offShelfCount}) ›`}</Text>
+                </Pressable>
+              )}
+            </View>
+          </>
         }
         ListEmptyComponent={
           <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
@@ -399,11 +411,27 @@ const styles = StyleSheet.create({
   centered: {
     textAlign: 'center',
   },
-  offShelfLink: {
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.one,
+  },
+  // The eyebrow register the summary card and the shelf card already use;
+  // the string is literal caps, so it needs no textTransform.
+  sectionLabel: {
+    fontFamily: SORA_BOLD,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    color: Dash.accent,
+  },
+  // The superseded footer link's register, with one gate-driven change:
+  // the operator ruled both section-row labels accent green (2026-08-03).
+  offShelfLabel: {
     fontFamily: SORA_REGULAR,
     fontSize: 11.5,
-    color: Dash.textMuted,
-    paddingVertical: Spacing.three,
-    textAlign: 'center',
+    color: Dash.accent,
   },
 });
