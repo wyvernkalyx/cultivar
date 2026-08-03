@@ -199,6 +199,8 @@ Corrections recorded after implementation, each ratified in chat:
    card styling is superseded. The archive marker is the retirement
    line plus the surface's own header, operator-ratified at the
    device gate 2026-08-02. The quiet footer link likewise stands.
+   The quiet footer link is superseded 2026-08-03 by D108 (the shelf
+   section row; see the D107-D109 amendments below).
 2. Slice plan item 1 named `src/lib/theme.ts` as the conditional
    token path. False as written: a shared token module already
    existed at `src/constants/theme.ts`, and the reference tokens
@@ -245,3 +247,49 @@ Confirmed platform target is the iPhone; Android stays banked.
   in-app. If WKWebView shows a blank surface at the gate, the named
   fallback is react-native-pdf as a second EAS cycle -- the risk the
   split rule exists to contain.
+
+## Amendments -- 2026-08-03 (D107-D109: header, shelf row, compact summary)
+
+Ratified by the operator 2026-08-03 in chat, per-decision, against the
+annotated reference mock (header + summary + section row) as the visual
+spec. Three UI slices behind this one docs commit; no schema, no native
+modules, no EAS cycle. Named non-goal: the mock's status-bar chrome
+(9:41, full battery) is mock furniture, never spec.
+
+- **D107 -- compact header.** The email row and the full-width "Add to
+  shelf" button are deleted. One row replaces them: CULTIVAR wordmark
+  left (letter-spaced caps, accent green per the Dash tokens), a
+  "+ Add" pill right. Rejected labels, with grounds: "Add COA"
+  (operator ruling, 2026-08-03 -- jargon in chrome); "Add Flower"
+  (bakes a product-type claim into chrome; other ingest classes are
+  conceivable). The label is one string and revisable at the gate.
+- **D107.1 -- sign-out relocates behind the settings gear.** The gear
+  (already rendered, bottom right) gains a small surface -- sheet or
+  menu -- holding the signed-in email and Sign out. Nothing ratified
+  specifies the gear today; the slice's recon observes its current
+  behavior before writing it.
+- **D108 -- shelf section row.** "ON SHELF - N" left, "Off-shelf (N) >"
+  right, directly below the preference summary and above the first
+  card. Off-shelf count is COAs with on_shelf_count = 0; the shelf's
+  .gt('on_shelf_count', 0) filter is untouched. Supersedes the quiet
+  footer link recorded in Amendment 1 (2026-08-02); the footer link is
+  deleted in this slice, and the pointer sentence added to Amendment 1
+  is the supersession's record.
+- **D109 -- compact preference summary.** Display-only restyle of the
+  D98 card per the reference: "N SESSIONS - ALL-TIME" left; mini
+  verdict bars with counts beneath, all five rungs rendered, empty
+  rungs dimmed never hidden (the D98 rule stands); "N BUY AGAIN"
+  right; terpene chips keep identity dots and drop their percentages;
+  THC/CBD collapse to one line. The dashboard subtitle reads
+  "N sessions logged, on and off the shelf. Verdicts build your
+  picture here." All D98 computation rules are unchanged.
+- **D109.1 -- reference defect, named: the mock renders CBD as
+  "ND-0.08%".** ND as a range endpoint folds ND in as a zero lower
+  bound, which the binding D98 rule forbids -- ND != 0, applied to
+  display. The ratified rule governs (the Amendment 4 precedent): the
+  compact card renders the reported-values range with ND annotated
+  alongside (register: "CBD 0.08% / 2 ND"). Exact string is
+  operator-owned at the gate.
+
+Slice order: D107 -> D108 -> D109, each its own feat: commit, Tier 2,
+device-gated on the physical iPhone.
