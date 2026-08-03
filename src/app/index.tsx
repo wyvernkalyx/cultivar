@@ -1,18 +1,28 @@
+import { SymbolView } from 'expo-symbols';
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, StyleSheet } from 'react-native';
+import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AddToShelfModal from '@/components/add-to-shelf-modal';
 import { ShelfList } from '@/components/shelf-list';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { BottomTabInset, Dash, MaxContentWidth, Spacing } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
+
+// Font families registered app-wide in the root layout (D83 Decision 1),
+// referenced by name exactly as the dashboard's other surfaces do; an unloaded
+// family falls back to the system font rather than blocking the render.
+const SORA_REGULAR = 'Sora_400Regular';
+const SORA_BOLD = 'Sora_700Bold';
+const SORA_DISPLAY = 'Sora_800ExtraBold';
 
 export default function HomeScreen() {
   const [email, setEmail] = useState<string | null>(null);
   const [addToShelfVisible, setAddToShelfVisible] = useState(false);
+  // The gear's surface (D107.1). It owns no shelf state: nothing behind it
+  // can change a COA, so closing it deliberately does NOT bump shelfVersion.
+  const [settingsVisible, setSettingsVisible] = useState(false);
   // Bumped on every modal close and used as ShelfList's key, so closing
   // after a save remounts the list and refetches (the pickId pattern). A
   // close without a save refetching too is accepted.
@@ -25,27 +35,38 @@ export default function HomeScreen() {
 
   const signOut = async () => {
     // The root-layout gate observes the auth change and swaps to sign-in on
-    // its own — no navigation here.
+    // its own — no navigation here. The sheet is dismissed first so a
+    // presented modal is never left over a screen being torn down.
+    setSettingsVisible(false);
     await supabase.auth.signOut();
   };
 
   return (
-    <ThemedView style={styles.container}>
+    <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedView type="backgroundElement" style={styles.accountRow}>
-          <ThemedText type="small" numberOfLines={1} style={styles.accountEmail}>
-            {email ?? '…'}
-          </ThemedText>
-          <Pressable onPress={signOut}>
-            <ThemedText type="smallBold">Sign out</ThemedText>
-          </Pressable>
-        </ThemedView>
-
-        <Pressable style={styles.addToShelfPressable} onPress={() => setAddToShelfVisible(true)}>
-          <ThemedView type="backgroundElement" style={styles.addToShelfRow}>
-            <ThemedText type="smallBold">Add to shelf</ThemedText>
-          </ThemedView>
-        </Pressable>
+        {/* D107: one row replaces the account row and the full-width "Add to
+            shelf" button. The pill keeps the app's sole ingestion entry
+            point; the gear opens D107.1's surface for the account. */}
+        <View style={styles.header}>
+          <Text style={styles.wordmark}>CULTIVAR</Text>
+          <View style={styles.headerActions}>
+            <Pressable
+              onPress={() => setSettingsVisible(true)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Settings">
+              <SymbolView name="gearshape" tintColor={Dash.textMuted} size={22} />
+            </Pressable>
+            <Pressable
+              onPress={() => setAddToShelfVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Add">
+              <View style={styles.addPill}>
+                <Text style={styles.addPillLabel}>+ Add</Text>
+              </View>
+            </Pressable>
+          </View>
+        </View>
 
         <AddToShelfModal
           visible={addToShelfVisible}
@@ -62,7 +83,37 @@ export default function HomeScreen() {
 
         {Platform.OS === 'web' && <WebBadge />}
       </SafeAreaView>
-    </ThemedView>
+
+      {/* The gear's surface (D107.1): the signed-in email and Sign out, the
+          two things the deleted account row carried and the only things it
+          carried. Same presentation family as the shelf's detail sheet. */}
+      <Modal
+        visible={settingsVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setSettingsVisible(false)}>
+        <View style={styles.sheet}>
+          <View style={styles.sheetHeader}>
+            <Text style={styles.sheetTitle}>Account</Text>
+            <Pressable
+              onPress={() => setSettingsVisible(false)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Close settings">
+              <Text style={styles.sheetClose}>Close</Text>
+            </Pressable>
+          </View>
+          {/* The same one-shot getSession read the account row used; the
+              placeholder stands in only until it resolves. */}
+          <Text style={styles.sheetEmail} numberOfLines={1}>
+            {email ?? '…'}
+          </Text>
+          <Pressable onPress={signOut} accessibilityRole="button" accessibilityLabel="Sign out">
+            <Text style={styles.signOut}>Sign out</Text>
+          </Pressable>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
@@ -71,6 +122,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     flexDirection: 'row',
+    // The screen chrome joins the surfaces it frames: the summary card, the
+    // shelf cards, and the archive are all fixed dark (Dash), and a themed
+    // white background behind them was the seam.
+    backgroundColor: Dash.bg,
   },
   safeArea: {
     flex: 1,
@@ -80,29 +135,76 @@ const styles = StyleSheet.create({
     paddingBottom: BottomTabInset + Spacing.three,
     maxWidth: MaxContentWidth,
   },
-  accountRow: {
+  header: {
     alignSelf: 'stretch',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderRadius: Spacing.four,
+    gap: Spacing.three,
   },
-  accountEmail: {
+  wordmark: {
     flexShrink: 1,
+    fontFamily: SORA_DISPLAY,
+    fontSize: 16,
+    letterSpacing: 3,
+    color: Dash.accent,
   },
-  addToShelfPressable: {
-    alignSelf: 'stretch',
-  },
-  addToShelfRow: {
+  headerActions: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing.three,
+  },
+  addPill: {
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
-    borderRadius: Spacing.four,
+    borderRadius: Dash.radius.row,
+    backgroundColor: Dash.accent,
+  },
+  addPillLabel: {
+    fontFamily: SORA_BOLD,
+    fontSize: 11.5,
+    color: Dash.bg,
   },
   shelfHeading: {
     alignSelf: 'stretch',
+    // ThemedText colors from the light/dark scheme; on the fixed dark
+    // chrome the style override is what keeps it legible.
+    color: Dash.text,
+  },
+  sheet: {
+    flex: 1,
+    backgroundColor: Dash.bg,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    gap: 16,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  sheetTitle: {
+    flexShrink: 1,
+    fontFamily: SORA_DISPLAY,
+    fontSize: 28,
+    lineHeight: 31,
+    textTransform: 'uppercase',
+    color: Dash.text,
+  },
+  sheetClose: {
+    fontFamily: SORA_BOLD,
+    fontSize: 11.5,
+    color: Dash.textMuted,
+  },
+  sheetEmail: {
+    fontFamily: SORA_REGULAR,
+    fontSize: 14.5,
+    color: Dash.textBody,
+  },
+  signOut: {
+    fontFamily: SORA_BOLD,
+    fontSize: 14.5,
+    color: Dash.accent,
   },
 });
