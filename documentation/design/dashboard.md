@@ -184,7 +184,8 @@ iPhone. No slice touches schema.
 
 ## Banked
 
-- In-app PDF viewer (D100; native-module split rule applies).
+- In-app PDF viewer: UNBANKED 2026-08-03, ratified as D106 (see
+  Amendments); the native-module split rule governs its slices.
 - Log on off-shelf detail, if the gate argues for it (D101).
 - `preference_summary` view, on measured render cost only (D98).
 
@@ -216,3 +217,31 @@ Corrections recorded after implementation, each ratified in chat:
 5. The verdict screen title is "Rate this session" (lowercase s),
    per reference 04; the prior capital-S string was corrected in
    slice 6.
+
+## Amendments -- 2026-08-03 (D106, in-app PDF viewer)
+
+D106 ratified by the operator 2026-08-03, unbanking D100's viewer.
+Confirmed platform target is the iPhone; Android stays banked.
+
+- **D106.1 -- module.** react-native-webview, installed with npx expo
+  install. iOS WKWebView renders PDFs natively, so no PDF-specific
+  library is needed for the confirmed iPhone target. Named costs:
+  Android WebView does not render PDFs natively (the banked Android
+  arc pays more here), and WKWebView offers no page search or
+  thumbnails -- acceptable for 2-4 page COAs.
+- **D106.2 -- presentation.** Full-screen React Native Modal, the
+  app's established pattern, with a header row (title, Done) over a
+  WebView loading the same signed URL the Safari path used.
+  src/lib/coa-pdf-storage.ts is untouched; the viewer consumes the
+  existing signed-URL creation at the detail call site.
+- **D106.3 -- the Safari hop is deleted.** The detail row opens the
+  viewer in-app. No open-in-browser affordance in v1; banked on lived
+  demand. The null pdf_object_path absent state is unchanged.
+- **D106.4 -- split slices per the standing native-module rule.**
+  Slice A is the dependency manifest alone as chore:, pushed before
+  the operator's EAS build; its gate is the new binary loading and the
+  app working. Slice B is the viewer component plus the one call-site
+  change as feat:, device-gated on the new binary rendering a PDF
+  in-app. If WKWebView shows a blank surface at the gate, the named
+  fallback is react-native-pdf as a second EAS cycle -- the risk the
+  split rule exists to contain.
