@@ -1,9 +1,10 @@
 import { SymbolView } from 'expo-symbols';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AddToShelfModal from '@/components/add-to-shelf-modal';
+import type { PreferenceSummaryProps } from '@/components/preference-summary';
 import { ShelfList } from '@/components/shelf-list';
 import { ThemedText } from '@/components/themed-text';
 import { WebBadge } from '@/components/web-badge';
@@ -16,6 +17,7 @@ import { supabase } from '@/lib/supabase';
 const SORA_REGULAR = 'Sora_400Regular';
 const SORA_BOLD = 'Sora_700Bold';
 const SORA_DISPLAY = 'Sora_800ExtraBold';
+const SERIF_ITALIC = 'Newsreader_400Regular_Italic';
 
 export default function HomeScreen() {
   const [email, setEmail] = useState<string | null>(null);
@@ -27,6 +29,17 @@ export default function HomeScreen() {
   // after a save remounts the list and refetches (the pickId pattern). A
   // close without a save refetching too is accepted.
   const [shelfVersion, setShelfVersion] = useState(0);
+  // The all-time session count, reported up by the shelf's own load() so the
+  // subtitle below the screen title reads from the same fetch the summary
+  // card does (D109's mock-faithful placement) -- never a second query.
+  // null is "no data yet", distinct from a real 0.
+  const [sessionCount, setSessionCount] = useState<number | null>(null);
+  // Stable identity on purpose: ShelfList's load() closes over this handler,
+  // so an inline arrow would re-identify load() on every render of this
+  // screen and refetch the shelf each time.
+  const handleSummary = useCallback((summary: PreferenceSummaryProps) => {
+    setSessionCount(summary.sessionCount);
+  }, []);
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setEmail(data.session?.user.email ?? null);
@@ -76,10 +89,22 @@ export default function HomeScreen() {
           }}
         />
 
-        <ThemedText type="subtitle" style={styles.shelfHeading}>
-          Your shelf
-        </ThemedText>
-        <ShelfList key={shelfVersion} />
+        {/* D109: the summary card's old countLine, moved out to sit under
+            the screen title per the mock. It renders only once there is a
+            session to report -- at zero the card's own empty branch carries
+            the invitation, and a "0 sessions logged" line above it would
+            state the fact twice and clash with that copy. */}
+        <View style={styles.shelfHeadingBlock}>
+          <ThemedText type="subtitle" style={styles.shelfHeading}>
+            Your shelf
+          </ThemedText>
+          {sessionCount !== null && sessionCount > 0 && (
+            <Text style={styles.shelfSubtitle}>
+              {`${sessionCount} ${sessionCount === 1 ? 'session' : 'sessions'} logged, on and off the shelf. Verdicts build your picture here.`}
+            </Text>
+          )}
+        </View>
+        <ShelfList key={shelfVersion} onSummary={handleSummary} />
 
         {Platform.OS === 'web' && <WebBadge />}
       </SafeAreaView>
@@ -165,11 +190,23 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: Dash.bg,
   },
+  // Title and subtitle are one block: the screen's own gap (Spacing.three)
+  // would read as two unrelated lines rather than a heading and its gloss.
+  shelfHeadingBlock: {
+    alignSelf: 'stretch',
+    gap: Spacing.one,
+  },
   shelfHeading: {
     alignSelf: 'stretch',
     // ThemedText colors from the light/dark scheme; on the fixed dark
     // chrome the style override is what keeps it legible.
     color: Dash.text,
+  },
+  // The register the summary card's countLine carried before D109 moved it.
+  shelfSubtitle: {
+    fontFamily: SERIF_ITALIC,
+    fontSize: 14.5,
+    color: Dash.textBody,
   },
   sheet: {
     flex: 1,

@@ -6,11 +6,13 @@ import { RUNGS } from '@/lib/lexicon';
 // Font families registered app-wide in the root layout (D83 Decision 1),
 // referenced by name exactly as session-ladder.tsx does; an unloaded family
 // falls back to the system font rather than blocking the render. Sora 800 --
-// the reference's display role -- is not among the loaded weights, so it is
-// deliberately unused here.
+// the reference's display role -- was deferred out of slice 1 and registered
+// in D99 for the shelf card's strain line; D109's header totals are this
+// file's first consumer of it.
 const SORA_REGULAR = 'Sora_400Regular';
 const SORA_SEMIBOLD = 'Sora_600SemiBold';
 const SORA_BOLD = 'Sora_700Bold';
+const SORA_DISPLAY = 'Sora_800ExtraBold';
 const SERIF_ITALIC = 'Newsreader_400Regular_Italic';
 
 // The five rung words, one source (RUNGS in src/lib/lexicon.ts), never a
@@ -58,12 +60,17 @@ function formatRange(range: AnalyteRange): string {
   return range.ndCount > 0 ? `${span} · ${range.ndCount} ND` : span;
 }
 
-const BAR_MAX_HEIGHT = 56;
+// Mini bars (D109): the distribution shares the header row with the two
+// totals, so the track is a third of its slice-1 height. barTrack reads the
+// same constant, so the two never drift.
+const BAR_MAX_HEIGHT = 30;
 const BAR_MIN_HEIGHT = 3;
 
 // One rung column: the bar's height is proportional to its count against the
 // tallest rung. A zero-count rung is DIMMED, never hidden (D98) -- the shape
-// of the distribution includes the verdicts that never happened.
+// of the distribution includes the verdicts that never happened. D109 drops
+// the rung word; hue (Dash.verdict, fixed per rung) and the dimming carry
+// rung identity, and the fixed top-rung-first order is unchanged.
 function VerdictBar({ word, count, max }: { word: RungWord; count: number; max: number }) {
   const height =
     count === 0 || max === 0
@@ -80,7 +87,6 @@ function VerdictBar({ word, count, max }: { word: RungWord; count: number; max: 
         />
       </View>
       <Text style={[styles.barCount, count === 0 && styles.dimmed]}>{count}</Text>
-      <Text style={[styles.barWord, count === 0 && styles.dimmed]}>{word}</Text>
     </View>
   );
 }
@@ -106,15 +112,18 @@ function LovedModule({ loved }: { loved: LovedConcentrations }) {
             <View key={terpene.name} style={styles.chip}>
               <View style={[styles.chipDot, { backgroundColor: terpeneHue(terpene.name) }]} />
               <Text style={styles.chipText}>{terpene.name}</Text>
-              <Text style={styles.chipValue}>{`${truncate2(terpene.pct)}%`}</Text>
             </View>
           ))}
         </View>
       )}
+      {/* D109 collapses the two stacked analytes onto one line. The values
+          are untouched: ND is first-class: a null range is every Loved COA's
+          lab not reporting the analyte, and it renders the literal "ND" on
+          the same grounds the shelf card's totals do -- never 0, never
+          blank; and formatRange still annotates ndCount ALONGSIDE the
+          reported range, never as a zero lower bound (D98's binding, which
+          D109.1 restates against the mock's "ND-0.08%" defect). */}
       <View style={styles.analyteRow}>
-        {/* ND is first-class: a null range is every Loved COA's lab not
-            reporting the analyte, and it renders the literal "ND" on the
-            same grounds the shelf card's totals do -- never 0, never blank. */}
         <View style={styles.analyte}>
           <Text style={styles.analyteLabel}>THC</Text>
           <Text style={styles.analyteValue}>{loved.thc === null ? 'ND' : formatRange(loved.thc)}</Text>
@@ -157,22 +166,33 @@ export function PreferenceSummary({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.label}>Your preferences</Text>
-      <Text style={styles.countLine}>
-        {`${sessionCount} ${sessionCount === 1 ? 'session' : 'sessions'} logged, on and off the shelf.`}
-      </Text>
-      {/* RUNGS order, top rung first -- the fixed green->red band identity. */}
-      <View style={styles.barRow}>
-        {RUNGS.map((rung) => (
-          <VerdictBar
-            key={rung.word}
-            word={rung.word}
-            count={distribution[rung.word]}
-            max={max}
-          />
-        ))}
+      {/* D109's header row, mock layout: the two all-time totals flank the
+          distribution. The card opens on it -- the "Your preferences"
+          eyebrow is gone from this branch because the screen's own subtitle
+          now frames the card, and the standalone "Would buy again: N" line
+          is absorbed into the right flank. The empty branch above keeps its
+          eyebrow: nothing frames a card that has no header row. */}
+      <View style={styles.headerRow}>
+        <View style={styles.flank}>
+          <Text style={styles.flankValue}>{sessionCount}</Text>
+          <Text style={styles.label}>SESSIONS · ALL-TIME</Text>
+        </View>
+        {/* RUNGS order, top rung first -- the fixed green->red band identity. */}
+        <View style={styles.barRow}>
+          {RUNGS.map((rung) => (
+            <VerdictBar
+              key={rung.word}
+              word={rung.word}
+              count={distribution[rung.word]}
+              max={max}
+            />
+          ))}
+        </View>
+        <View style={styles.flankRight}>
+          <Text style={styles.flankValue}>{buyAgainCount}</Text>
+          <Text style={styles.label}>BUY AGAIN</Text>
+        </View>
       </View>
-      <Text style={styles.buyAgain}>{`Would buy again: ${buyAgainCount}`}</Text>
       <LovedModule loved={loved} />
     </View>
   );
@@ -197,12 +217,32 @@ const styles = StyleSheet.create({
     fontSize: 14.5,
     color: Dash.textBody,
   },
-  countLine: {
-    fontFamily: SERIF_ITALIC,
-    fontSize: 14.5,
-    color: Dash.textBody,
+  headerRow: {
+    flexDirection: 'row',
+    // The two flanks and the bar row all end on the same line: each column
+    // is value-over-eyebrow or bar-over-count, so bottom alignment is what
+    // lines the three eyebrow-register rows up.
+    alignItems: 'flex-end',
+    gap: 12,
+  },
+  flank: {
+    gap: 2,
+  },
+  flankRight: {
+    gap: 2,
+    alignItems: 'flex-end',
+  },
+  flankValue: {
+    fontFamily: SORA_DISPLAY,
+    fontSize: 26,
+    lineHeight: 28,
+    fontVariant: ['tabular-nums'],
+    color: Dash.text,
   },
   barRow: {
+    // Takes the header row's middle; the flanks are content-sized, so the
+    // distribution absorbs whatever width their digits leave.
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: 8,
@@ -226,20 +266,8 @@ const styles = StyleSheet.create({
     color: Dash.text,
     textAlign: 'center',
   },
-  barWord: {
-    fontFamily: SORA_REGULAR,
-    fontSize: 9,
-    color: Dash.textFaint,
-    textAlign: 'center',
-  },
   dimmed: {
     opacity: 0.15,
-  },
-  buyAgain: {
-    fontFamily: SORA_SEMIBOLD,
-    fontSize: 11.5,
-    fontVariant: ['tabular-nums'],
-    color: Dash.textBody,
   },
   section: {
     gap: 8,
@@ -276,18 +304,20 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: Dash.textBody,
   },
-  chipValue: {
-    fontFamily: SORA_SEMIBOLD,
-    fontSize: 11.5,
-    fontVariant: ['tabular-nums'],
-    color: Dash.text,
-  },
   analyteRow: {
     flexDirection: 'row',
-    gap: 16,
+    // Wraps rather than truncates: a two-ended range with an ND annotation
+    // on both analytes is longer than one narrow line, and a clipped lab
+    // value is a misreported one.
+    flexWrap: 'wrap',
+    alignItems: 'baseline',
+    columnGap: 14,
+    rowGap: 4,
   },
   analyte: {
-    gap: 2,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 5,
   },
   analyteLabel: {
     fontFamily: SORA_BOLD,

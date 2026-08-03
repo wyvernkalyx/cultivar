@@ -117,7 +117,18 @@ function buildSummary(
   };
 }
 
-export function ShelfList() {
+// The dashboard's subtitle renders OUTSIDE the card from D109 on (the
+// mock-faithful placement, under the screen title), so the screen needs the
+// all-time session count this component already computes. One optional
+// callback, fired from the same load() that sets the state -- no second
+// query and no second fetch lifecycle. The key={shelfVersion} remount
+// refiring it is expected: it reports the same number, so the parent's
+// setState is a no-op.
+export type ShelfListProps = {
+  onSummary?: (summary: PreferenceSummaryProps) => void;
+};
+
+export function ShelfList({ onSummary }: ShelfListProps) {
   const [rows, setRows] = useState<ShelfCoa[] | null>(null);
   // The preference summary's props (D98), computed in load() from the same
   // fetch as the shelf so it has no lifecycle of its own — it refetches
@@ -200,12 +211,17 @@ export function ShelfList() {
         const sessions = sessionsResult.data as SummarySession[];
         const terpenes = terpenesResult.data as SummaryTerpene[];
         const allCoas = allCoasResult.data as SummaryCoa[];
-        setSummary(buildSummary(sessions, allCoas, terpenes));
+        const built = buildSummary(sessions, allCoas, terpenes);
+        setSummary(built);
+        onSummary?.(built);
         setSessionsByCoa(groupSessionsByCoa(sessions));
         setTerpenesByCoa(groupTopTerpenesByCoa(terpenes));
         setOffShelfCount(allCoas.filter((coa) => coa.on_shelf_count === 0).length);
       }),
-    []
+    // onSummary is in the closure, so it is in the deps. The caller passes a
+    // stable (useCallback) handler; an unstable one would re-identify load()
+    // on every parent render and refetch through the mount effect below.
+    [onSummary]
   );
 
   useEffect(() => {
