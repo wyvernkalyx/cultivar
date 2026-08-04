@@ -320,3 +320,54 @@ by observation, recorded rather than silently repaired:
    labels render Dash.accent (the muted default was overruled on
    device); the D109 mini bars drop the rung words, with hue and
    dimming carrying identity.
+
+## Amendments -- 2026-08-04 (D113-D114: card-surface favorite, retire discoverability)
+
+Grounds: first real usage (2026-08-03, operator). The operator looked for
+both actions on the shelf card and found neither. Phase A (2026-08-04, at
+cdecc16) established: the retire control exists at the bottom of the COA
+detail, styled as the PDF link's twin beneath the dominant Log bar -- a
+discoverability defect, not a gap; the favorite chip renders on the card
+but is display-only and absent when unanswered.
+
+**D113 -- favorite is a card control, always rendered.** The card's
+favorite chip becomes a Pressable on both surfaces (shelf and archive),
+per the settable-at-any-time ruling in
+documentation/design/coa-retention-and-possession.md (D91 section).
+Unanswered renders a prompt-state chip (Buy again?) instead of nothing.
+Reconciliation with D48: a question-affordance is not a displayed answer
+-- the card still shows no answer that was not given; it shows the
+question. Tap raises the question as an alert titled the same way the
+retirement prompt asks it -- "Would you buy it again?" -- with Yes, No,
+Clear answer (present only when an answer exists), and Cancel (operator
+copy ruling 2026-08-04: one question, one wording, both prompts;
+retirement Q2 keeps Skip because skipping a question and clearing an
+answer are different operations). The single-writer property is preserved
+by extraction: writeFavorite moves from coa-detail.tsx to a shared module
+(src/lib/coa-favorite.ts); the detail imports it; both lists wire the
+card's new optional onFavorite prop through it and refetch via their own
+load(). The nested-press precedent (the Log button) governs: tapping the
+chip does not open the detail.
+
+**D114 -- retire is visually distinct and reachable from the shelf
+card.** Two halves, one concern (discoverability):
+(a) In place: the detail's retire row drops the actionRow twinning --
+destructive-tinted label, separated from the PDF row, so it reads as an
+action rather than a second document link.
+(b) On the card: an overflow button (horizontal ellipsis glyph) on the
+shelf card, raising an alert listing Retire a package and Cancel, then
+the identical reason and favorite prompt sequence as the detail. The
+archive is excluded by the optional-prop precedent: the shelf list passes
+the card's new onRetire prop, the archive omits it (the onLog form;
+exclusion is the prop, not the count). The card additionally renders the
+overflow only at on_shelf_count > 0 as defense-in-depth. The ritual is
+shared, not duplicated: the imperative alert sequence extracts to a
+module both surfaces call, keeping retire_coa's single client call site
+in coa-retire.ts and the survey untouched (the reset ruling D110.1 in
+documentation/design/profile-reset-and-export.md is unaffected).
+
+Slice plan: this amendment (Tier 1); D113 as one feat (Tier 2, device
+gate); D114 as one feat (Tier 2, device gate). Non-goals: un-retire
+(banked 2026-08-04, no lived instance); any change to retire_coa or the
+RPC surface; any change to the survey's two user-facing reasons;
+session-ladder.tsx; any schema change.
