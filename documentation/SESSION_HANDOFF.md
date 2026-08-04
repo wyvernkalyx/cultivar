@@ -1,106 +1,161 @@
-# Session handoff -- written 2026-08-03, second session of 2026-08-03
+# Session handoff -- 2026-08-04
 
-Write-last: this file is committed only after every commit below was
-pushed with 0 0 observed through both channels. The repo adjudicates
-all state claims; this file predicts, it does not testify.
+The repo is authoritative over this document. This session's own example:
+the incoming architect's carried copy of this very file predicted HEAD as
+the 2026-08-03 handoff commit and 15 migrations; observed reality was
+702da3b (five commits past it), 16 migrations, and an uncommitted D110
+slice 5 in the tree -- the prior session continued past its handoff
+without amending it (a 4.5 violation, cost paid in reconciliation time).
+And this paragraph's own first draft said "four commits past it" against
+a rev-list of five -- caught by the implementer before commit
+(refutation 8). Begin with a read-only Phase A audit.
 
-Carried-context refutations from this session, so the next one
-calibrates -- seven architect items, the most in one session yet:
-a predicted heading count of 14 against an observed 15 (authored
-after the heading existed); a predicted zero-hit D107 grep that
-forgot the handoff sentence that prompted it; Phase A measured
-tests with raw npx jest and read 48 failures that npm test (the
-repo's own script, which carries --experimental-vm-modules) shows
-green at 52; an ASCII dirty control written with hex escapes this
-printf does not interpret (octal is the working form); a grep -A3
-context window one line short of the property it gated; a bare-token
-gate criterion tripped by the build's own comment (now promoted, see
-below); and a dashboard.md line count stated as 324 in chat when
-arithmetic on observed diffstats gives 322. Begin with a read-only
-Phase A audit.
+## Start here (Phase A, read-only)
 
-## What shipped -- five commits, each pushed with 0 0 observed twice
+- HEAD's parent is a0b4c8e (feat: D114). Predicted subject of the handoff
+  commit itself: "docs: session handoff 2026-08-04 -- D110 closed,
+  D113-D114 shipped". Sync 0 0 after the operator's push. If HEAD is
+  neither, work continued past this handoff -- reconcile before
+  proceeding.
+- git status --porcelain: exactly seven ?? reference/handoff/0N-screens.png
+  lines (N=1..7), the standing noise.
+- Migrations: 16 on disk by name-form count, 16 in the ledger.
+- npm test -> 52 passed (npm test, never npx jest). npx tsc --noEmit -> 0.
+  npx expo lint -> 1 error 0 warnings, template file only.
+- DB via MCP, observed 2026-08-04 post-D114-gate: coas 6, session_entries
+  39 raw / 3 current, retirements 7 (4 reason Profile reset, 1 from
+  today's device gate), profile_resets 1, favorites set 3,
+  sum(on_shelf_count) 1, storage objects 3, anon grants in public 0.
+If any of these do not match, the repo wins -- re-baseline before
+proceeding.
 
-- e574954  docs: D107-D109 post-implementation record; gated-string
-           promotion
-- df0eb62  feat: compact preference summary, mock-faithful (D109)
-- 234fe8e  feat: shelf section row replaces quiet footer link (D108)
-- 108f934  feat: compact header with gear account sheet (D107, D107.1)
-- c31ca71  docs: ratify D107-D109 -- header, shelf row, compact summary
+## What shipped (newest first)
 
-Three product commits, two docs commits -- the handoff-specs 4.7
-ratio pointed the right way for the first time.
+- a0b4c8e feat: retire is destructive-styled and card-reachable (D114)
+- c4a9a8e feat: favorite is a card control on both surfaces (D113)
+- fc148a3 docs: amend dashboard.md with D113-D114 (card favorite, retire discoverability)
+- cdecc16 feat: profile reset UI from the account sheet (D110 slice 5)
+
+Three product commits to one docs commit -- the 4.7 ratio leaned product
+for the first time, driven entirely by first real usage.
 
 ## The arcs
 
-**D107/D107.1, compact header.** Email row and Add-to-shelf button
-deleted; CULTIVAR wordmark + gear + "+ Add" pill. The ratified
-"already rendered" gear premise was refuted by recon: no gear
-existed in app code -- the on-device gear was Expo's dev-menu
-button, confirmed at the gate. Built net-new in the header (operator
-option 1a). First iOS SymbolView render in this app; autolinking
-held on the existing binary, no EAS cycle. The remount-key pattern
-(modal + shelfVersion in HomeScreen) was preserved deliberately.
+**D110 close-out.** The prior session ended mid-slice without a handoff:
+slice 5 (reset UI) sat uncommitted while slices 1-4 were pushed. The
+operator ran a real profile reset and ~3 real sessions from that
+uncommitted code via Metro on 2026-08-03. This session diagnosed the
+slice (Phase A confirmed it as exactly the ratified slice 5 plus two
+in-service ride-alongs), gated it retroactively -- operator testimony
+for the UI half, MCP forensics for the server half (12 tombstones at one
+created_at, 4 system retirements matching the pre-reset shelf sum, 5-key
+snapshot) -- and shipped it as cdecc16. Grounds for retroactive rather
+than re-run gating: re-running the reset would tombstone the operator's
+real sessions, and undo is banked.
 
-**D108, shelf section row.** Pure shelf-list.tsx relocation: both
-counts already existed in state, zero query changes. The row renders
-outside the summary's null conditional (loading-flash cost named and
-accepted). Gate ruling: both labels Dash.accent, overruling the
-muted default. Supersession of D101's footer recorded in Amendment 1
-by pointer, per the standing rule.
+**D113-D114, born from first real usage.** The operator could not find
+retirement and wanted the buy-again control on the card. Phase A refuted
+the architect's model on both counts (see refutations) and reclassified
+the report as a discoverability defect: the retire control existed but
+sat last on the longest screen, styled as the PDF link's twin, under the
+accent Log bar; the favorite chip existed but was display-only and
+absent when unanswered. The fix shape: shared writer-plus-ritual modules
+(coa-favorite.ts new, promptRetire beside retireCoa), cards receive
+callbacks and never writers, archive excluded by prop omission with
+count checks as defense in depth, one question wording everywhere with
+Skip-vs-Clear kept distinct by operator ruling.
 
-**D109, compact summary.** Mock-faithful (option a) made it a
-three-file slice against the ratified "display-only" language --
-corrected in the post-implementation record, not silently. ShelfList
-gained onSummary; the handler is useCallback-stable because load()
-now depends on it, and an inline arrow would refetch the shelf on
-every screen render (implementer-caught; prompt was wrong twice in
-that step). formatRange, truncate2, analyteRange, buildSummary
-shipped byte-identical, diff-gated -- the live ND-annotated string
-is the D109.1 implementation and was never touched.
+**Milestone: first real usage happened.** 2026-08-03, ~3 sessions on a
+freshly reset profile, MCP-observed. The oldest open milestone is
+closed. Current-session rows are real data now; the all-test-data
+assumption in prior handoffs no longer holds.
+
+**QR-import recon (design not started).** Operator: package QRs never
+reach a COA directly -- age gates, summary pages, per-provider landing
+pages. Architect fetched a live 1a4.com landing URL: JS-rendered SPA,
+empty shell server-side. Server-side URL-to-PDF resolution is dead as
+the primary path. Leading design: scan QR -> in-app WebView -> user
+clicks through -> app detects a loaded PDF and offers one-tap import ->
+Edge Function fetches the PDF URL server-side into the existing ingest
+pipeline. Cost: camera scanner and WebView are both native modules --
+one combined dependency chore commit, one EAS build, then code.
 
 ## Refuted hypotheses / corrections -- read before trusting anyone
 
-Architect's, seven: the preamble list, in session order. Two are
-promotion-relevant: the bare-token criterion became the CLAUDE.md
-gated-string rule (e574954); the npm-test instrument is a standing
-fact below and a promotion candidate at one instance.
+Architect's, eight, all caught by the implementer or a gate:
+1. H1: believed retirement reachable only via the survey and absent from
+   the detail. Both clauses false -- the survey never had it; the detail
+   has had it since slice 6 (1802dbf).
+2. H2: believed favorite settable only in the retirement prompt. False --
+   the direct detail control predates it and implements D91 exactly.
+3. Cited the reset's 4 retirement rows as evidence retire_coa works.
+   Wrong per D110.1: reset inserts its events directly. The real
+   evidence is the slice 6 gate record.
+4. D113 prompt's gate enumeration anticipated setFavorite hits in both
+   lists while the same prompt's extraction clause mandated the build
+   that removes them. Implementer read the enumeration as an upper
+   bound and refused to add redundant references to satisfy a count.
+5. D114 prompt: "minimum fields the confirm copy needs" against a
+   five-field enumeration including favorite, which nothing reads.
+   Kept per enumeration, documented as named-but-unread.
+6. D114 prompt: "moved verbatim in behavior" contradicted its own
+   onDone-on-failure clause. Implementer followed the explicit clause;
+   the delta (failed retire now refetches) was ratified as better.
+7. Absolute non-ASCII gate (expect 3, control 0) written against a file
+   carrying 21 pre-existing non-ASCII bytes the architect had read in
+   diffs that same session. Unmeetable by construction. Implementer
+   pre-measured the delta (21 -> 24, exactly the glyph), proceeded, and
+   reported. Delta-with-control is the only sound form for this gate.
+8. This handoff's first draft stated the stale-handoff distance as four
+   commits; rev-list measures five. The architect does not hand-count,
+   including in the sentence written to demonstrate repo-over-memory.
 
-Implementer conduct, three accepted deviations, all correct:
-- useCallback stabilization beyond the prompt's literal inline arrow
-  (necessary; the prompt's stated behavior was preserved, its
-  literal instruction was not).
-- A stale Sora-800 comment corrected when the constant landed beside
-  it (a false claim would otherwise sit above new code).
-- Refused to reword a comment to dodge the malformed gate 6;
-  reported the construct-form re-run instead. The extra check in the
-  close run -- verifying the record's repo-checkable claims before
-  committing them while declining to vouch for device observations
-  -- is the conduct bar for future docs commits.
+Implementer's, self-corrected: one line-count misreport (625 for a
+624-line doc), caught and corrected in its own next report.
 
-Operator-side: two collapsed verdicts ("All gates passed" at the
-D108 gate before per-step rulings arrived; proceeding past the
-green-confirmed conditional at the D108 commit). Both recovered by
-the mechanical one-step regime; the count across sessions is now
-seven.
+Prior-session conduct finding: work continued past the 2026-08-03
+handoff without amendment (4.5), ending in an uncommitted slice and a
+handoff wrong by construction. Cost was real; recorded without blame --
+the mechanism (amend or write-last) exists and was simply not run.
 
 ## Ratified decisions
 
-- D107, D107.1, D108, D109 with post-ratification rulings: gear
-  net-new in header (1a); "+ Add" label; sign-out behind the gear;
-  glyphs are the shipped middle dot and U+203A chevron; zero
-  off-shelf hides the right half; rung words dropped from mini bars;
-  both section-row labels accent; empty-state branch untouched;
-  mock-faithful subtitle placement (a). Grounds in dashboard.md
-  D107-D109 amendments + post-implementation record.
-- CLAUDE.md promotion (e574954): authored text must not quote a
-  gated string.
+- D113, D114: dashboard.md tail amendment (fc148a3) carries decisions
+  and grounds. Post-ratification rulings absorbed into the commits:
+  converged question copy (one wording, Skip only at retirement),
+  archive exclusion by prop, RetireTarget keeps its unread field,
+  failed-retire refetch, strain-name menu title, baseline U+2026 glyph.
+- Retroactive gate for cdecc16: testimony plus MCP forensics accepted in
+  lieu of re-run where re-running destroys real data.
+- favorites_cleared stays unsurfaced (cdecc16 body records it).
+- Un-retire: BANKED with grounds -- no lived instance of a mistaken
+  retirement; the only count-raising path is the dedupe modal's
+  bought-another, and that is accepted until demand exists.
+
+## Promotion candidates for CLAUDE.md (next docs pass)
+
+- Non-ASCII file gates state the DELTA with a paired control (HEAD vs
+  worktree equal, or HEAD~1 vs HEAD plus expected delta), never an
+  absolute count. Two instances 2026-08-04: the dashboard.md equality
+  gate (clean) and refutation 7 (absolute form, failed). Meets the
+  corrected-twice bar.
+- Carried from prior handoff: npm-test-as-Phase-A-instrument (one
+  instance), grep-context rule, octal printf control form, blob-hash
+  identity, D-registry renumber for doubled D87.
 
 ## Open items
 
-**Runnable now:** nothing drafted. The dashboard arc is closed.
+**Runnable now:** QR-import design doc -- recon complete (see arc), no
+prompt drafted yet; drafting it is the entry point.
 
-**Blocked:** none.
+**Blocked:** mood-capture design (two bipolar axes vs tags vs both) --
+blocked on an operator decision the architect has framed but not
+received. Relevant tension, recorded so it is not re-derived: the
+operator simultaneously wants more resolution (sliders, doubts the
+5-point scale) while real data volume is ~3 sessions; continuous
+capture is harmless to the math and favored by recover-later
+asymmetry, but any new axis amends the ratified lexicon (D85 family),
+and the doc governs.
 
 **Banked:** committing the seven reference/handoff 0N-screens.png
 (operator to vet for personal info first -- one shows the email);
@@ -113,50 +168,26 @@ instance); octal-only printf escapes as the standing control form
 promotion (carried); D-registry renumber for doubled D87 (carried);
 authenticated TRUNCATE; off-shelf log; preference_summary view;
 never_again; retirement last-log step; third retirement reason;
-Android; app-code test wiring.
+Android; app-code test wiring; un-retire path (2026-08-04, grounds
+above); 5-point scale resolution (operator's own doubt, banked by
+operator ruling; re-examine before the friend cohort onboards -- a
+scale change costs nothing at 3 sessions and a lot at 1000);
+session-logging mood axes and tags (moves to Blocked the moment the
+operator decides; listed here so it survives if Blocked is cleared).
 
-## New standing facts
+## Working rhythm
 
-- expo-symbols SymbolView renders on iOS on the existing dev binary
-  (autolinked; gearshape confirmed at the D107 gate).
-- The Phase A test instrument is npm test, never raw npx jest -- the
-  script carries --experimental-vm-modules, without which unpdf's
-  dynamic import fails all 48 fixture tests.
-- Newsreader_400Regular_Italic and Sora_800ExtraBold are both
-  registered and now consumed in index.tsx.
-
-## Phase A for the next session -- falsifiable
-
-- HEAD: this handoff's own docs commit; its parent is e574954
-  (docs: D107-D109 post-implementation record). Predict the subject:
-  "docs: session handoff 2026-08-03 -- D107-D109 shipped". Sync 0 0
-  after the operator's push. If HEAD is neither, work continued --
-  reconcile before proceeding.
-- git status --porcelain: the seven ?? reference/handoff lines.
-- Migrations: 15 on disk (name-form count), 15 in the ledger
-  (ledger observed at close).
-- Tests: npm test -> 52 passed (the instrument matters; raw npx
-  jest reads 48 failures by design of the environment, not the code).
-- CLAUDE.md: 329 lines (observed at e574954). dashboard.md: 322
-  (arithmetic on observed diffstats 247+48+27; implementer confirms
-  at persist).
-- DB at close, observed via MCP 2026-08-03 second session: coas 5,
-  session_entries 23 raw / 12 current, retirements 2, storage
-  objects 2, favorites 2, anon grants in public 0, ledger 15.
-  Unchanged across the whole session -- UI-only work, and the
-  device gates wrote nothing.
+Unchanged from CLAUDE.md and handoff-specs 4. One live observation: the
+operator-pasted-my-DECIDE-as-a-prompt event (2026-08-04) was handled
+correctly by the implementer (STOP, no rules header) -- if it recurs,
+consider a standing one-line prompt header even on DECIDE messages.
 
 ## Entry point
 
-The verification apparatus is in its best-observed order -- seven
-architect refutations were all caught before they cost anything,
-and the product:docs commit ratio finally leans product. The one
-milestone that has now outlasted three full arcs is unchanged:
-**no real session has ever been logged.** All 23 raw entries are
-gate taps. The dashboard the operator asked for is shipped and
-matches the mock. The next unit of product progress is not a prompt:
-it is the operator consuming something real and tapping a verdict,
-which will fire lexicon v4 vocabulary, session_current, the summary
-card, and the card footer against their first honest datum. If that
-surfaces a gripe, that gripe is the next arc. D110 is believed
-next-free -- verify by reading, not by this claim.
+Draft the QR-import design doc. It is the largest friction named from
+first real usage ("I never know where to find the COA on my iPhone"),
+the recon is done, the design shape is chosen pending validation
+against the operator's other lab providers, and its first commit is a
+Tier 1 docs slice requiring no build. The mood-capture DECIDE should be
+put to the operator at the same session's start, so its design can
+proceed if the QR arc stalls on the EAS build.
