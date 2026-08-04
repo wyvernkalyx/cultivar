@@ -25,6 +25,7 @@ import {
   type SummaryTerpene,
 } from '@/lib/card-data';
 import { promptFavorite } from '@/lib/coa-favorite';
+import { promptRetire } from '@/lib/coa-retire';
 import { RUNGS } from '@/lib/lexicon';
 import { supabase } from '@/lib/supabase';
 
@@ -305,6 +306,12 @@ export function ShelfList({ onSummary }: ShelfListProps) {
             // the fetched row, so the list is what puts it back in agreement
             // with the database.
             onFavorite={(coa) => promptFavorite(coa, load)}
+            // D114: the same sequence the detail raises, reached from the
+            // card. The archive omits this prop -- that omission is the
+            // exclusion, on the onLog form. Refetch is load(), the D63 path:
+            // a retirement changes the count, and a card that reached zero
+            // has to stop being rendered here.
+            onRetire={(coa) => promptRetire(coa, load)}
           />
         )}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}

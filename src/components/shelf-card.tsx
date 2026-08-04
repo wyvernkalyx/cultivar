@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Dash, terpeneHue, verdictHue } from '@/constants/theme';
 
@@ -59,6 +59,12 @@ export type ShelfCardProps = {
   // display-only chip back, unanswered rows included. Both card surfaces
   // pass it, so the optionality is the contract, not a live branch.
   onFavorite?: (coa: ShelfCoa) => void;
+  // Reaching the retirement ritual from the card (D114). The PROP is the
+  // archive's exclusion, exactly as the Log handler is: the shelf passes it
+  // and the archive omits it. The count check below is defense in depth, not
+  // the mechanism -- an archive row is count 0 anyway, but a surface that
+  // never wants the control should not be relying on its data to hide it.
+  onRetire?: (coa: ShelfCoa) => void;
   // Present only off the shelf, where it is the archive marker.
   retirement?: CardRetirement;
 };
@@ -177,6 +183,7 @@ export function ShelfCard({
   onOpen,
   onLog,
   onFavorite,
+  onRetire,
   retirement,
 }: ShelfCardProps) {
   // Reported AND non-zero: a zero total has no share to divide, so there is
@@ -197,13 +204,39 @@ export function ShelfCard({
             numberOfLines={2}>
             {coa.strain?.trim() ? coa.strain : 'Strain not reported'}
           </Text>
-          {/* Quantity badge (D89): one card per COA regardless of count, so
-              the count rides the strain line. Rendered only above a single
-              package -- at one package there is no badge at all, because
-              absence says it and a stated count of one is noise. */}
-          {coa.on_shelf_count > 1 && (
-            <Text style={styles.badge}>{`x${coa.on_shelf_count}`}</Text>
-          )}
+          <View style={styles.strainRowActions}>
+            {/* Quantity badge (D89): one card per COA regardless of count, so
+                the count rides the strain line. Rendered only above a single
+                package -- at one package there is no badge at all, because
+                absence says it and a stated count of one is noise. */}
+            {coa.on_shelf_count > 1 && (
+              <Text style={styles.badge}>{`x${coa.on_shelf_count}`}</Text>
+            )}
+            {/* The overflow (D114). Top-right, diagonally opposite the Log
+                button, so the card's one loud control keeps its own corner
+                and this one crowds nothing. Nested inside the card's
+                Pressable exactly as Log and the chip are: RN grants the
+                responder to the innermost view that wants it, so opening the
+                menu does not also open the detail. */}
+            {onRetire !== undefined && coa.on_shelf_count > 0 && (
+              <Pressable
+                hitSlop={12}
+                onPress={() =>
+                  Alert.alert(
+                    coa.strain?.trim() ? coa.strain.trim() : 'this COA',
+                    undefined,
+                    [
+                      { text: 'Retire a package', onPress: () => onRetire(coa) },
+                      { text: 'Cancel', style: 'cancel' },
+                    ]
+                  )
+                }
+                accessibilityRole="button"
+                accessibilityLabel="More actions for this package">
+                <Text style={styles.overflowGlyph}>…</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
 
         {/* Repurchase intent (D113). With a handler the chip is a control and
@@ -334,10 +367,27 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: Dash.textMuted,
   },
+  // The badge and the overflow share the strain line's trailing end, so they
+  // group rather than being spread apart by the row's space-between. Baseline
+  // alignment is inherited deliberately: it is what kept the badge sitting on
+  // the strain's baseline before the group existed.
+  strainRowActions: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+  },
   badge: {
     fontFamily: SORA_BOLD,
     fontSize: 11.5,
     fontVariant: ['tabular-nums'],
+    color: Dash.textMuted,
+  },
+  // Quiet by construction (D114): a muted glyph on no surface at all. The tap
+  // target comes from hitSlop rather than a box, so the control adds nothing
+  // to the strain line's height.
+  overflowGlyph: {
+    fontFamily: SORA_BOLD,
+    fontSize: 16,
     color: Dash.textMuted,
   },
   chipYes: {

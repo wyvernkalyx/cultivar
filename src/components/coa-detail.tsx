@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CoaPdfViewer from '@/components/coa-pdf-viewer';
 import { Dash, verdictHue } from '@/constants/theme';
 import { setFavorite } from '@/lib/coa-favorite';
-import { retireCoa } from '@/lib/coa-retire';
+import { promptRetire } from '@/lib/coa-retire';
 import { supabase } from '@/lib/supabase';
 
 // Font families registered app-wide in the root layout (D83 Decision 1),
@@ -367,50 +367,11 @@ export function CoaDetail({
     await load();
   };
 
-  // Q2 of the retirement survey (D90), optional by design. Skip writes
-  // NOTHING -- favorite is left untouched, not nulled, because unanswered is
-  // not an answer (D48). Every arm reloads: Q1 already changed the count.
-  const askFavorite = () =>
-    Alert.alert('Would you buy it again?', undefined, [
-      { text: 'Yes', onPress: () => void answerFavorite(true) },
-      { text: 'No', onPress: () => void answerFavorite(false) },
-      { text: 'Skip', style: 'cancel', onPress: () => void load() },
-    ]);
-
-  // Q1 is the event (D90). One RPC, one transaction (D90.1): the reason and
-  // the decrement land together or not at all. A failure stops here -- Q2 is
-  // a question about a retirement that happened.
-  const retire = async (record: CoaDetailRecord, reason: string) => {
-    const result = await retireCoa(record.id, reason);
-    if (!result.ok) {
-      Alert.alert('Could not retire', result.message);
-      return;
-    }
-    askFavorite();
-  };
-
-  const confirmRetire = (record: CoaDetailRecord) => {
-    // The D44 identity echo again, same two rules: strain falls back to
-    // "this COA", and a blank brand omits its line rather than rendering an
-    // empty one.
-    const strain = record.strain?.trim() ? record.strain.trim() : 'this COA';
-    const brand = record.brand?.trim();
-    const identity = [strain, ...(brand ? [brand] : [])].join('\n');
-    // Exactly one outcome line, chosen by what will be left. D90's copy
-    // constraint: a card that stays on the shelf must never be told it is
-    // being taken off it.
-    const outcome =
-      record.on_shelf_count > 1
-        ? `You'll still have ${record.on_shelf_count - 1} on your shelf.`
-        : 'This takes it off your shelf.';
-    Alert.alert('Retire a package', `${identity}\n\n${outcome}`, [
-      { text: 'Smoked it all', onPress: () => void retire(record, 'Smoked it all') },
-      { text: 'Gave up on it', onPress: () => void retire(record, 'Gave up on it') },
-      // Nothing has been written at this point, so cancelling is a pure
-      // no-op -- no event, no decrement, no question.
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
+  // The whole retirement sequence -- confirm, reason, and the repurchase
+  // question that follows a successful event -- lives in the shared module
+  // from D114 on, because the shelf card raises the identical sequence. This
+  // surface supplies the record and its own refetch and owns nothing else
+  // about the ritual.
 
   if (error !== null) {
     return (
@@ -620,13 +581,16 @@ export function CoaDetail({
 
         {/* 7. Retire (D90): a package leaves the shelf, the COA does not. At
             count 0 there is nothing left to retire, and the confirm copy's
-            arithmetic presumes a package exists. */}
+            arithmetic presumes a package exists. Block order is unchanged;
+            only the treatment is (D114a) -- this row no longer wears the
+            PDF row's neutral card, so it reads as an action rather than a
+            second document link. */}
         {coa.on_shelf_count > 0 && (
           <Pressable
-            onPress={() => confirmRetire(coa)}
+            onPress={() => promptRetire(coa, load)}
             accessibilityRole="button"
-            style={styles.actionRow}>
-            <Text style={styles.actionLabel}>Retire a package</Text>
+            style={styles.retireRow}>
+            <Text style={styles.retireLabel}>Retire a package</Text>
           </Pressable>
         )}
       </ScrollView>
@@ -886,6 +850,23 @@ const styles = StyleSheet.create({
     fontFamily: SORA_BOLD,
     fontSize: 11.5,
     color: Dash.text,
+  },
+  // D114(a). The retire row stops twinning the PDF row above it: it carries
+  // the destructive tint the No choice on this same surface already uses --
+  // the same value, not a second red -- and its own top margin over the
+  // scroll's gap, so the two rows no longer read as a pair of links.
+  retireRow: {
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    marginTop: 8,
+    backgroundColor: 'rgba(224, 104, 94, 0.14)',
+    borderRadius: Dash.radius.card,
+    paddingVertical: 16,
+  },
+  retireLabel: {
+    fontFamily: SORA_BOLD,
+    fontSize: 11.5,
+    color: Dash.verdict.Hated,
   },
   choiceRow: {
     flexDirection: 'row',
