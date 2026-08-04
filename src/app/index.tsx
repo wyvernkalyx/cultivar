@@ -10,6 +10,7 @@ import { ThemedText } from '@/components/themed-text';
 import { WebBadge } from '@/components/web-badge';
 import { BottomTabInset, Dash, MaxContentWidth, Spacing } from '@/constants/theme';
 import { exportProfile } from '@/lib/export';
+import { resetProfile } from '@/lib/profile-reset';
 import { supabase } from '@/lib/supabase';
 
 // Font families registered app-wide in the root layout (D83 Decision 1),
@@ -29,6 +30,10 @@ export default function HomeScreen() {
   // The export's in-flight flag (D111). It gates the row against a second
   // tap while the selects and the file write are outstanding.
   const [exporting, setExporting] = useState(false);
+  // The reset's in-flight flag (D110): true across the pre-read and across
+  // the RPC, false again once an alert is on screen, since the alert is
+  // what holds the interaction from there.
+  const [resetting, setResetting] = useState(false);
   // Bumped on every modal close and used as ShelfList's key, so closing
   // after a save remounts the list and refetches (the pickId pattern). A
   // close without a save refetching too is accepted.
@@ -55,16 +60,118 @@ export default function HomeScreen() {
   // path's only place to report. Nothing here mutates, so shelfVersion is
   // deliberately untouched -- the account sheet's no-refresh-on-close
   // property (D107.1) is unaffected by a read.
-  const runExport = async () => {
+  // Returns whether the export completed, which is what the reset's
+  // "export first" branch needs: a failed export must never fall through
+  // into the reset it was offered ahead of.
+  const runExport = async (): Promise<boolean> => {
     setExporting(true);
     try {
       await exportProfile();
+      return true;
     } catch (e) {
       Alert.alert('Export failed', e instanceof Error ? e.message : String(e));
+      return false;
     } finally {
       setExporting(false);
     }
   };
+
+  // The two counts the confirm sentence states, read live at the moment of
+  // the tap. Both are cheap: a head-only count over the live-session view,
+  // and the shelf column summed here rather than in a new server-side
+  // aggregate, since PostgREST has no sum and D110's non-goals rule out a
+  // view for one sentence.
+  const readResetCounts = async (): Promise<{ sessions: number; packages: number }> => {
+    const [sessions, shelf] = await Promise.all([
+      supabase.from('session_current').select('*', { count: 'exact', head: true }),
+      supabase.from('coas').select('on_shelf_count'),
+    ]);
+    if (sessions.error) {
+      throw new Error(sessions.error.message);
+    }
+    if (shelf.error) {
+      throw new Error(shelf.error.message);
+    }
+    const packages = ((shelf.data ?? []) as { on_shelf_count: number }[]).reduce(
+      (total, row) => total + row.on_shelf_count,
+      0,
+    );
+    return { sessions: sessions.count ?? 0, packages };
+  };
+
+  // The RPC is one transaction, so a failure means nothing moved: the
+  // error is reported and no local state changes. Success is the ratified
+  // exception to the sheet's no-refresh-on-close property (D110 slice 5) --
+  // reset changes COA state, so the shelf behind the sheet is now stale.
+  const runReset = async () => {
+    setResetting(true);
+    const result = await resetProfile();
+    setResetting(false);
+    if (!result.ok) {
+      Alert.alert('Reset failed', result.message);
+      return;
+    }
+    Alert.alert(
+      `Profile reset — ${result.sessions_hidden} ${result.sessions_hidden === 1 ? 'session' : 'sessions'} hidden, ${result.packages_retired} ${result.packages_retired === 1 ? 'package' : 'packages'} retired.`,
+      undefined,
+      [
+        {
+          text: 'OK',
+          onPress: () => {
+            setSettingsVisible(false);
+            setShelfVersion((n) => n + 1);
+          },
+        },
+      ],
+    );
+  };
+
+  // Counts are re-read on every entry to this confirm, including the
+  // return trip from "Export first": the export can take a while, and a
+  // sentence stating numbers the user has since changed would be stating
+  // something untrue about their own data.
+  const confirmReset = async () => {
+    setResetting(true);
+    try {
+      const counts = await readResetCounts();
+      Alert.alert(
+        'Start from scratch?',
+        `This hides your ${counts.sessions} logged ${counts.sessions === 1 ? 'session' : 'sessions'} and takes ${counts.packages} ${counts.packages === 1 ? 'package' : 'packages'} off the shelf. Favorites are cleared. Your COAs stay, and nothing is deleted. You can export your data first.`,
+        [
+          {
+            text: 'Export first',
+            onPress: () => {
+              void exportThenConfirm();
+            },
+          },
+          {
+            text: 'Reset',
+            style: 'destructive',
+            onPress: () => {
+              void runReset();
+            },
+          },
+          { text: 'Cancel', style: 'cancel' },
+        ],
+      );
+    } catch (e) {
+      Alert.alert('Reset failed', e instanceof Error ? e.message : String(e));
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  // Shared or dismissed both count as completed -- the user got their file
+  // either way, and only a thrown export blocks the return to the confirm.
+  const exportThenConfirm = async () => {
+    if (await runExport()) {
+      await confirmReset();
+    }
+  };
+
+  // One flag for both action rows: the two operations share the sheet, and
+  // either one in flight is a reason not to start the other.
+  const busy = exporting || resetting;
 
   const signOut = async () => {
     // The root-layout gate observes the auth change and swaps to sign-in on
@@ -158,14 +265,28 @@ export default function HomeScreen() {
               treatment so only the wording is in question. */}
           <Pressable
             onPress={runExport}
-            disabled={exporting}
+            disabled={busy}
             accessibilityRole="button"
-            accessibilityState={{ disabled: exporting }}
+            accessibilityState={{ disabled: busy }}
             accessibilityLabel="Export data">
-            <Text style={[styles.sheetAction, exporting && styles.sheetActionBusy]}>
+            <Text style={[styles.sheetAction, busy && styles.sheetActionBusy]}>
               {exporting ? 'Preparing export...' : 'Export data'}
             </Text>
           </Pressable>
+          {/* D110. Grouped with the export as its peer, and carrying the
+              same type treatment: the weight of the action lives in the
+              confirm's destructive button, not in a red row that shouts
+              before the user has asked for anything. */}
+          <Pressable
+            onPress={confirmReset}
+            disabled={busy}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: busy }}
+            accessibilityLabel="Reset profile">
+            <Text style={[styles.sheetAction, busy && styles.sheetActionBusy]}>Reset profile</Text>
+          </Pressable>
+          {/* Isolated from the two action rows by its own margin: it is not
+              their peer, and the spacing is what says so. */}
           <Pressable onPress={signOut} accessibilityRole="button" accessibilityLabel="Sign out">
             <Text style={styles.signOut}>Sign out</Text>
           </Pressable>
@@ -284,7 +405,11 @@ const styles = StyleSheet.create({
   sheetActionBusy: {
     color: Dash.textMuted,
   },
+  // The sheet's own gap already separates the rows; this margin is the
+  // extra distance that makes Sign out read as apart from the pair above
+  // it rather than third in a list of three.
   signOut: {
+    marginTop: 16,
     fontFamily: SORA_BOLD,
     fontSize: 14.5,
     color: Dash.accent,
