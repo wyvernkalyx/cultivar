@@ -1,7 +1,8 @@
 # QR Import -- Design
 
 Status: design ratified D115-D118, 2026-08-04. No code. This line is
-amended by the commit that changes its truth.
+amended by the commit that changes its truth. Slice (b) scope amended
+2026-08-04: the config plugin joins the deps commit.
 
 ## Purpose
 
@@ -75,12 +76,20 @@ not the feature.
 ## D118 -- Slice plan, EAS split, and provider validation
 
 - Slice (a), docs: this document.
-- Slice (b), chore: dependency manifest only -- expo-camera (verify
-  against SDK 56 documentation at build time that expo-camera is the
-  current barcode-scanning API) and react-native-webview, installed with
-  npx expo install. Both are native modules: the EAS-rebuild split rule
-  is triggered. The operator runs the EAS build; the gate is the app
-  booting on the new binary.
+- Slice (b), chore: dependency manifest and config-plugin registration.
+  expo-camera is the new native module (verified 2026-08-04 against SDK
+  56's bundledNativeModules.json and its shipped type declarations:
+  CameraView/onBarcodeScanned is the current barcode API, and
+  expo-barcode-scanner is absent from the SDK manifest);
+  react-native-webview was already pinned at HEAD, so the manifest
+  delta is one package. The expo-camera config plugin is registered in
+  app.json in the same commit, with the operator-ratified camera
+  permission copy, the iOS microphone string suppressed, and the
+  Android record-audio manifest permission suppressed
+  (no platform records audio) -- iOS embeds usage-description strings
+  at build time, and shipping the plugin now means one EAS build
+  serves slice (c). The operator runs the EAS build; the gate is the
+  app booting on the new binary.
 - Slice (c), feat: scan screen, WebView browser, detection, hand-off to
   the ingest modal. Gate: device, one real package QR end to end through
   confirm/edit to a saved row with pdf_object_path populated, with MCP
