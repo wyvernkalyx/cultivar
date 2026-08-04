@@ -17,6 +17,7 @@ import {
   type SummarySession,
   type SummaryTerpene,
 } from '@/lib/card-data';
+import { promptFavorite } from '@/lib/coa-favorite';
 import { supabase } from '@/lib/supabase';
 
 // Font families registered app-wide in the root layout (D83 Decision 1),
@@ -181,6 +182,12 @@ export function OffShelfList({ visible, onClose }: { visible: boolean; onClose: 
                 // event, because a retirement line with no retirement behind
                 // it would be fabricated.
                 retirement={retirementByCoa.get(item.id)}
+                // D113 does reach here, unlike the Log button: repurchase
+                // intent is a verdict about the chemistry and has to outlive
+                // every package (D91), so the archive is exactly where the
+                // question stays worth asking. The write refetches through
+                // this surface's own load().
+                onFavorite={(coa) => promptFavorite(coa, load)}
               />
             )}
             ListEmptyComponent={

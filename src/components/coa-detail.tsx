@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import CoaPdfViewer from '@/components/coa-pdf-viewer';
 import { Dash, verdictHue } from '@/constants/theme';
+import { setFavorite } from '@/lib/coa-favorite';
 import { retireCoa } from '@/lib/coa-retire';
 import { supabase } from '@/lib/supabase';
 
@@ -348,22 +349,20 @@ export function CoaDetail({
   };
 
   /**
-   * Repurchase intent (D91), written straight to the row. No RPC: `coas`
-   * carries a single ALL policy because `favorite` is revisable state, not a
-   * record, which is the same reasoning D88.6 used for the count. The record
-   * is `coa_retirements`, and it is not updatable at all.
+   * Repurchase intent (D91), recorded through the shared writer (D113).
+   * The row update itself no longer lives here: the shelf and archive
+   * cards raise the same question now, and one writer is what keeps the
+   * three surfaces from drifting. What stays is this surface's own
+   * reporting and refetch, which the card surfaces do differently.
    *
    * Reloads on both arms. On success the row moved; on failure it did not,
    * and the control renders from the stored value, so a refetch is what puts
    * the surface back in agreement with the database either way.
    */
-  const writeFavorite = async (next: boolean | null) => {
-    const { error: updateError } = await supabase
-      .from('coas')
-      .update({ favorite: next })
-      .eq('id', coaId);
-    if (updateError) {
-      Alert.alert('Could not save', updateError.message);
+  const answerFavorite = async (next: boolean | null) => {
+    const result = await setFavorite(coaId, next);
+    if (!result.ok) {
+      Alert.alert('Could not save', result.message);
     }
     await load();
   };
@@ -373,8 +372,8 @@ export function CoaDetail({
   // not an answer (D48). Every arm reloads: Q1 already changed the count.
   const askFavorite = () =>
     Alert.alert('Would you buy it again?', undefined, [
-      { text: 'Yes', onPress: () => void writeFavorite(true) },
-      { text: 'No', onPress: () => void writeFavorite(false) },
+      { text: 'Yes', onPress: () => void answerFavorite(true) },
+      { text: 'No', onPress: () => void answerFavorite(false) },
       { text: 'Skip', style: 'cancel', onPress: () => void load() },
     ]);
 
@@ -600,7 +599,7 @@ export function CoaDetail({
           <Text style={styles.label}>Would buy again</Text>
           <View style={styles.choiceRow}>
             <Pressable
-              onPress={() => void writeFavorite(coa.favorite === true ? null : true)}
+              onPress={() => void answerFavorite(coa.favorite === true ? null : true)}
               accessibilityRole="button"
               style={[styles.choice, coa.favorite === true && styles.choiceYes]}>
               <Text style={[styles.choiceText, coa.favorite === true && styles.choiceYesText]}>
@@ -608,7 +607,7 @@ export function CoaDetail({
               </Text>
             </Pressable>
             <Pressable
-              onPress={() => void writeFavorite(coa.favorite === false ? null : false)}
+              onPress={() => void answerFavorite(coa.favorite === false ? null : false)}
               accessibilityRole="button"
               style={[styles.choice, coa.favorite === false && styles.choiceNo]}>
               <Text style={[styles.choiceText, coa.favorite === false && styles.choiceNoText]}>
