@@ -64,6 +64,17 @@ const TERPENE_CANON: Record<string, string> = {
   NEROLIDOL: 'Nerolidol',
   ISOPULEGOL: 'Isopulegol',
   SABINENE: 'Sabinene',
+  // Added 2026-08-05 from the Green Analytics panel, which reports a wider
+  // set than the other labs in the corpus. Each of these parsed and carried
+  // its value before this entry existed; the entry only fixes the display
+  // form, which title-case gets wrong for a lowercase isomer prefix.
+  CARENE: 'Carene',
+  PCYMENE: 'p-Cymene',
+  SABINENEHYDRATE: 'Sabinene Hydrate',
+  CITRONELLOL: 'Citronellol',
+  ALPHACEDRENE: 'alpha-Cedrene',
+  CISNEROLIDOL: 'cis-Nerolidol',
+  TRANSNEROLIDOL: 'trans-Nerolidol',
 };
 
 /** Collapse a terpene name to its canonical lookup key. */

@@ -4,7 +4,7 @@ import { join } from 'path';
 import { extractText } from '../extractText.ts';
 import { parseCoa } from '../parseCoa.ts';
 import { normalizeUsDate } from '../dates.ts';
-import { dominantTerpene } from '../normalize.ts';
+import { displayTerpene, dominantTerpene, isKnownTerpene } from '../normalize.ts';
 import type { CoaResult } from '../types.ts';
 
 const FIXTURES = join(__dirname, '..', '__fixtures__');
@@ -202,6 +202,33 @@ describe('parseCoa unknown-lab shell', () => {
     expect(coa.brand).toBeNull();
     expect(coa.strain).toBeNull();
     expect(coa.batch).toBeNull();
+  });
+});
+
+describe('displayTerpene canonical forms', () => {
+  // Every name below is printed by a lab in the fixture corpus. The value is
+  // the display form; title-case is wrong for the lowercase isomer prefixes,
+  // which is what these entries exist to fix.
+  const EXPECTED: [string, string][] = [
+    ['Carene', 'Carene'],
+    ['p-Cymene', 'p-Cymene'],
+    ['Sabinene Hydrate', 'Sabinene Hydrate'],
+    ['Citronellol', 'Citronellol'],
+    ['Alpha-cedrene', 'alpha-Cedrene'],
+    ['cis-Nerolidol', 'cis-Nerolidol'],
+    ['trans-Nerolidol', 'trans-Nerolidol'],
+  ];
+
+  for (const [printed, display] of EXPECTED) {
+    it(`${printed} is known and displays as ${display}`, () => {
+      expect(isKnownTerpene(printed)).toBe(true);
+      expect(displayTerpene(printed)).toBe(display);
+    });
+  }
+
+  it('keeps the cis and trans nerolidol isomers distinct from bare Nerolidol', () => {
+    const forms = ['Nerolidol', 'cis-Nerolidol', 'trans-Nerolidol'];
+    expect(new Set(forms.map(displayTerpene)).size).toBe(3);
   });
 });
 
