@@ -1,224 +1,183 @@
-# Session handoff -- 2026-08-04 (second)
+# Session handoff -- 2026-08-05
 
-The repo is authoritative over this document. This session's opening
-Phase A verified all of the prior handoff's predictions clean -- and the
-session still produced nine architect refutations, including two chat
-hand-counts of the day's own commit total ("nine", "ten") against
-rev-lists of six and seven. Begin with a read-only Phase A audit.
+The repo is authoritative over this document. This session's own
+ledger: the architect generalized "these providers simply don't
+gate" from three jars and was refuted by an age gate on device the
+same afternoon; named the live labs as "Kaycha and Moby" from the
+parser fixtures when no scanned jar was Moby's; and shipped a
+presence gate opening with a bare dash that aborted exit 2 in
+pre-execution -- the promoted -e rule, violated by its promoter.
+Begin with a read-only Phase A audit.
 
 ## Start here (Phase A, read-only)
 
-- HEAD's parent is 8dfded2 (feat: slice d). Predicted subject of the
-  handoff commit itself: "docs: session handoff 2026-08-04 second --
-  QR docs+deps, effects shipped end to end". Sync 0 0 after the
-  operator's push. If HEAD is neither, work continued past this
-  handoff -- reconcile before proceeding.
-- git status --porcelain: exactly seven ?? reference/handoff/0N-screens.png
-  lines (N=1..7), the standing noise.
+- HEAD's parent is ec29eb5 (docs: qr-import slice (c) gate
+  observations). Predicted subject of the handoff commit itself:
+  "docs: session handoff 2026-08-05 -- QR arc shipped end to end,
+  GA parser next". Sync 0 0 after the operator's push. If HEAD is
+  neither, work continued past this handoff -- reconcile first.
+- git status --porcelain: exactly seven ?? reference/handoff/
+  0N-screens.png lines (N=1..7), the standing noise.
 - Migrations: 17 on disk by name-form count, 17 in the ledger.
-- npm test -> 52 passed. npx tsc --noEmit -> 0. npx expo lint -> 1 error
-  0 warnings, template file only.
-- DB via MCP, observed 2026-08-04 post-slice-(d) gates: coas 6,
-  session_entries 57 raw / 11 current, 8 of the 11 at lexicon_version 5,
-  tombstoned chains 14 (12 profile-reset, 2 slice-(d) discards),
-  retirements 7, storage objects 3, anon grants in public 0.
-- EAS build status: UNKNOWN. The operator was asked to run the build
-  after 635ac01 and never pasted a result. Do not assume it ran; ask.
-If any of these do not match, the repo wins -- re-baseline before
-proceeding.
+- npm test -> 52 passed. npx expo lint -> 1 error 0 warnings,
+  template file only.
+- npx tsc --noEmit -> 0 IN THE OPERATOR'S WORKTREE ONLY. On any
+  fresh checkout it is 1 error, exit 2 (TS2882, @/global.css):
+  tsconfig includes expo-env.d.ts and .expo/types/**, both
+  gitignored, zero .d.ts tracked, so the pass depends on
+  Expo-generated typings. Architect-observed on a clean clone,
+  TS 6.0.3 lockfile-pinned; the worktree 0 was implementer-observed
+  2026-08-05. Banked fix; do not chase it as a regression.
+- DB via MCP, observed at write time: coas 9, session_entries 59
+  raw / 12 current, tombstoned chains 14, retirements 7, storage
+  objects 6, anon grants in public 0.
+- The installed dev-client binary is the 2026-08-03 EAS build from
+  dbfe1cc and carries expo-camera; its boot gate and the slice (c)
+  device gate both passed 2026-08-05. No new build is owed.
+If any of these do not match, the repo wins -- re-baseline.
 
-## What shipped (newest first, seven commits -- rev-list verified at
-commit time, not hand-counted)
+## What shipped (newest first, four commits -- rev-list verified,
+plus this handoff)
 
-- 8dfded2 feat: post-close bloom, outcome-from-state, discard, closing header (slice d)
-- 8f11374 feat: closing-screen effect tags and lexicon v5 (D119, D120)
-- 2e80a5b docs: rewrite session-entries column table to live schema
-- 610d299 feat: effects column and session_current republish (D119, D121)
-- 635ac01 chore: QR slice (b) -- expo-camera dep and config plugin (D118)
-- 16cb0c2 docs: session effects tags design (D119-D121)
-- 03a503f docs: QR import design (D115-D118)
+- ec29eb5 docs: qr-import slice (c) gate observations and corrections
+- 7b1985d feat: QR import slice (c) -- scan, browse, three-prong detect
+- f9074f9 docs: qr-import provider validation walks and D117 third prong
+- cd1553e docs: doc-staleness sweep -- four stale status claims amended
 
 ## The arcs
 
-**QR import, D115-D118 (docs + deps shipped; slice (c) waits).** Design:
-scan -> in-app WebView -> user clicks through -> URL-detect ->
-CLIENT-SIDE download into the unchanged ingest pipeline. D116 supersedes
-the recon's Edge-Function fetch with grounds: D87.4 uploads from the
-client cache URI at save, so the client needs the bytes regardless; no
-SSRF surface; RN fetch has no CORS. Named shared risk: cookie-gated PDF
-URLs fail either design; fallback (WebView-native download) is a doc
-amendment, never improvisation. Slice (b) shipped one new native module
-(expo-camera 56.0.8 -- react-native-webview was already pinned at HEAD)
-plus the config plugin: ratified camera permission copy, iOS microphone
-suppressed via the strict === false deletion branch (omission would have
-written the default string), Android RECORD_AUDIO suppressed. Slice (c)
-is pure design-complete but double-blocked: the EAS build boot gate
-(status unknown) and the operator's per-provider QR walks, both
-operator-side.
+**QR import shipped end to end in one session: walks, D117
+amendment, slice (c), device gate, corrections.** The operator
+walked real jars; the finals exposed that the primary provider's
+URLs are suffix-less per-visit signed blobs, so the operator
+ratified a third detection prong (one HEAD request per settled
+navigation, content-type raises the affordance, fails to the manual
+control). Slice (c) is one new component (scan stage on expo-camera,
+browse stage on WebView, three prongs with a stale-probe guard) plus
+a surgical modal extension: the post-URI pipeline was factored into
+ingestFromUri and shared verbatim by picker and QR paths;
+importFromUrl downloads to a fresh cache-local file (unique name per
+import -- blob basenames repeat) and drops the remote URL. Nothing
+downstream of the URI changed. Gate: three real jars imported with
+full retention read-back; the HEAD prong's prediction observed true
+on device over an inline suffix-less blob COA; suffix prong observed
+on the durable Green Analytics link; download-event prong
+unexercised; fail-closed observed twice (forced HTML import
+surfaced the 400 and wrote nothing; unsupported lab landed in the
+empty-parse guard). qr-import.md carries walks, amendment, and gate
+observations as three dated layers -- read all three; the later
+layers correct the earlier.
 
-**Effects tags, D119-D121, end to end in one day.** Operator ruled
-tags-only, then a 20-tag vocabulary (Spacey/Forgetful split by ruling;
-other slash forms are permanent synonym-pair tokens). D119: one flat
-valence-free text[]; groups are presentation only; the same effect flips
-valence by session, the score carries the judgment. D120: closing
-screen, one insert on Close carrying tags + notes (D95's exception
-extended to the screen). D121 migration replaced session_current IN
-PLACE with effects appended last -- replace-not-drop preserved ACLs (the
-D105 anon revocation re-observed 0 post-apply) and never touched
-coa_session_stats; both views re-observed security_invoker=true.
-LEXICON_VERSION moved 4->5 with the UI, not the schema: the version
-stamps what the user was SHOWN, and the pre-UI 2026-08-04 session
-correctly reads 4 in the live data.
+**The architect's channel widened, and the working rhythm used it.**
+The architect now clones origin directly, runs the test suite and
+tsc, hashes blobs, and reads the DB over MCP. Every doc edit this
+session was applied on an architect-side scratch branch and every
+grep gate EXECUTED against the real post-edit text before its
+prompt shipped; ratified bytes were verified into commits by blob
+hash (three commits, three matches), not by eye. Phase A ran
+architect-side in minutes. The operator's worktree, device, and
+credentialed surfaces remain operator-only.
 
-**Slice (d): the operator's gate caught a real defect, and the fix
-reshaped dismissal.** Page-1 Close after a Back announced 'cancelled'
-about a session already on the shelf (tap-is-the-save had already
-written it). Fix: outcome derives from STATE (lastConfirmed), never from
-the control that fired. Closing from the top keeps a rated session
-(operator ruling). Page-1 Close on a rated session asks Keep/Discard;
-Discard appends a D52 soft-delete tombstone through the one insert
-pipeline, fail-closed -- D52's append-only delete acquiring its UI,
-deliberately NOT a new D-number. Every write now states deleted
-explicitly. CloseOutcome gained 'discarded' (a discard writes a row;
-reporting it 'cancelled' would be a false report). onLoggedChange prop
-added and KEPT despite the host dismissal path being iOS-unreachable
-(fullScreen has no interactive dismissal): the code states truth on
-every platform. Also in (d): bloom relocated off closing to a post-close
-transient over opaque Dash.bg with tap-anywhere skip ("never eats a tap"
-honestly translated to "costs at most one tap" under an opaque ground);
-closing's header became "Anything else? (optional)" in the heading
-idiom, knowingly amending D81 for that one screen; closing's middle
-renders nothing, keeping only the bottom-anchor flex slack.
+**Provider landscape, observed not assumed.** Kaycha jars: QR ->
+Metrc verifID landing (app.1a4.com, per-package) -> one tap ->
+suffix-less signed blob, no age gate cookied or fresh, fetchable
+cookie-less, token per visit (~24h). DRS Testing arrived through
+the same path unwalked and parsed. Aeterna packages carry TWO QRs:
+Metrc lot-label QR -> verifID page that (for that package) renders
+lab data as HTML with no PDF; brand QR -> age gate -> index ->
+durable .pdf link. Green Analytics is the lab behind the Aeterna
+site.
 
-**session-entries-schema.md rewrite.** Its "table below still describes
-the live schema" had been false since the survey-cut migration applied
--- the rewrite that doc promised from the applying commit never landed.
-Corrected, late, with the correction paragraph saying so. Table now
-matches the MCP-observed live schema including notes and effects.
+## Refuted hypotheses / corrections
 
-## Refuted hypotheses / corrections -- read before trusting anyone
-
-Architect's, nine, caught by the implementer, a gate, or the operator:
-1. D120 draft claimed the required path "stays exactly one tap" against
-   four ratified/observed two-tap statements (survey-cut.md:85, :354,
-   :446; session-ladder.tsx:442). Implementer STOPped a Tier 1 combined
-   prompt on it -- the STOP is the only human-free check Tier 1 has, and
-   it worked.
-2. QR deps prompt treated react-native-webview as a new install; it was
-   pinned at HEAD. Manifest delta was one package, not two.
-3. Effects build prompt said "19 tags" and "Off-Key eight" against the
-   doc's 20/nine -- the architect hand-counted the pre-split vocabulary
-   after authoring the split. Implementer built the doc per the
-   conflict rule.
-4. Predicted session count 3->5 at the slice (c) gate; observed 6. The
-   operator logged three sessions, not the requested two. Benign;
-   testimony-vs-observation discrepancy recorded, not resolved.
-5. A reanimated absence gate used a bare token and collided with the
-   repo's own autolinking EXCLUSION -- the already-promoted
-   import-construct rule, violated by its author. Discriminating forms:
-   dependency-entry grep on package.json + src/-scoped grep.
-6. A VERIFY glob (src/app/**/*.tsx) matched nothing; grep exited 2,
-   masked by 2>/dev/null -- the vacuous-gate family, again.
-7. Cited coa-detail.tsx as the two-button Alert precedent; it has none.
-   The idiom lives at coa-editor.tsx:247-249. Cosmetic; the built shape
-   was the intended one.
-8. Asserted art-direction.md and survey-cut.md "may carry pre-existing
-   non-ASCII"; both are pure ASCII at HEAD. The delta gate degenerated
-   to absolute-zero and still held.
-9. Chat prose said "nine commits" then "ten commits" shipped; rev-list
-   at those moments read six and seven. Hand-counting, in the session
-   where the no-hand-count promotion sat banked.
-
-Also recorded: three-then-four phrase-level edit targets spanned line
-wraps (now a standing form, see prompts); a tail -3 criterion truncated
-the very line it gated; one implementer-report diff hunk arrived
-MANGLED IN TRANSIT (shelf-list onRequestClose minus-line showed the
-post-edit call) and was caught by whole-diff review plus an operator
-paste -- transport corruption, not an implementer defect, and the
-whole-diff rule is what caught it.
-
-Operator's catch: the page-1-Close-after-Back defect (arc above). Three
-reviewers missed it; the device gate did not.
+Architect's:
+1. "These providers simply don't gate" -- refuted on device;
+   Aeterna's age gate appeared in the fresh browser. The walks
+   appendix's possibly-cookied flag (the operator's own catch) was
+   correct all along. Recorded in ec29eb5.
+2. Live labs named as "Kaycha and Moby" from fixtures; the shelf's
+   jars were Kaycha x3, Green Analytics, then DRS -- Moby on none.
+   Fixtures describe the parser corpus, not the shelf.
+3. A presence gate pattern opened with a bare dash and aborted
+   exit 2 -- caught by architect-side pre-execution before the
+   prompt shipped, which is the pre-execution rule earning its keep.
+4. The walks appendix recorded the Gelato QR as landing on the
+   brand site; the operator's later scan of the SAME PACKAGE hit
+   Metrc verifID -- reconciled by the two-QR photo observation,
+   corrected in ec29eb5.
+Implementer's catch: a 13-vs-14 deletion count explained by a
+byte-identical first line rendering as context (cd1553e review).
+Also: the implementer flagged, unprompted, that the slice (c)
+commit body's device-gate paragraph was the architect's
+observation, not its own -- the worktree-only rule applied in the
+correct direction, twice this session.
+Operator process note: one gate came back as an aggregate ("all
+worked"); the per-step record was reconstructed from screenshots
+plus MCP read-back and the D117 prediction got its clean
+observation on a re-scan. Aggregate verdicts still are not
+evidence; the screenshots were.
 
 ## Ratified decisions
 
-- D115-D118 (qr-import.md) and D119-D121 (effects-tags.md) carry
-  decisions and grounds; slice (d)'s four rulings are in survey-cut.md's
-  2026-08-04 amendment tail; the bloom placement supersession is in
-  art-direction.md's amendment.
-- Post-ratification rulings absorbed into commits: recordAudioAndroid
-  false (no platform records audio); 'discarded' as a third
-  CloseOutcome; explicit deleted on every write; onLoggedChange kept;
-  Dash.bg (not #000) as the transient's ground; discard-dialog copy
-  approved as built; 'note'->'closing' InsertSource rename; Off-Key as
-  one rendered group; package-lock.json diff-stat exemption (explicit
-  architect ruling for machine-generated lockfiles, not a precedent for
-  authored files).
-- Keyboard-scroll defect (carried from 2026-07-27): RESOLVED by
-  operator observation at the slice (d) gate -- the note field scrolls
-  into view now that the tags give closing scroll slack.
-
-## Promotion candidates for CLAUDE.md (next docs pass)
-
-- Phrase-level edit targets against the ~70-column doc family are
-  written as LINE-ANCHORED BLOCKS, never sentence fragments; every
-  phrase-gate assumes wrap-spanning. Four instances 2026-08-04. Over
-  the bar.
-- The architect does not hand-count -- now including commit totals in
-  chat prose (refutations 3 and 9 this session; carried instances
-  prior). Over the bar.
-- Carried: non-ASCII delta-with-control form; npm-test-as-Phase-A
-  instrument; grep-context rule; octal printf control form; blob-hash
-  identity; D-registry renumber for doubled D87.
+- D117 third automatic prong (HEAD request, content-type), grounds
+  in qr-import.md's 2026-08-05 amendment. CONFIRMED at the gate.
+- Scan entry lives inside the Add flow (idle arm, second button),
+  not the shelf header. Strings ratified verbatim: "Scan package
+  QR", "Import this COA", "Import this page". Five supporting
+  strings shipped and were seen at the gate without rewording --
+  approved by exercise; the operator may still reword (Tier 1).
+- Bytes-before-prompt: architect-side scratch application plus
+  gate pre-execution is now the standing prep for every doc pass.
 
 ## Open items
 
-**Runnable now:** the doc-staleness pass -- one Tier 1 commit bundling:
-art-direction.md status line (unaware of its 2026-08-04 amendment);
-survey-cut.md status line (no pointer to its new tail);
-session-entries-schema.md "Column decisions" bullets (still name the six
-retired classes); effects-tags.md's "if this document shipped, that
-check passed" sentence (reads stronger than the re-check it records).
+**Runnable now: the Green Analytics parser.** First parser request
+driven by lived usage -- a real jar on the shelf is unreadable. The
+durable fixture URL shape is recorded in qr-import.md; the operator
+downloads the Gelato 33 PDF and supplies it as a fixture (data:
+commit; the architect's fetches are robots-blocked on that host).
+Then the standing parser pattern: design-doc-first if the format
+diverges structurally, pure-logic slice, Jest-gated, fixture-driven,
+ND -> null throughout. Nothing about it touches the client.
 
-**Blocked:** QR slice (c) -- on the EAS build boot gate (status UNKNOWN,
-ask the operator) and the operator's per-provider QR walks (click path +
-final PDF URL per lab, appended to qr-import.md before the slice is
-prompted). Both operator-side; the architect owes nothing until they
-land.
+**Blocked:** nothing operator-side. The download-event prong is
+unexercised (banked, not blocked): no known provider produces it.
 
-**Banked:** committing the seven reference screenshots (operator to vet;
-one shows the email); "Expo Starter" web tab chrome; empty-shelf double
-statement; authenticated TRUNCATE; off-shelf log; preference_summary
-view; never_again; retirement last-log step; third retirement reason;
-Android (note: expo-camera plugin writes android.permission.CAMERA;
-RECORD_AUDIO suppressed; barcodeScannerEnabled's ABSENCE from
-Podfile/Gradle properties is the enabled state -- do not misread a
-prebuild); app-code test wiring; un-retire; 5-point scale resolution
-(re-examine before friend cohort); user-authored custom tags (entry
-surface); EXPLAINERS.closing line 3 -- return it to closing's vacated
-middle or retire it (copy decision, operator's); the 220ms
-invisible-but-armed bloom window (flagged, accepted, unexercised); the
-Alert-under-external-dismissal interaction (unreachable in ordinary
-use, unexercised); source_url on coas (defused by D87 retention);
-commit-body/doc phrase collision ("no platform records audio" -- any
-future gate on it pins the doc path); anon-grants durable-ACL solution
-(pg_default_acl rot, carried); CLAUDE.md promotion pass itself.
+**Banked (new this session, ahead of the carried list):** stale
+hasher comment in add-to-shelf-modal.tsx ("committed but not
+deployed" -- the deployed function IS hashing, MCP-observed;
+comment sweep); fresh-checkout tsc dependency on generated typings
+(tracked .d.ts or a documented caveat); DRS Testing walk detail
+(record on the next DRS jar); support-copy reword window.
+Carried: the seven reference screenshots (one shows the email);
+"Expo Starter" web tab chrome; empty-shelf double statement;
+authenticated TRUNCATE; off-shelf log; preference_summary view;
+never_again; retirement last-log step; third retirement reason;
+Android; app-code test wiring; un-retire; 5-point scale resolution;
+user-authored custom tags; EXPLAINERS.closing line 3; the 220ms
+bloom window; Alert-under-external-dismissal; anon-grants durable
+ACL; commit-body/doc phrase collisions; CLAUDE.md promotion pass
+(now also: bytes-before-prompt and the blob-hash ratification
+check, both over the bar after this session).
 
 ## Working rhythm
 
-Unchanged from CLAUDE.md and handoff-specs 4. Two live observations:
-Tier 1's only defect check is the implementer's STOP -- refutation 1
-proved it load-bearing, so Tier 1 prompts should keep stating explicit
-STOP conditions rather than relying on goodwill. And a prompt that
-self-retracts an instruction inline was followed correctly once
-(2026-08-04, tombstone commit prompt) but the implementer flagged the
-skim hazard; prefer clean re-issues.
+Unchanged from CLAUDE.md and handoff-specs 4, with the channel
+change above. One live observation: the two-channel commit check
+now runs three-deep (implementer report, operator cat -A, architect
+blob hash against ratified bytes) and caught nothing this session
+-- which is the point; it is cheap and it makes transport
+corruption a non-event.
 
 ## Entry point
 
-Run the doc-staleness pass (Runnable above): four small amendments, one
-Tier 1 commit, no build, no operator dependency. It clears every stale
-status claim the session accumulated while QR slice (c)'s two blockers
-(EAS build status, provider walks) sit with the operator. Ask about the
-EAS build in the same breath -- its status is the one fact this handoff
-could not observe.
+The Green Analytics parser arc (Runnable above). It begins with the
+operator supplying the Gelato 33 PDF as a fixture and a read-only
+Phase A over the existing parser layout at
+supabase/functions/_shared/coa/ -- the architect has not yet read
+that directory end to end this session and owes that read before
+any design claim. The product finding handoff-specs 4.7 asks for:
+this session shipped one feat commit and three docs commits, and
+the feat commit is the largest product-behavior change since the
+survey cut -- the ratio is healthy, and the next arc is product
+again.
