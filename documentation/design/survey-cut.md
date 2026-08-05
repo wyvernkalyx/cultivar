@@ -1,9 +1,11 @@
 # The Survey Cut -- design (D92-D96)
 
 Status: RATIFIED and implemented 2026-07-27 across 9fb396b, b39d3a5,
-and e7d56fc. See the Amendment at the end for what the device gate
-found. This status line is amended by the commit that changes its
-truth.
+and e7d56fc. Two amendment sections close this document: the
+2026-07-27 device-gate amendment, and the 2026-08-04 slice (d)
+rulings (dismissal outcome from state, Keep/Discard, closing header,
+bloom as post-close transient). This status line is amended by the
+commit that changes its truth.
 
 North stars: `documentation/design/scoring-lexicon.md` (the durable skeleton,
 especially items 1-4), `documentation/design/session-logging.md` (the

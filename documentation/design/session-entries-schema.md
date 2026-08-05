@@ -66,13 +66,18 @@ Column decisions that are design, not accident:
   constraint tying word to value — that would hardcode vocabulary into
   the schema and fight the versioning architecture.
 - **No separate session timestamp.** The chain already knows its moment.
-- **Fact classes are distinct columns** (skeleton item 4). Amended by
-  D77 (derived from D76, not re-authored here): `energy`/`environment`/`main_goal`
-  (three axes), `fit`, `co_consumption`, `physical_state`; `context` removed.
-- **Fact-class values are text**, not enums: vocabularies are v1 and
-  provisional, user-extensible by design (lexicon doc). The multi-select
-  panels are `text[]` for the same reason (D77) — one column per fact class,
-  zero migration to add a value. Enums would put vocabulary in the schema.
+- **Fact classes were distinct columns** (skeleton item 4, amended
+  by D77, then reduced to nothing by D93): the six D77 columns --
+  `energy`, `environment`, `main_goal`, `fit`, `co_consumption`,
+  `physical_state` -- were dropped by the survey-cut migration
+  (20260727161152). The D77 amendment at the end of this document is
+  their historical record. The one fact-class column live today is
+  `effects` (D119, effects-tags.md).
+- **Fact-class values are text**, not enums: vocabularies are
+  provisional and user-extensible by design (lexicon doc). `effects`
+  is `text[]` on the same grounds (D119) -- one column per fact
+  class, zero migration to add a value. Enums would put vocabulary
+  in the schema.
 
 ## RLS (the entire policy surface)
 

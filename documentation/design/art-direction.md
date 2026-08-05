@@ -2,7 +2,9 @@
 
 Status: D83 ratified at `45e721d`; slice 1 (statics) shipped at `d24c8b4`;
 the animation-constraint section amended by the Reanimated excision chore;
-slice 2 (motion) shipped with this commit's amendments.
+slice 2 (motion) shipped with this commit's amendments; bloom
+placement superseded by the 2026-08-04 amendment (post-close
+transient; see "Screen mapping").
 
 ## Scope and inputs
 

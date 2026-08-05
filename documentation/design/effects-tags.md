@@ -122,8 +122,12 @@ usage shows the optional surface itself deters logging, that is a new
 fact and this document is amended, not defended.
 
 The build prompt for this document required the implementer to read
-survey-cut.md end to end and STOP on any contradiction. If this
-document shipped, that check passed.
+survey-cut.md end to end and STOP on any contradiction. The check
+fired once: the first run STOPped on a draft tap-count claim that
+contradicted the ratified two-tap minimum, corrected before this
+document shipped. Shipping records that the corrected draft raised
+no further STOP; the check is an implementer STOP, not proof that no
+contradiction exists.
 
 ## Non-goals
 
