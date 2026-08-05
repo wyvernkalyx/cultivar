@@ -1,18 +1,19 @@
 # Session Entries — Schema
 
-Status: design ratified (D52–D53); schema revised for the D70-D76 survey (D77, 2026-07-18; see Amendment at end); migration applied -- column set and the D85 main_goal rename both observed live 2026-07-26. This is
+Status: design ratified (D52–D53); schema revised for the D70-D76 survey (D77, 2026-07-18; see Amendment at end); migration applied -- column set and the D85 main_goal rename both observed live 2026-07-26. Column table rewritten to the live schema 2026-08-04 (D92-D96 drops, D119 effects). This is
 slice 2 of the plan in `documentation/design/session-logging.md`, which
 deliberately excluded schema. North stars: that doc (the mechanic this
 table records) and `documentation/design/scoring-lexicon.md` (the durable
 skeleton, especially items 2–4 and the D47 amendment).
 
-**Superseded in part by D92-D96** (`documentation/design/survey-cut.md`,
-2026-07-26). That pass retires the three intent axes, `fit`, and both
-multi-select panels as survey surfaces, drops their six columns, adds
-`notes`, and moves `LEXICON_VERSION` to 4. **The table below still
-describes the live schema** and remains correct until that migration
-runs. It is rewritten by the commit that applies the migration, not
-before -- the status-line rule applied to a table.
+**Rewritten for D92-D96 and D119/D121** (2026-08-04). The survey-cut
+migration (20260727161152) dropped energy, environment, main_goal,
+fit, co_consumption, and physical_state and added notes; migration
+20260804000000 added effects. The table below describes the live
+schema, MCP-observed 2026-08-04. The rewrite D92-D96 promised from
+its applying commit did not land with that commit -- corrected here,
+late. The D77 amendment at the end of this document stands as
+historical record of the retired columns.
 
 ## D52 — One table, append-only chain
 
@@ -49,17 +50,13 @@ those operations deserve.
 | `session_id` | uuid | not null | the chain key; client-generated at drop time |
 | `created_by` | uuid | not null, default `auth.uid()`, references `auth.users (id)` on delete cascade | ownership; the `coas` convention verbatim, observed at `20260708220816_create_core_schema.sql:39` — name included: the repo's convention is `created_by`, and this table does not diverge from it (ratified during this pass when the divergence was flagged) |
 | `coa_id` | uuid | not null, references `coas(id)` **on delete cascade** (D53) | what was consumed |
-| `lexicon_version` | smallint | not null | the vocabulary the answers were given under; the client sends its constant (3 today, D77/D85) |
+| `lexicon_version` | smallint | not null | the vocabulary the answers were given under; the client sends its constant (4 today, D92-D96; 5 when the effects UI ships, effects-tags.md) |
 | `overall_word` | text | not null | the raw answer — the word as tapped |
 | `overall_score` | smallint | not null, check between 1 and 5 | the hidden value at that lexicon_version |
-| `energy` | text | nullable | axis 1 (D71); null = unanswered |
-| `environment` | text | nullable | axis 2 (D71); null = unanswered |
-| `main_goal` | text | nullable | axis 3, the intent anchor (D71-D72); a null Main Goal is the aimless session (D73) (renamed by D85; documentation/design/glossary.md) |
-| `fit` | text | nullable | 3-point strings v1; intent-relative, never touches the score |
-| `co_consumption` | text[] | nullable | multi-select confound panel (D75); presence-only; null/empty both = nothing recorded |
-| `physical_state` | text[] | nullable | multi-select baseline panel (D76); presence-only; null/empty both = nothing recorded |
 | `deleted` | boolean | not null, default false | soft delete is an entry with true |
 | `created_at` | timestamptz | not null, default `now()` | the session's moment is its **first** entry's created_at |
+| `notes` | text | nullable | free-text closing reflection (D95); null = none written |
+| `effects` | text[] | nullable | flat effect-tag fact class (D119, effects-tags.md); null and empty both mean nothing recorded |
 
 Column decisions that are design, not accident:
 
