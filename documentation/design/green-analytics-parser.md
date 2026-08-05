@@ -1,6 +1,7 @@
 # Green Analytics parser
 
-Status: design ratified D122-D125, 2026-08-05. No implementation yet.
+Status: design ratified D122-D125, 2026-08-05; implemented 9ef88a6,
+gate observed at 69 tests passing.
 This line is amended by the commit that changes its truth.
 
 The first parser request driven by lived usage rather than fixture
