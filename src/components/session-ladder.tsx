@@ -1,6 +1,7 @@
 import { uuid } from 'expo-modules-core';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
+  Alert,
   Animated,
   Easing,
   Modal,
@@ -49,12 +50,19 @@ type LadderCoa = {
 // so the client collapses to null and never sends an empty array (D119's
 // restatement of the D75 collapse). lastConfirmed holds exactly this shape,
 // and every insert sends one.
+// `deleted` joins the shape because soft delete IS an entry, not an operation
+// on one (D52): the discard path writes a tombstone through the same pipeline
+// as every other write, so the flag has to travel in the snapshot rather than
+// beside it. Every non-discard write carries false explicitly instead of
+// leaning on the column default, so the payload states the entry's whole
+// truth rather than half of it.
 type Snapshot = {
   index: number;
   word: string;
   score: number;
   notes: string | null;
   effects: string[] | null;
+  deleted: boolean;
 };
 
 // Which control fired the insert. Both sources revert by derivation when their
@@ -62,8 +70,34 @@ type Snapshot = {
 // advances to closing on confirm while the closing write ends the survey
 // (D95). The closing source covers the whole screen, not the note alone: one
 // insert carries the note and the tags together (D95's exception extended to
-// the screen by the 2026-08-04 ruling).
-type InsertSource = 'drop' | 'closing';
+// the screen by the 2026-08-04 ruling). 'discard' is the tombstone write: the
+// same pipeline, the same D54/D55 grammar, a snapshot whose deleted is true.
+type InsertSource = 'drop' | 'closing' | 'discard';
+
+// How this presentation ended, reported to the owner.
+//
+// The outcome is derived from STATE — whether a score ever confirmed — and
+// never from which control fired. That is the whole correction of the
+// 2026-08-04 device-gate defect: page-1's Close reported 'cancelled'
+// unconditionally, so a rated session reached by Back and then closed from the
+// top was announced as if nothing had been logged, while its row sat on the
+// shelf. A control knows what the user pressed; only the state knows what
+// exists.
+//
+// - 'logged'    — a score confirmed and its row stands. Every non-discard
+//                 dismissal of a rated session reports this, including an
+//                 outside or system dismissal: closing from the top saves
+//                 (operator ruling).
+// - 'cancelled' — nothing was ever confirmed, so nothing was written.
+// - 'discarded' — a score confirmed and the user then discarded it; a
+//                 tombstone row was written. Distinct from 'cancelled'
+//                 because a write happened, and reporting a write as
+//                 'cancelled' would be a false report to the owner.
+//
+// A FAILED insert is none of these: it does not dismiss at all (D54), so the
+// surface stays open on the error and the owner is never told anything
+// happened. Only 'logged' earns the completion transient.
+export type CloseOutcome = 'logged' | 'cancelled' | 'discarded';
 
 // The survey is two screens (D92): the score pill screen, then closing. The
 // score screen advances on insert CONFIRM (not on tap); closing terminates.
@@ -136,91 +170,26 @@ function SavingSpinner({ color }: { color: string }) {
   );
 }
 
-// The completion bloom (D83 Unfurl 2a), redrawn to reference 05: a bloom mark
-// of rounded bars over a center dot, accent on a 14%-accent circle. Reference
-// 05 describes the mark as THREE rotated bars; a bar spans the full diameter,
-// so three bars at 60deg apart and six center-rooted arms at 60deg apart are
-// the same six-fold figure. The six-arm form is what is drawn here, because it
-// is the form the six ratified Animated.Values already drive — the motion
-// budget, count, stagger, timings, and the held-settled latch are untouched
-// (D83), and only the art they animate is redrawn.
-//
-// The value names (petalAnims, calyxAnim) keep their ratified spelling for the
-// same reason: the values are the ratified thing. The style keys below carry
-// the reference's vocabulary.
-//
-// All motion is passed in as native-driven Animated.Values owned by
-// SessionLadder, so a Back-and-return to closing shows the held (settled)
-// bloom rather than replaying it. Each arm wrapper carries a static 60deg
-// rotation; the inner bar scales up from its base (transformOrigin 50% 100%).
-function CompletionBloom({
-  petalAnims,
-  calyxAnim,
-  captionAnim,
-}: {
-  petalAnims: Animated.Value[];
-  calyxAnim: Animated.Value;
-  captionAnim: Animated.Value;
-}) {
-  return (
-    <View style={styles.bloomWrap}>
-      <View style={styles.bloomArt}>
-        <View style={styles.bloomCircle} />
-        {petalAnims.map((anim, i) => (
-          <View key={i} style={[styles.bloomBarRoot, { transform: [{ rotate: `${i * 60}deg` }] }]}>
-            <Animated.View
-              style={[
-                styles.bloomBar,
-                {
-                  opacity: anim.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0, 1, 1] }),
-                  transform: [
-                    { scaleY: anim.interpolate({ inputRange: [0, 1], outputRange: [0.08, 1] }) },
-                  ],
-                },
-              ]}
-            />
-          </View>
-        ))}
-        <Animated.View
-          style={[
-            styles.bloomDot,
-            {
-              opacity: calyxAnim.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 1, 1] }),
-              transform: [
-                { scale: calyxAnim.interpolate({ inputRange: [0, 1], outputRange: [0.2, 1] }) },
-              ],
-            },
-          ]}
-        />
-      </View>
-      <Animated.View
-        style={{
-          opacity: captionAnim,
-          transform: [
-            { translateY: captionAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }) },
-          ],
-        }}>
-        <ThemedText style={styles.loggedText}>Logged.</ThemedText>
-        <ThemedText style={styles.loggedSub}>On the shelf with the rest.</ThemedText>
-      </Animated.View>
-    </View>
-  );
-}
-
 // The shared sequence-screen header (D83 header block, over D80/D81): a styled
 // leading control chip, then a left-aligned block — a quiet brand label on top,
 // the product line dominant beneath it (D81: every screen names the product, so
 // the user never rates an unnamed thing), and the screen's question as an
 // accent subheading. The identification is never fabricated: whichever of brand
 // / strain the COA carries shows, and the dominant line always names something.
-// A screen that asks nothing (closing) passes no title and shows the
-// identification alone.
+//
+// Both halves are independently optional, which is what lets the two screens
+// use one header for opposite compositions: the score screen passes the COA and
+// its question, closing passes its question alone. Omitting the identification
+// on closing knowingly departs from D81's every-screen-names-the-product
+// (operator ruling, 2026-08-04) — by then the product has been named on the
+// screen that did the rating, and the remaining question is about the session,
+// not about what it was.
 function SequenceHeader({
   leadingLabel,
   onLeading,
   disabled,
-  brand,
-  strain,
+  brand = null,
+  strain = null,
   title,
   saving = false,
   onInfo,
@@ -228,8 +197,8 @@ function SequenceHeader({
   leadingLabel: string;
   onLeading: () => void;
   disabled: boolean;
-  brand: string | null;
-  strain: string | null;
+  brand?: string | null;
+  strain?: string | null;
   title?: string;
   // D83 Layer 1 saving state: the header dims to 40% while an insert is on
   // the wire (the tapped pill stays lit; siblings dim to 32%).
@@ -275,10 +244,13 @@ function SequenceHeader({
         )}
         {/* Wrap-only (D83, ratified item 1): up to two lines at full size, no
             shrink. A real overflow at the device gate is the only thing that
-            reopens it. */}
-        <ThemedText style={styles.productLine} numberOfLines={2}>
-          {productLine}
-        </ThemedText>
+            reopens it. Absent entirely when no identification was passed —
+            never an empty dominant line holding its own height. */}
+        {productLine !== '' && (
+          <ThemedText style={styles.productLine} numberOfLines={2}>
+            {productLine}
+          </ThemedText>
+        )}
         {title !== undefined && (
           <ThemedText style={styles.question} numberOfLines={2}>
             {title}
@@ -535,9 +507,17 @@ const sameTags = (a: string[] | null, b: string[] | null) =>
  * under the same grammar; a failed revision reverts to the last confirmed truth
  * by derivation (D55).
  *
- * Closing (D92) carries the product identification (D81), the completion bloom,
- * the effect tags (D119/D120), an optional free-text note (D95), and Close. The
- * note is the one deliberate exception to tap-is-the-save — text has no tap —
+ * Closing (D92) carries its own question as its header — the product
+ * identification leaves this screen by the 2026-08-04 ruling, knowingly
+ * amending D81 here — plus the effect tags (D119/D120), an optional free-text
+ * note (D95), and Close. The completion
+ * bloom is NOT here: the 2026-08-04 ruling moved it off this screen entirely
+ * and made it a post-close transient the owner plays over the landing surface
+ * (completion-bloom.tsx), because the middle this screen used to spend on it is
+ * now the tag surface. This component therefore renders no completion moment at
+ * all and owns no motion for one; it only reports how it ended.
+ *
+ * The note is the one deliberate exception to tap-is-the-save — text has no tap —
  * and the 2026-08-04 ruling extends that exception to the whole screen: the
  * tags and the note ride ONE revision insert when Close fires, never
  * keystroke-by-keystroke and never a second write per surface. Closing with
@@ -547,6 +527,20 @@ const sameTags = (a: string[] | null, b: string[] | null) =>
  * restatement of the D75 collapse for the tags). Every write rides the one
  * insertEntry pipeline under the same D54/D55 grammar.
  *
+ * How a presentation ENDS is derived from state, never from the control that
+ * ended it (2026-08-04, closing a device-gate defect where page-1's Close
+ * announced 'cancelled' about a session already on the shelf). One rule covers
+ * every non-discard exit — page-2's Close, and the owner's own dismissal path
+ * through onLoggedChange: a confirmed score means 'logged', its absence means
+ * 'cancelled'. Closing from the top therefore keeps the session, by ruling.
+ *
+ * The one exit that destroys anything asks first. Page-1's Close on a rated
+ * session raises a two-button confirmation; Discard appends a soft-delete
+ * tombstone (D52: a delete IS an entry) through the same insert pipeline and
+ * the same D54/D55 grammar as every other write, and a tombstone that fails to
+ * land leaves the survey open on its error rather than dismissing — a discard
+ * never gets to look like it worked.
+ *
  * The three intent axes, fit, and the two confound panels retired as questions
  * with D93 and as columns with D94. Nothing removed ever touched the score, the
  * band, or the shelf (skeleton item 1), so this cut cannot corrupt them.
@@ -555,10 +549,23 @@ export function SessionLadder({
   coa,
   onClose,
   onBusyChange,
+  onLoggedChange,
 }: {
   coa: LadderCoa;
-  onClose: () => void;
+  // Reports how the presentation ended, because the owner's post-close
+  // behavior differs by outcome (2026-08-04: the completion transient plays on
+  // 'logged' and never on 'cancelled'). Dismissal itself is unconditional and
+  // unchanged — this argument tells the owner what happened, it does not ask
+  // permission.
+  onClose: (outcome: CloseOutcome) => void;
   onBusyChange: (busy: boolean) => void;
+  // Whether a score has confirmed and still stands. The owner's Modal owns the
+  // one dismissal path this component cannot see (onRequestClose), and that
+  // path has to derive its outcome from the same state every other path does
+  // (2026-08-04). This is the guard's line of sight into that state, the same
+  // shape and the same reason as onBusyChange: the ladder owns the fact, the
+  // owner needs to read it.
+  onLoggedChange: (logged: boolean) => void;
 }) {
   const insets = useSafeAreaInsets();
   // One in-flight insert at a time (D54): the source whose insert is on
@@ -631,52 +638,6 @@ export function SessionLadder({
     return () => anim.stop();
   }, [phase, phaseAnim]);
 
-  // Completion bloom (D83 Unfurl 2a): six petals, the calyx, and the caption,
-  // each a native-driven Animated.Value owned here so they survive the closing
-  // screen's unmount/remount on a Back-and-return. `bloomPlayed` latches the
-  // one play — on revisit the effect early-returns and the values render at
-  // their settled 1, so the bloom holds and never replays (gate requirement).
-  const [petalAnims] = useState(() => Array.from({ length: 6 }, () => new Animated.Value(0)));
-  const [calyxAnim] = useState(() => new Animated.Value(0));
-  const [captionAnim] = useState(() => new Animated.Value(0));
-  // A genuine mutable latch, read only inside the effect (never in render).
-  const bloomPlayed = useRef(false);
-  useEffect(() => {
-    if (phase !== 'closing' || bloomPlayed.current) {
-      return;
-    }
-    bloomPlayed.current = true;
-    // Petals unfurl on a 70ms stagger with the ratified cubic-bezier; the calyx
-    // swells alongside; the caption rises after a 500ms beat. Nothing loops —
-    // each timing settles at 1 and holds (play-once).
-    Animated.parallel([
-      Animated.stagger(
-        70,
-        petalAnims.map((anim) =>
-          Animated.timing(anim, {
-            toValue: 1,
-            duration: 700,
-            easing: Easing.bezier(0.2, 0.8, 0.3, 1),
-            useNativeDriver: true,
-          })
-        )
-      ),
-      Animated.timing(calyxAnim, {
-        toValue: 1,
-        duration: 700,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(captionAnim, {
-        toValue: 1,
-        duration: 600,
-        delay: 500,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [phase, petalAnims, calyxAnim, captionAnim]);
-
   // The D92 screen order, now linear and unconditional: the score screen leads
   // into closing, the one terminal. Main Goal's fit branch retired with the
   // question (D93), so nothing decides this any more.
@@ -692,6 +653,13 @@ export function SessionLadder({
     setSaveError(null);
     setPhase(backTarget());
   };
+
+  // The dismissal outcome, derived from state rather than from the control the
+  // user pressed (2026-08-04). Every non-discard exit runs through this: a
+  // confirmed score means the row is on the shelf and the survey ended in a
+  // logged session, whichever screen and whichever affordance ended it. The
+  // discard path does not use it — it knows what it did.
+  const dismissOutcome = (): CloseOutcome => (lastConfirmed === null ? 'cancelled' : 'logged');
 
   // The save attempt (D54): every path is the same insert — same chain,
   // full snapshot (D52). A score tap sends its rung with the note carried
@@ -718,12 +686,24 @@ export function SessionLadder({
       onBusyChange(false);
       if (!failed) {
         setLastConfirmed(snapshot);
+        // The owner reads this to answer its own dismissal path. A tombstone
+        // confirms that the session no longer stands, so it reports false.
+        onLoggedChange(!snapshot.deleted);
+        // A confirmed tombstone ends the survey as a discard: the row exists,
+        // the session does not, and nothing gets celebrated (2026-08-04).
+        if (source === 'discard') {
+          onClose('discarded');
+          return;
+        }
         // A confirmed closing write ends the survey (D95: it writes once, on
         // Close, and Close is what fired it) rather than advancing a phase —
-        // closing is already the terminal. A confirmed score advances on
-        // CONFIRM, not on tap (D79's rule, unchanged).
+        // closing is already the terminal. The outcome still derives rather
+        // than being asserted here: reaching this screen required a confirmed
+        // score, so the derivation yields 'logged' — but it yields it from the
+        // state, like every other exit. A confirmed score advances on CONFIRM,
+        // not on tap (D79's rule, unchanged).
         if (source === 'closing') {
-          onClose();
+          onClose(dismissOutcome());
           return;
         }
         setPhase((current) => nextScreen(current));
@@ -733,17 +713,23 @@ export function SessionLadder({
       // (D55): clearing the source's pending state above already reverted the
       // rendered answer to the last confirmed value, and a failed closing write
       // leaves the surface on closing with the note draft and the tapped tags
-      // intact. Retry is re-tapping — the pill on the score screen, Close on
-      // closing.
+      // intact. A failed TOMBSTONE is the same rule and matters most: the
+      // survey stays open on the error rather than dismissing on a delete that
+      // did not land, so a discard can never look like it worked. Retry is
+      // re-tapping — the pill on the score screen, Close on closing, Close and
+      // Discard again for the tombstone.
       setSaveError("Couldn't save — check your connection.");
     };
 
-    // created_by and deleted are server defaults, never sent. Full
-    // snapshot (D52): the note and the tags ride every insert at their
-    // snapshot values — carried forward on a score tap, changed together on
-    // the one closing write (D95, D119). On the lazy path both stay null (the
-    // overall word is the only mandatory field). The six retired fact columns
-    // are gone from the schema (D94) and are not sent.
+    // created_by is a server default, never sent. Full snapshot (D52): the
+    // note and the tags ride every insert at their snapshot values — carried
+    // forward on a score tap, changed together on the one closing write (D95,
+    // D119). On the lazy path both stay null (the overall word is the only
+    // mandatory field). `deleted` is now sent EXPLICITLY on every write rather
+    // than left to the column default, because the discard path needs it true
+    // and a field that is sometimes stated and sometimes defaulted is the kind
+    // of half-truth this payload should not carry. The six retired fact
+    // columns are gone from the schema (D94) and are not sent.
     supabase
       .from('session_entries')
       .insert({
@@ -754,6 +740,7 @@ export function SessionLadder({
         overall_score: snapshot.score,
         notes: snapshot.notes,
         effects: snapshot.effects,
+        deleted: snapshot.deleted,
       })
       .abortSignal(controller.signal)
       .then(
@@ -778,7 +765,7 @@ export function SessionLadder({
     setPendingScore(rung.word);
     insertEntry(
       lastConfirmed === null
-        ? { index, word: rung.word, score: rung.score, notes: null, effects: null }
+        ? { index, word: rung.word, score: rung.score, notes: null, effects: null, deleted: false }
         : { ...lastConfirmed, index, word: rung.word, score: rung.score },
       'drop'
     );
@@ -806,10 +793,53 @@ export function SessionLadder({
       lastConfirmed === null ||
       (normalizedNote === lastConfirmed.notes && sameTags(normalizedTags, lastConfirmed.effects))
     ) {
-      onClose();
+      // The clean no-write close, reported by derivation like every other
+      // exit: reaching this screen at all means a score confirmed, so the
+      // session is on the shelf whether or not this screen added anything to
+      // it.
+      onClose(dismissOutcome());
       return;
     }
     insertEntry({ ...lastConfirmed, notes: normalizedNote, effects: normalizedTags }, 'closing');
+  };
+
+  // The score screen's leading control (2026-08-04). It is the flow's entry, so
+  // it renders Close rather than Back — but what Close MEANS depends on whether
+  // anything is on the shelf yet, not on which screen the user is looking at.
+  //
+  // Nothing confirmed: a plain cancel, exactly as before. Nothing was written,
+  // so nothing is being thrown away and a confirmation would be friction over
+  // an empty set.
+  //
+  // Something confirmed (the Back-and-revise case the device gate caught): the
+  // session already exists, and dismissing from here would either silently keep
+  // it — the old behavior, which reported 'cancelled' about a live row — or
+  // silently destroy it. Both are the surface deciding something the user
+  // didn't say. So it asks, in the app's own two-button destructive idiom
+  // (coa-editor's Delete row, coa-retire's confirmations): Keep leaves the
+  // survey exactly where it stood and writes nothing at all; Discard writes a
+  // soft-delete tombstone through the one insert pipeline, under the same D54
+  // busy/abort/error grammar as every other write. Copy here is
+  // operator-reviewable at the gate.
+  const closeFromScore = () => {
+    if (lastConfirmed === null) {
+      onClose('cancelled');
+      return;
+    }
+    Alert.alert('Discard this session?', "It's already on your shelf. Discard removes it.", [
+      // Cancel role first, destructive second — the ordering the app's other
+      // destructive confirmations already use.
+      { text: 'Keep', style: 'cancel' },
+      {
+        text: 'Discard',
+        style: 'destructive',
+        // A tombstone is an ENTRY (D52): the confirmed snapshot verbatim with
+        // deleted true, appended to the same chain. Nothing is rewritten and
+        // nothing is erased — the prior entries stay exactly as they were
+        // beneath it, which is the whole point of an append-only chain.
+        onPress: () => insertEntry({ ...lastConfirmed, deleted: true }, 'discard'),
+      },
+    ]);
   };
 
   // The confirmed (or pending) score word (D80): the tapped word while its
@@ -840,9 +870,10 @@ export function SessionLadder({
             anchored pills, Loved top to Hated bottom (D51's up-is-better as
             visual order). Tap is the save (D50 contract, D54 pending). No
             Skip — score is the skeleton's mandatory field. The leading
-            control is Close (this is the flow's entry, there is no Back):
-            it dismisses without writing, disabled while an insert is on the
-            wire (D54). */}
+            control is Close (this is the flow's entry, there is no Back);
+            it dismisses without writing when nothing is confirmed and asks
+            before discarding when something is, and it is disabled while an
+            insert is on the wire (D54). */}
         {phase === 'ladder' && (
           <PillScreen
             brand={coa.brand}
@@ -857,15 +888,18 @@ export function SessionLadder({
             disabled={inFlight}
             error={saveError}
             onSelect={tapScore}
-            onLeading={onClose}
+            onLeading={closeFromScore}
             leadingLabel="Close"
           />
         )}
 
         {/* The closing screen (D92): the survey's terminus, now the second of
-            two. It asks nothing, so its header shows the product line alone
-            (D81: no title passed) and carries no glossary trigger (D86.6's
-            structural exclusion, restated by D96). It holds the optional
+            two. Its header is the score screen's heading idiom with the
+            product identification omitted (operator ruling, 2026-08-04,
+            knowingly amending D81 for this one screen): the product was named
+            on the screen that rated it, and what is left to ask is about the
+            session. It still carries no glossary trigger (D86.6's structural
+            exclusion, restated by D96). It holds the optional
             free-text note (D95), whose single revision insert fires on Close,
             and Close itself — both disabled while an insert is on the wire
             (D54). Back returns to the score screen, which is where revision by
@@ -896,24 +930,25 @@ export function SessionLadder({
             automaticallyAdjustKeyboardInsets
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}>
+            {/* No brand or strain passed: this screen's header is its question
+                alone, in the same accent the score screen's question carries
+                (2026-08-04). Back and the leading-control geometry are
+                unchanged. */}
             <SequenceHeader
               leadingLabel="Back"
               onLeading={goBack}
               disabled={inFlight}
-              brand={coa.brand}
-              strain={coa.strain}
+              title="Anything else? (optional)"
             />
-            {/* The completion bloom (D83 Unfurl 2a) occupies closing's empty
-                middle. Per the ratified screen mock the bloom state replaces
-                the explainer line (the middle hosts one or the other, not
-                both); EXPLAINERS.closing remains the copy of record. */}
-            <View style={styles.explainerWrap}>
-              <CompletionBloom
-                petalAnims={petalAnims}
-                calyxAnim={calyxAnim}
-                captionAnim={captionAnim}
-              />
-            </View>
+            {/* Closing's middle renders NOTHING as of the 2026-08-04 ruling.
+                The bloom that used to hold it is now a post-close transient
+                (completion-bloom.tsx) and the explainer line it displaced was
+                already not rendered here (art-direction.md's closing-screen
+                resolution; EXPLAINERS.closing remains the copy of record). What
+                survives is the flex that made the actions bottom-anchored: the
+                slack is the ratified layout property, not the thing that filled
+                it. */}
+            <View style={styles.closingMiddle} />
             <View style={styles.closingActions}>
               {/* The effect tags (D119/D120): the structured half of the same
                   optional reflection the note already carried, so they sit with
@@ -1164,6 +1199,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: Dash.text,
   },
+  // Closing's empty middle: the same flex:1 slack explainerWrap gave it, with
+  // nothing rendered into it. It is what keeps the tags, the note, and Close
+  // bottom-anchored in thumb reach (D83) on a short screen; when the tags
+  // overflow the frame the ScrollView takes over and this contributes nothing.
+  closingMiddle: {
+    flex: 1,
+  },
   closingActions: {
     gap: Spacing.two,
   },
@@ -1176,15 +1218,18 @@ const styles = StyleSheet.create({
   effectGroup: {
     gap: Spacing.two,
   },
-  // The header block's eyebrow idiom (brandLabel), one step quieter: this
-  // labels a group of answers, it is not one.
+  // The header block's eyebrow idiom (brandLabel) in the survey's question
+  // color: the operator ruled these labels the same green the score screen's
+  // question heading carries (2026-08-04), so they read as asked-for rather
+  // than as fine print. The token is shared with that heading, never a
+  // second copy of its value.
   effectGroupLabel: {
     fontFamily: SORA_MEDIUM,
     fontSize: 13,
     // .14em at 13pt, matching the eyebrow's tracking ratio.
     letterSpacing: 1.8,
     textTransform: 'uppercase',
-    color: Dash.textMuted,
+    color: Dash.accent,
   },
   effectRow: {
     flexDirection: 'row',
@@ -1238,82 +1283,6 @@ const styles = StyleSheet.create({
     fontFamily: SORA_SEMIBOLD,
     fontSize: 16,
     color: Dash.bg,
-  },
-  // The completion bloom (D83 Unfurl 2a). Art box over caption, centered.
-  bloomWrap: {
-    alignItems: 'center',
-    gap: Spacing.five,
-  },
-  // The bloom art field; the bars root at its center and overflow it.
-  bloomArt: {
-    width: 140,
-    height: 140,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // The 14%-accent circle the mark sits on (reference 05). It replaces the
-  // former blur-approximating glow disc: the reference names a defined circle,
-  // which RN core draws exactly, so nothing here is an approximation any more.
-  bloomCircle: {
-    position: 'absolute',
-    top: 14,
-    left: 14,
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    backgroundColor: 'rgba(126, 217, 155, 0.14)',
-  },
-  // One arm's 0x0 root at the art center; its static 60deg rotation is applied
-  // inline per index, and the animated bar hangs off it.
-  bloomBarRoot: {
-    position: 'absolute',
-    left: '50%',
-    top: '50%',
-    width: 0,
-    height: 0,
-  },
-  // One arm of the mark (reference 05): a fully rounded 22x46 bar running from
-  // the center outward, rooted at its base so scaleY unfurls outward. Six of
-  // these at 60deg is the reference's three rotated bars; the inner ends meet
-  // under the center dot.
-  bloomBar: {
-    position: 'absolute',
-    left: -11,
-    top: -46,
-    width: 22,
-    height: 46,
-    borderRadius: 11,
-    backgroundColor: Dash.accent,
-    transformOrigin: '50% 100%',
-  },
-  // The center dot (reference 05): 22pt at the art center, over the bars.
-  bloomDot: {
-    position: 'absolute',
-    left: '50%',
-    top: '50%',
-    width: 22,
-    height: 22,
-    marginLeft: -11,
-    marginTop: -11,
-    borderRadius: 11,
-    backgroundColor: Dash.text,
-  },
-  // "Logged." in the reference's display role (Sora 800, 28/1.1).
-  loggedText: {
-    fontFamily: SORA_DISPLAY,
-    fontSize: 28,
-    lineHeight: 31,
-    textAlign: 'center',
-    color: Dash.text,
-  },
-  // The serif-italic completion line (D83), reference 05's copy.
-  loggedSub: {
-    fontFamily: SERIF_ITALIC,
-    fontStyle: 'italic',
-    fontSize: 15,
-    marginTop: Spacing.half,
-    textAlign: 'center',
-    color: Dash.textMuted,
   },
   // The glossary sheet (D86): a read-only pageSheet, re-themed only. Its
   // entries, its trigger, and its read-only nature are untouched (D96). Its

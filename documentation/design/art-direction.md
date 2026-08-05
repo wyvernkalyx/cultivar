@@ -105,6 +105,14 @@ serif line, and the explainer is emptied (`screen.dc.html:158`). So
 closing renders the bloom, not explainer line 3. Line 3 stays ratified
 copy but is not rendered on closing; flagged to the banked copy review.
 
+Amendment (2026-08-04): the bloom left the closing screen. Operator
+ruling: it plays as a post-close transient over the landing surface
+(completion-bloom.tsx) -- opaque Dash.bg ground, tap-anywhere skips,
+costs at most one tap -- and closing's middle renders nothing, keeping
+only the flex slack that bottom-anchors the actions. The mapping row
+above and this resolution are superseded on placement; the Unfurl 2a
+art and motion spec is unchanged and is what the transient plays.
+
 ## Decision 1 -- fonts (operator-ratified 2026-07-20, absorbed)
 
 Bundle Sora (UI) and Newsreader italic (explainers) via `expo-font`.

@@ -486,3 +486,25 @@ The app has now logged sessions end to end. **None of them is a real
 session.** The nine entries above are gate taps. The cut exists so the survey
 is cheap enough to actually use; using it is the whole point, and it has not
 happened yet.
+
+### Amendment (2026-08-04): slice (d) rulings
+
+Four operator rulings landed together, gated on device with MCP read-backs:
+
+- Closing's header is its own question, "Anything else? (optional)", in the
+  score screen's heading idiom. The product identification leaves the screen,
+  knowingly amending D81 here: page 1 named the product seconds earlier, and
+  the flow was entered from its card.
+- A dismissal's outcome derives from state, never from the control that fired
+  it. This closes a device-gate defect where page-1 Close after a Back
+  announced a cancel about a session already on the shelf. Closing from the
+  top keeps a rated session.
+- Page-1 Close on a rated session asks Keep or Discard. Discard appends a
+  soft-delete tombstone through the one insert pipeline -- D52's append-only
+  delete finally acquiring its UI, not a new mechanic. A failed tombstone
+  never dismisses. Every write now states deleted explicitly rather than
+  leaning on the column default.
+- The completion bloom is a post-close transient over an opaque Dash.bg
+  ground with tap-anywhere skip (art-direction.md carries the placement
+  amendment). It plays only on a logged outcome: never on a cancel, never on
+  a discard.

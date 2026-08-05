@@ -3,13 +3,14 @@ import { FlatList, Modal, Pressable, RefreshControl, StyleSheet, Text, View } fr
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { CoaDetail } from '@/components/coa-detail';
+import { CompletionBloomOverlay } from '@/components/completion-bloom';
 import { OffShelfList } from '@/components/off-shelf-list';
 import {
   PreferenceSummary,
   type PreferenceSummaryProps,
   type RungWord,
 } from '@/components/preference-summary';
-import { SessionLadder } from '@/components/session-ladder';
+import { SessionLadder, type CloseOutcome } from '@/components/session-ladder';
 import {
   ShelfCard,
   type CardSession,
@@ -159,6 +160,18 @@ export function ShelfList({ onSummary }: ShelfListProps) {
   // The ladder owns the in-flight lifecycle; this is the guard's line of
   // sight into it.
   const [logBusy, setLogBusy] = useState(false);
+  // The completion transient (operator ruling, 2026-08-04): the bloom left the
+  // closing screen and plays here instead, over the shelf the survey dismisses
+  // back to. Mounted only by a ladder close that actually logged — a cancel
+  // sets nothing, and a failed insert never closes the ladder at all (D54), so
+  // neither can reach it. It unmounts itself by reporting completion.
+  const [bloomVisible, setBloomVisible] = useState(false);
+  // Whether the open ladder has a session on the shelf, reported by it (D54's
+  // reporting shape, second instance). The modal's own dismissal path is the
+  // one exit the ladder cannot see, and 2026-08-04 requires it to derive its
+  // outcome from the same state every other exit does instead of asserting a
+  // cancel it never observed.
+  const [logHasEntry, setLogHasEntry] = useState(false);
 
   // Promise-callback form, not an async body: setState stays out of the
   // synchronous effect path (react-hooks/set-state-in-effect), matching the
@@ -232,8 +245,20 @@ export function ShelfList({ onSummary }: ShelfListProps) {
 
   // Every ladder-close path refetches (D63): a session may have landed, and
   // a stale band beside a fresh entry is the defect the refetch exists for.
-  const closeLadder = () => {
+  // The outcome decides one further thing and nothing else: whether the
+  // completion transient plays. Dismissal and refetch are unconditional, as
+  // they were before the ladder reported an outcome at all.
+  const closeLadder = (outcome: CloseOutcome) => {
     setLoggingCoa(null);
+    // The gate is 'logged' and only 'logged'. A discard wrote a row, so it
+    // refetches like any other write, but a session the user just threw away
+    // is not a session to celebrate.
+    if (outcome === 'logged') {
+      setBloomVisible(true);
+    }
+    // Reset for the next presentation: this flag describes the ladder that is
+    // open, and no ladder is open now.
+    setLogHasEntry(false);
     load();
   };
 
@@ -349,6 +374,13 @@ export function ShelfList({ onSummary }: ShelfListProps) {
           </ThemedText>
         }
       />
+      {/* The completion transient (2026-08-04). It sits here, over the shelf,
+          because the shelf IS the surface the survey lands on when its modal
+          dismisses — and because this component already knows the one fact that
+          licenses it, which is how the ladder ended. It fills the screen and
+          takes no touches, so the list underneath stays scrollable and every
+          card stays tappable while it plays. */}
+      {bloomVisible && <CompletionBloomOverlay onDone={() => setBloomVisible(false)} />}
       {/* Card detail (D45): same presentation family as AddToShelfModal.
           Owning the modal here dissolves the post-delete refresh problem —
           the list owns load(), so a detail-context delete closes and
@@ -405,14 +437,23 @@ export function ShelfList({ onSummary }: ShelfListProps) {
         animationType="slide"
         presentationStyle="fullScreen"
         onRequestClose={() => {
-          // Inert while an insert is in flight (D54).
+          // Inert while an insert is in flight (D54). The outcome derives from
+          // the ladder's reported state, not from the fact that dismissal came
+          // from out here (2026-08-04): closing from the top keeps a rated
+          // session and says so, rather than announcing a cancel about a row
+          // that exists.
           if (!logBusy) {
-            closeLadder();
+            closeLadder(logHasEntry ? 'logged' : 'cancelled');
           }
         }}>
         {loggingCoa !== null && (
           <GestureHandlerRootView style={styles.gestureRoot}>
-            <SessionLadder coa={loggingCoa} onClose={closeLadder} onBusyChange={setLogBusy} />
+            <SessionLadder
+              coa={loggingCoa}
+              onClose={closeLadder}
+              onBusyChange={setLogBusy}
+              onLoggedChange={setLogHasEntry}
+            />
           </GestureHandlerRootView>
         )}
       </Modal>
