@@ -5,7 +5,9 @@ by the commit that changes its truth. Slice (b) scope amended
 2026-08-04: the config plugin joins the deps commit. Slice (b)
 shipped at 635ac01; the post-635ac01 EAS build passed its boot gate
 2026-08-05. D117 amended (third detection prong) and provider
-validation walks appended 2026-08-05; slice (c) is unblocked.
+validation walks appended 2026-08-05. Slice (c) shipped at 7b1985d
+and passed its device gate 2026-08-05; gate observations are
+appended at the end of this document.
 
 ## Purpose
 
@@ -186,3 +188,52 @@ cookie-free fetchability for this provider is observed at the slice
 - Every "rendered inline" above is a Safari observation. The
   app-WebView prediction (inline render, no file-download event) is
   stated as a prediction and gated on device.
+
+## Slice (c) gate observations -- 2026-08-05
+
+Operator device gate plus architect MCP read-back, recorded here so
+the walks appendix above is read with its corrections.
+
+**Imports.** Three real jars end to end through confirm to saved
+rows: two Kaycha (Sherbadelic, Permanent Shade) and one DRS Testing
+(Animal Face) -- a lab no walk recorded, arriving through the same
+1a4-to-blob path and parsing successfully. Read-back: all three rows
+carry pdf_object_path and pdf_sha256; storage objects moved 3 to 6.
+The read-back also refutes a stale code comment: the deployed
+ingest function IS hashing (add-to-shelf-modal.tsx still says the
+hasher is committed but not deployed; a comment sweep is banked).
+
+**Detection.** The HEAD prong raised the affordance over an inline
+blob COA with no suffix -- the 2026-08-05 amendment's recorded
+prediction, CONFIRMED on device. The suffix prong raised it on the
+durable Green Analytics link. The download-event prong went
+unexercised: no provider handed off a download. Negative controls
+observed: HTML pages raised nothing, and a forced manual import of
+an HTML page surfaced the 400 and wrote no row -- fail-closed as
+designed.
+
+**Age gate, and an architect refutation.** The fresh in-app browser
+DID surface Aeterna's age gate; the user clicked through, per
+design. The walks appendix's possibly-cookied flag was correct, and
+the architect's interim generalization in chat ("these providers
+simply don't gate") is refuted by observation. The 1a4 path showed
+no gate, cookied or fresh.
+
+**The Aeterna package carries two QRs (photo-observed).** The
+lot-label sticker's Metrc QR opens a Metrc verifID page for the
+package; for this package that page renders lab data as HTML tables
+and no PDF was found on it, so acquisition had nothing to acquire.
+The brand's own QR opens the age-gated site, and the walk-recorded
+index-to-PDF path detected, downloaded, and hashed the durable PDF.
+The 1a4 landing pages of the Kaycha jars are the same Metrc verifID
+platform with a View COA control -- the platform is shared; whether
+a package's page links a PDF varies by package.
+
+**The one gap is the parser layer, and it is the next lived
+demand.** The Green Analytics PDF cleared every acquisition layer
+and landed in the empty-parse guard: no Green Analytics parser
+exists, so a real jar on the shelf is unreadable today. That is the
+first parser request driven by lived usage rather than fixtures --
+a pure-logic slice, Jest-gated, with the durable Gelato 33 PDF as
+its first fixture. It is the top runnable item in the session
+handoff.
