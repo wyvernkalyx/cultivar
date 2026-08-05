@@ -10,6 +10,7 @@ import type { SourceLab } from './types.ts';
  */
 export function identifyLab(text: string): SourceLab {
   if (/Kaycha\s+Labs/i.test(text)) return 'kaycha';
+  if (/Green\s+Analytics/i.test(text)) return 'green-analytics';
   if (/DRS\s+Testing/i.test(text) || /Con\w*dent\s+LIMS/i.test(text)) {
     return 'drs-confident';
   }

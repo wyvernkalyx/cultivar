@@ -20,7 +20,10 @@ function terpene(coa: CoaResult, name: string) {
 }
 
 interface FixtureCase {
+  /** Human label for the describe block. */
   strain: string;
+  /** The strain exactly as the parser returns it, casing included. */
+  parsedStrain: string;
   file: string;
   sourceLab: CoaResult['sourceLab'];
   totalThc: number;
@@ -37,6 +40,7 @@ interface FixtureCase {
 const CASES: FixtureCase[] = [
   {
     strain: 'Animal Face',
+    parsedStrain: 'Animal Face',
     file: 'animal-face.pdf',
     sourceLab: 'drs-confident',
     totalThc: 32.69,
@@ -51,6 +55,7 @@ const CASES: FixtureCase[] = [
   },
   {
     strain: 'Rainbow Runtz',
+    parsedStrain: 'RAINBOW RUNTZ',
     file: 'rainbow-runtz.pdf',
     sourceLab: 'kaycha',
     totalThc: 22.7326,
@@ -65,6 +70,7 @@ const CASES: FixtureCase[] = [
   },
   {
     strain: 'Cosmic Cereal',
+    parsedStrain: 'Cosmic Cereal',
     file: 'cosmic-cereal.pdf',
     sourceLab: 'kaycha',
     totalThc: 31.8081,
@@ -78,7 +84,23 @@ const CASES: FixtureCase[] = [
     testedDate: '2026-04-28',
   },
   {
+    strain: 'Gelato 33',
+    parsedStrain: 'Gelato 33',
+    file: 'gelato-33.pdf',
+    sourceLab: 'green-analytics',
+    totalThc: 23.574,
+    totalTerp: 1.42,
+    dominant: 'Limonene',
+    myrcene: 0.14,
+    limonene: 0.46,
+    batch: '2601-030',
+    brand: 'Aeterna Cannabis',
+    sampledDate: '2026-01-20',
+    testedDate: '2026-02-13',
+  },
+  {
     strain: 'Permanent Shade',
+    parsedStrain: 'Permanent Shade',
     file: 'permanent-shade.pdf',
     sourceLab: 'kaycha',
     totalThc: 29.5444,
@@ -159,6 +181,10 @@ describe('parseCoa on real COA fixtures', () => {
 
       it('reports a Pesticides safety row', () => {
         expect(coa.safety.some((s) => /pesticide/i.test(s.category))).toBe(true);
+      });
+
+      it(`strain is ${JSON.stringify(c.parsedStrain)}`, () => {
+        expect(coa.strain).toBe(c.parsedStrain);
       });
     });
   }
