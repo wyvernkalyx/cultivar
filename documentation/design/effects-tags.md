@@ -1,8 +1,9 @@
 # Session Effects Tags -- Design
 
-Status: design ratified D119-D121, 2026-08-04. No UI code yet; the
-D121 migration applied and gated 2026-08-04. This line is amended
-by the commit that changes its truth.
+Status: design ratified D119-D121, 2026-08-04. D121 migration and
+the slice (c) closing-screen UI both applied and
+gated 2026-08-04; LEXICON_VERSION is 5. This line is amended by
+the commit that changes its truth.
 
 ## Purpose
 

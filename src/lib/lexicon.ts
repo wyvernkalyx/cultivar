@@ -13,7 +13,17 @@
 // v3->v4, exactly as it was across v1->v2 and v2->v3, so cross-version score
 // averaging in coa_session_stats stays valid with no lexicon_version branch
 // and NO ratified recompute is triggered (D94).
-export const LEXICON_VERSION = 4;
+//
+// v5 marks the effects vocabulary joining the closing screen (D119/D121). The
+// version stamps what the user was SHOWN, which is why the D121 migration
+// deliberately left the constant at 4: a session logged after the column
+// landed but before the tags rendered saw v4, and stamping it 5 would
+// fabricate a fact about the user's screen. It moves here, with the UI that
+// shows the vocabulary. This is a field-set change like v3->v4, not a
+// scale-shape change — the hidden 5/4/3/2/1 mapping is UNCHANGED, tags never
+// touch overall_word or overall_score, so cross-version averaging stays valid
+// and no ratified recompute is triggered (effects-tags.md, D121).
+export const LEXICON_VERSION = 5;
 
 // Ordered top rung first (D51: up = better, "Neutral" at dead center) — index
 // i here IS rung index i on the ladder. The ladder reads this array; the rung
@@ -29,6 +39,46 @@ export const RUNGS = [
   { word: 'Neutral', score: 3 },
   { word: 'Disliked', score: 2 },
   { word: 'Hated', score: 1 },
+] as const;
+
+// The effects vocabulary (D119), copied character-for-character from the
+// ratified list in documentation/design/effects-tags.md — operator-authored
+// copy, so it is transcribed, never paraphrased or re-ordered.
+//
+// The three groups here are PRESENTATION ONLY. The column is one flat text[]
+// with no valence (D119): the same effect flips valence by session, so the
+// score carries the judgment and the tags record only what showed up. Nothing
+// downstream may read a tag's group as data — moving a tag between groups is
+// free precisely because the stored array never knew them.
+//
+// The doc splits the Off-Key material across two lines (common discomforts,
+// then head and body flags). They merge into the one group the closing screen
+// renders, discomforts first, order preserved: the sub-split is authoring
+// structure in the doc, not a surface the user sees.
+export type EffectGroup = { readonly label: string; readonly tags: readonly string[] };
+export const EFFECTS: readonly EffectGroup[] = [
+  {
+    label: 'Head space',
+    tags: ['Focused', 'Creative', 'Uplifted/Happy', 'Giggly', 'Clear-headed', 'Mellow/Chill'],
+  },
+  {
+    label: 'Body feel',
+    tags: ['Heavy Body', 'Couch-lock', 'Unwound/Unstressed', 'Heavy Eyelids', 'Energized'],
+  },
+  {
+    label: 'Off-Key',
+    tags: [
+      'Dry Mouth',
+      'Dry Eyes',
+      'Munchies',
+      'Mind Racing',
+      'Jittery',
+      'Spacey',
+      'Forgetful',
+      'Lightheaded',
+      'Heavy-headed',
+    ],
+  },
 ] as const;
 
 // The glossary tap-surface content, reduced to the ladder by D96: five

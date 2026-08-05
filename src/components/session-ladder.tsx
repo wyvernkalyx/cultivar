@@ -15,7 +15,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Dash, MaxContentWidth, Spacing, verdictHue } from '@/constants/theme';
-import { GLOSSARY, type GlossaryEntry, LEXICON_VERSION, RUNGS } from '@/lib/lexicon';
+import {
+  EFFECTS,
+  type EffectGroup,
+  GLOSSARY,
+  type GlossaryEntry,
+  LEXICON_VERSION,
+  RUNGS,
+} from '@/lib/lexicon';
 import { supabase } from '@/lib/supabase';
 
 // Rung order is the lexicon's (D51, preserved as visual order by D80): up =
@@ -36,19 +43,27 @@ type LadderCoa = {
 
 // One entry's writable fields (D52 full snapshot). The survey cut (D93)
 // retired every fact class as a question and D94 dropped their columns, so
-// what remains is the rung answer plus the optional free-text note (D95).
-// lastConfirmed holds exactly this shape, and every insert sends one.
+// what remains is the rung answer plus the closing screen's two optional
+// fields: the free-text note (D95) and the effect tags (D119). Tags are one
+// flat array in tap order; null and empty mean the same thing to the column,
+// so the client collapses to null and never sends an empty array (D119's
+// restatement of the D75 collapse). lastConfirmed holds exactly this shape,
+// and every insert sends one.
 type Snapshot = {
   index: number;
   word: string;
   score: number;
   notes: string | null;
+  effects: string[] | null;
 };
 
 // Which control fired the insert. Both sources revert by derivation when their
 // pending state clears (D55); the source is still tracked because a score tap
-// advances to closing on confirm while a note write ends the survey (D95).
-type InsertSource = 'drop' | 'note';
+// advances to closing on confirm while the closing write ends the survey
+// (D95). The closing source covers the whole screen, not the note alone: one
+// insert carries the note and the tags together (D95's exception extended to
+// the screen by the 2026-08-04 ruling).
+type InsertSource = 'drop' | 'closing';
 
 // The survey is two screens (D92): the score pill screen, then closing. The
 // score screen advances on insert CONFIRM (not on tap); closing terminates.
@@ -437,6 +452,75 @@ function PillScreen({
   );
 }
 
+// The effect tags (D119/D120): the ratified vocabulary as toggle chips in its
+// three presentation groups, sitting with the note on the closing screen. The
+// grouping is presentation only and stops here — the column stores one flat
+// array with no valence (D119), so no group name ever reaches the data and
+// moving a tag between groups later costs nothing.
+//
+// Multi-select with no limit and no Done control: a tap toggles and nothing
+// else happens, which is what keeps the surface free of the required path
+// (D120). Selection state, tap order, and the null collapse all live in the
+// owner; this renders selection and reports taps, the same
+// card-receives-callbacks split PillScreen already uses. The chip grammar is
+// the screens' existing one — surface fill at rest, inverted when selected
+// (D57/D80) — and the label font does not change on toggle, so a selection
+// never reflows a wrapped row under the user's thumb.
+function EffectsPicker({
+  groups,
+  selected,
+  disabled,
+  onToggle,
+}: {
+  groups: readonly EffectGroup[];
+  selected: readonly string[];
+  disabled: boolean;
+  onToggle: (tag: string) => void;
+}) {
+  return (
+    <View style={styles.effectGroups}>
+      {groups.map((group) => (
+        <View key={group.label} style={styles.effectGroup}>
+          {/* Group copy is the doc's verbatim name (operator-owned), rendered
+              in the header block's quiet eyebrow idiom. */}
+          <ThemedText style={styles.effectGroupLabel}>{group.label}</ThemedText>
+          <View style={styles.effectRow}>
+            {group.tags.map((tag) => {
+              const isSelected = selected.includes(tag);
+              return (
+                <Pressable
+                  key={tag}
+                  // Disabled while any insert is on the wire (D54), exactly as
+                  // every other control on both screens.
+                  disabled={disabled}
+                  onPress={() => onToggle(tag)}
+                  style={[
+                    styles.effectChip,
+                    { backgroundColor: isSelected ? Dash.text : Dash.surface2 },
+                  ]}>
+                  <ThemedText
+                    style={[styles.effectChipLabel, { color: isSelected ? Dash.bg : Dash.text }]}>
+                    {tag}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+// Tag-list equality for the closing write's no-op check. Order-sensitive on
+// purpose: the array is stored in tap order, so a reordered selection is a
+// different value and earns its revision insert. Null-aware because null is
+// the recorded-nothing value on both sides (D119).
+const sameTags = (a: string[] | null, b: string[] | null) =>
+  a === null || b === null
+    ? a === b
+    : a.length === b.length && a.every((tag, i) => tag === b[i]);
+
 /**
  * The session-logging surface, cut to two screens by D92: the score screen,
  * then closing. Minimum cost is two taps; maximum is two taps plus typing.
@@ -452,12 +536,16 @@ function PillScreen({
  * by derivation (D55).
  *
  * Closing (D92) carries the product identification (D81), the completion bloom,
- * an optional free-text note (D95), and Close. The note is the one deliberate
- * exception to tap-is-the-save — text has no tap — so it writes a single
- * revision insert when Close fires, never keystroke-by-keystroke, and closing
- * with an empty note writes nothing at all. Empty normalizes to null, never ''
- * (the ND != 0 family, D78's rule for the retired panels). Every write rides
- * the one insertEntry pipeline under the same D54/D55 grammar.
+ * the effect tags (D119/D120), an optional free-text note (D95), and Close. The
+ * note is the one deliberate exception to tap-is-the-save — text has no tap —
+ * and the 2026-08-04 ruling extends that exception to the whole screen: the
+ * tags and the note ride ONE revision insert when Close fires, never
+ * keystroke-by-keystroke and never a second write per surface. Closing with
+ * nothing typed and nothing tapped writes nothing at all, so skipping costs
+ * exactly the taps it always did. Both fields normalize their empty to null,
+ * never '' and never [] (the ND != 0 family: D78's rule for the note, D119's
+ * restatement of the D75 collapse for the tags). Every write rides the one
+ * insertEntry pipeline under the same D54/D55 grammar.
  *
  * The three intent axes, fit, and the two confound panels retired as questions
  * with D93 and as columns with D94. Nothing removed ever touched the score, the
@@ -507,6 +595,18 @@ export function SessionLadder({
   // comparison on Close is draft-vs-confirmed and an unchanged note writes
   // nothing.
   const [noteText, setNoteText] = useState('');
+  // The tag draft (D119), held at surface scope for the same reason as the
+  // note: a Back to the score screen and a return keeps what was tapped. Tap
+  // order IS array order — a tag appended on select and dropped on deselect,
+  // so a re-tapped tag lands at the end, which is still the order the user
+  // chose it in. Empty here is the recorded-nothing state; the collapse to
+  // null happens at the write, never in this list.
+  const [effectTags, setEffectTags] = useState<string[]>([]);
+  const toggleEffect = (tag: string) => {
+    setEffectTags((current) =>
+      current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag]
+    );
+  };
   // The surface's phase (D92): the current screen of the two. One screen
   // renders at a time; the flow state lives up here and survives every screen
   // change, so Back to the score screen lands on the intact confirmed
@@ -618,11 +718,11 @@ export function SessionLadder({
       onBusyChange(false);
       if (!failed) {
         setLastConfirmed(snapshot);
-        // A confirmed note write ends the survey (D95: the note writes once, on
+        // A confirmed closing write ends the survey (D95: it writes once, on
         // Close, and Close is what fired it) rather than advancing a phase —
         // closing is already the terminal. A confirmed score advances on
         // CONFIRM, not on tap (D79's rule, unchanged).
-        if (source === 'note') {
+        if (source === 'closing') {
           onClose();
           return;
         }
@@ -631,18 +731,19 @@ export function SessionLadder({
       }
       // A failed insert never advances, never closes, and touches no snapshot
       // (D55): clearing the source's pending state above already reverted the
-      // rendered answer to the last confirmed value, and a failed note write
-      // leaves the surface on closing with the draft intact. Retry is
-      // re-tapping — the pill on the score screen, Close on closing.
+      // rendered answer to the last confirmed value, and a failed closing write
+      // leaves the surface on closing with the note draft and the tapped tags
+      // intact. Retry is re-tapping — the pill on the score screen, Close on
+      // closing.
       setSaveError("Couldn't save — check your connection.");
     };
 
     // created_by and deleted are server defaults, never sent. Full
-    // snapshot (D52): the note rides every insert at its snapshot value —
-    // carried forward on a score tap, changed on the one note write (D95).
-    // On the lazy path it stays null (the overall word is the only mandatory
-    // field). The six retired fact columns are gone from the schema (D94) and
-    // are not sent.
+    // snapshot (D52): the note and the tags ride every insert at their
+    // snapshot values — carried forward on a score tap, changed together on
+    // the one closing write (D95, D119). On the lazy path both stay null (the
+    // overall word is the only mandatory field). The six retired fact columns
+    // are gone from the schema (D94) and are not sent.
     supabase
       .from('session_entries')
       .insert({
@@ -652,6 +753,7 @@ export function SessionLadder({
         overall_word: snapshot.word,
         overall_score: snapshot.score,
         notes: snapshot.notes,
+        effects: snapshot.effects,
       })
       .abortSignal(controller.signal)
       .then(
@@ -676,27 +778,38 @@ export function SessionLadder({
     setPendingScore(rung.word);
     insertEntry(
       lastConfirmed === null
-        ? { index, word: rung.word, score: rung.score, notes: null }
+        ? { index, word: rung.word, score: rung.score, notes: null, effects: null }
         : { ...lastConfirmed, index, word: rung.word, score: rung.score },
       'drop'
     );
   };
 
-  // Closing's Close (D95): the note's one write, then the dismissal. Empty is
-  // null, never '' — the same normalization the panels carried (D78) and the
-  // same family as ND != 0. An unchanged note (including the untouched-empty
-  // case, and the touched-then-emptied case, both of which normalize to null)
-  // writes nothing: no revision insert, no row churn. A null lastConfirmed
-  // takes the same no-write path — closing is only reachable on a confirmed
-  // score, so there is no row to revise and nothing to fabricate.
-  const closeWithNote = () => {
+  // Closing's Close: the screen's ONE write, then the dismissal. The note and
+  // the tags are compared and sent together (D95's exception extended to the
+  // whole screen, 2026-08-04) — one insert, never one per field, so a screen
+  // that changed both still costs a single row.
+  //
+  // Empty is null on both: '' for the note (D78's normalization, the ND != 0
+  // family) and [] for the tags (D119's restatement of the D75 collapse), and
+  // the tapped-then-untapped-to-zero case lands on that same null rather than
+  // an empty array. An unchanged closing state — including the untouched case
+  // and both emptied-again cases — writes nothing: no revision insert, no row
+  // churn, and skipping the surface costs exactly the taps it costs today. A
+  // null lastConfirmed takes the same no-write path: closing is only reachable
+  // on a confirmed score, so there is no row to revise and nothing to
+  // fabricate.
+  const closeWithClosingState = () => {
     const trimmed = noteText.trim();
-    const normalized = trimmed === '' ? null : trimmed;
-    if (lastConfirmed === null || normalized === lastConfirmed.notes) {
+    const normalizedNote = trimmed === '' ? null : trimmed;
+    const normalizedTags = effectTags.length === 0 ? null : effectTags;
+    if (
+      lastConfirmed === null ||
+      (normalizedNote === lastConfirmed.notes && sameTags(normalizedTags, lastConfirmed.effects))
+    ) {
       onClose();
       return;
     }
-    insertEntry({ ...lastConfirmed, notes: normalized }, 'note');
+    insertEntry({ ...lastConfirmed, notes: normalizedNote, effects: normalizedTags }, 'closing');
   };
 
   // The confirmed (or pending) score word (D80): the tapped word while its
@@ -802,9 +915,23 @@ export function SessionLadder({
               />
             </View>
             <View style={styles.closingActions}>
+              {/* The effect tags (D119/D120): the structured half of the same
+                  optional reflection the note already carried, so they sit with
+                  it rather than on a screen of their own — above it, so the
+                  reading order runs structured, then free text, then Close.
+                  Nothing here is mandatory and no control confirms them: their
+                  value reaches the database on the same Close the note rides.
+                  This is what makes the screen taller than the frame, which is
+                  exactly what the ScrollView above is for. */}
+              <EffectsPicker
+                groups={EFFECTS}
+                selected={effectTags}
+                disabled={inFlight}
+                onToggle={toggleEffect}
+              />
               {/* The same inline save-error banner the score screen carries
-                  (D54): a failed note write stays on closing and shows it, so
-                  retry is re-tapping Close. */}
+                  (D54): a failed closing write stays on closing and shows it,
+                  so retry is re-tapping Close. */}
               {saveError !== null && (
                 <View style={styles.errorBanner}>
                   <View style={styles.errorBadge}>
@@ -827,7 +954,10 @@ export function SessionLadder({
                 placeholder="Add a note"
                 placeholderTextColor={Dash.textMuted}
               />
-              <Pressable disabled={inFlight} onPress={closeWithNote} style={styles.closeButton}>
+              <Pressable
+                disabled={inFlight}
+                onPress={closeWithClosingState}
+                style={styles.closeButton}>
                 <ThemedText style={styles.closeLabel}>Close</ThemedText>
               </Pressable>
             </View>
@@ -1036,6 +1166,45 @@ const styles = StyleSheet.create({
   },
   closingActions: {
     gap: Spacing.two,
+  },
+  // The tag surface (D119/D120): three labeled groups stacked, each a wrapped
+  // row of chips. Group spacing is wider than chip spacing so the three read as
+  // three without a rule or a box between them.
+  effectGroups: {
+    gap: Spacing.three,
+  },
+  effectGroup: {
+    gap: Spacing.two,
+  },
+  // The header block's eyebrow idiom (brandLabel), one step quieter: this
+  // labels a group of answers, it is not one.
+  effectGroupLabel: {
+    fontFamily: SORA_MEDIUM,
+    fontSize: 13,
+    // .14em at 13pt, matching the eyebrow's tracking ratio.
+    letterSpacing: 1.8,
+    textTransform: 'uppercase',
+    color: Dash.textMuted,
+  },
+  effectRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.one,
+  },
+  // A tag chip: the control chip's pill geometry at a size that wraps into
+  // rows, sized to its label. Selection inverts (the D57/D80 chip grammar the
+  // rung cards use), and only the colors change on toggle — the font and the
+  // metrics hold, so tapping never reflows the row under the thumb.
+  effectChip: {
+    height: 40,
+    borderRadius: 999,
+    paddingHorizontal: Spacing.three,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  effectChipLabel: {
+    fontFamily: SORA_MEDIUM,
+    fontSize: 15,
   },
   // The note field (D95, restyled only): the reference's nested-row surface and
   // radius, and the serif italic the explainer voice already uses — what the
