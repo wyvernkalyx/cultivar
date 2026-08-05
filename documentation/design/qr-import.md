@@ -1,8 +1,11 @@
 # QR Import -- Design
 
-Status: design ratified D115-D118, 2026-08-04. No code. This line is
-amended by the commit that changes its truth. Slice (b) scope amended
-2026-08-04: the config plugin joins the deps commit.
+Status: design ratified D115-D118, 2026-08-04. This line is amended
+by the commit that changes its truth. Slice (b) scope amended
+2026-08-04: the config plugin joins the deps commit. Slice (b)
+shipped at 635ac01; the post-635ac01 EAS build passed its boot gate
+2026-08-05. D117 amended (third detection prong) and provider
+validation walks appended 2026-08-05; slice (c) is unblocked.
 
 ## Purpose
 
@@ -73,6 +76,19 @@ this document, never as an improvisation in code.
 Grounds: detection heuristics miss, and a miss must cost the user a tap,
 not the feature.
 
+Amendment (2026-08-05), operator-ratified: a third automatic prong.
+On each top-frame navigation the WebView settles on, the client
+issues one HEAD request to the current URL; a response content-type
+of application/pdf raises the import affordance. Grounds, from the
+validation walks below: the primary provider's final URLs are Azure
+blob paths with no .pdf suffix, rendered inline -- both original
+prongs miss, and without this prong the most common import would
+ride the manual fallback. The prong is provider-agnostic (it reads
+the response, not the URL), costs one small request per settled
+page, and fails exactly as the other prongs fail: to the manual
+control, never blocking. The suffix prong stays -- it is free and
+covers providers whose HEAD is refused.
+
 ## D118 -- Slice plan, EAS split, and provider validation
 
 - Slice (a), docs: this document.
@@ -111,3 +127,62 @@ landing behavior; every other provider is an assumption until observed.
   is defused by retention.
 - No multi-QR batch scanning.
 - No Android claims.
+
+## Provider validation walks -- observed 2026-08-05 (D118)
+
+The validation D118 required before slice (c). Operator walks on
+real package QRs, architect fetches where noted. Providers observed:
+Kaycha (three jars), Green Analytics (one jar). The parser-fixture
+labs are not the shelf: Moby appears in the fixtures and on no
+scanned jar.
+
+**Kaycha (via 1a4).** The QR encodes
+`https://app.1a4.com/landingpage/<metrc-package-tag>/<n>` -- the
+same 1a4.com host whose server-side emptiness produced this design
+(Purpose, above). One tap from landing to the COA on screen
+(operator; detail recorded for one jar of three, finals observed
+for all three). The final URL is an Azure blob object --
+`https://midncustorage01.blob.core.windows.net/<container>/<guid>`
+with a read-only SAS token (`sr=b&sp=r`), no `.pdf` suffix --
+rendered inline. Observed properties:
+
+- Fetchable by a cookie-less client: the architect fetched one
+  final URL from a session holding no cookies and received the full
+  COA PDF (`application/pdf`). D116's named cookie-gated risk is
+  observed-false for this provider.
+- Tokens live roughly 24 hours (`se` expiry vs issuance) and are
+  minted per visit: two walks of the same jar produced two
+  different tokens on the same container. Consequence, recorded so
+  it is not optimized away later: a Kaycha final URL is never
+  persistable or shareable; the import fetch happens in the walk's
+  own session, and a retry is a re-scan, never a stored URL. This
+  is D116's fetch-on-detect confirmed by observation, and a
+  second, independent ground for the source-URL non-goal.
+- Detection: no `.pdf` suffix and an inline render -- the two
+  original D117 prongs are predicted to miss in the app's WebView.
+  The 2026-08-05 amendment (D117, above) is the response. The
+  prediction is falsified or confirmed at the slice (c) device
+  gate.
+
+**Green Analytics (via the brand site).** The QR encodes
+`https://aeternacannabis.com/lab-results/` -- the brand's own index
+page, not a per-package deep link; the user locates their batch on
+the page (tap detail not recorded; low stakes, since detection here
+does not depend on the path). The final URL is durable and
+`.pdf`-suffixed (`/media/<strain-batch>.pdf`), rendered inline. The
+original suffix prong fires as ratified. Untested by the architect:
+both aeterna URLs refuse automated access by robots policy, so
+cookie-free fetchability for this provider is observed at the slice
+(c) device gate, not before.
+
+**Honesty flags, carried to the gate:**
+
+- The operator's walks ran in Safari with standing cookies; no age
+  gate appeared, and the operator flagged that cookies may have
+  suppressed one. The app's WebView starts fresh and may surface a
+  gate these walks did not. D115 already has the user clicking
+  through whatever appears; the first in-app walk observes the
+  true fresh-state path.
+- Every "rendered inline" above is a Safari observation. The
+  app-WebView prediction (inline render, no file-download event) is
+  stated as a prediction and gated on device.
