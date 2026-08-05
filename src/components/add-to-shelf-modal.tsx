@@ -1,8 +1,10 @@
 import * as DocumentPicker from 'expo-document-picker';
+import { File, Paths } from 'expo-file-system';
 import { useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { CoaEditor, type CoaParseResult } from '@/components/coa-editor';
+import QrImportBrowser from '@/components/qr-import-browser';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
@@ -22,6 +24,7 @@ import { supabase } from '@/lib/supabase';
 // separate copy.
 type Phase =
   | 'idle'
+  | 'scanning'
   | 'picking'
   | 'sending'
   | 'done'
@@ -97,6 +100,31 @@ export default function AddToShelfModal({
 
   const pickAnother = reset;
 
+  /**
+   * Everything downstream of a cache-local file URI, shared verbatim by the
+   * picker and the QR path rather than copied: once the bytes are on disk the
+   * two entry points ARE the same pipeline, and two copies of it would drift.
+   */
+  const ingestFromUri = async (uri: string) => {
+    // Retained for the save step. The URI is cache-local either way — the
+    // picker copies there, the QR path downloads there — which is what makes a
+    // second read at confirm time possible at all.
+    setPickedUri(uri);
+    setPhase('sending');
+    const ingested = await ingestCoaPdf(uri);
+    setResult(ingested);
+    // Read off the transport envelope, not the parse: the field is optional
+    // because the hashing function is committed but not deployed, and a
+    // client that required it would break against the live deployment.
+    setPdfSha256(
+      ingested.ok
+        ? ((ingested.json as { data?: { pdfSha256?: string } }).data?.pdfSha256 ?? null)
+        : null,
+    );
+    setPickId((n) => n + 1);
+    setPhase('done');
+  };
+
   const pick = async () => {
     setConfirmError(null);
     setPhase('picking');
@@ -109,22 +137,7 @@ export default function AddToShelfModal({
         setPhase('idle');
         return;
       }
-      const uri = picked.assets[0].uri;
-      // Retained for the save step. copyToCacheDirectory above means this URI
-      // stays resolvable for the session, which is what makes a second read at
-      // confirm time possible at all.
-      setPickedUri(uri);
-      setPhase('sending');
-      const ingested = await ingestCoaPdf(uri);
-      setResult(ingested);
-      // Read off the transport envelope, not the parse: the field is optional
-      // because the hashing function is committed but not deployed, and a
-      // client that required it would break against the live deployment.
-      setPdfSha256(
-        ingested.ok
-          ? ((ingested.json as { data?: { pdfSha256?: string } }).data?.pdfSha256 ?? null)
-          : null,
-      );
+      await ingestFromUri(picked.assets[0].uri);
     } catch (err) {
       setResult({
         ok: false,
@@ -132,9 +145,49 @@ export default function AddToShelfModal({
         body: '',
         message: `Picker failed: ${err instanceof Error ? err.message : String(err)}`,
       });
+      setPickId((n) => n + 1);
+      setPhase('done');
     }
-    setPickId((n) => n + 1);
-    setPhase('done');
+  };
+
+  /**
+   * The QR path's entry into that same pipeline (D116): the client fetches the
+   * bytes itself, and hands a cache-local URI to the helper above. The remote
+   * URL is used for the download and then dropped — `pickedUri` holds only the
+   * local file, which is what retention uploads, and no URL is stored anywhere
+   * (qr-import.md non-goal, reinforced by the validation walks' finding that
+   * the primary provider mints a fresh token per visit).
+   */
+  const importFromUrl = async (url: string) => {
+    setConfirmError(null);
+    // The error arm the parse failures already use, reached the same way.
+    const fail = (message: string) => {
+      setResult({ ok: false, status: null, body: '', message });
+      setPickId((n) => n + 1);
+      setPhase('done');
+    };
+
+    // D116 restricts the client fetch to https in code. The WebView may
+    // traverse http on the way there; only this download is gated.
+    if (!/^https:\/\//i.test(url)) {
+      fail('This page is not served over https, so Cultivar will not download it.');
+      return;
+    }
+
+    setPhase('sending');
+    let downloaded: File;
+    try {
+      // A fresh name per import. The primary provider's finals repeat GUID
+      // basenames across jars, and a collision throws rather than overwriting
+      // — which would fail an import that should have succeeded.
+      const destination = new File(Paths.cache, `qr-import-${Date.now()}.pdf`);
+      downloaded = await File.downloadFileAsync(url, destination);
+    } catch (err) {
+      fail(`Could not download this page: ${err instanceof Error ? err.message : String(err)}`);
+      return;
+    }
+
+    await ingestFromUri(downloaded.uri);
   };
 
   const confirm = async (payload: CoaParseResult) => {
@@ -359,19 +412,40 @@ export default function AddToShelfModal({
                 <ThemedText type="smallBold">Pick another</ThemedText>
               </Pressable>
             </>
+          ) : phase === 'scanning' ? (
+            // Fills the content area in place of the button stack. Cancel
+            // returns to idle; nothing has been fetched or written yet.
+            <View style={styles.resultBody}>
+              <QrImportBrowser onImport={importFromUrl} onCancel={() => setPhase('idle')} />
+            </View>
           ) : (
-            <Pressable
-              onPress={pick}
-              disabled={busy}
-              style={[
-                styles.button,
-                { backgroundColor: theme.backgroundElement },
-                busy && styles.buttonDisabled,
-              ]}>
-              <ThemedText type="smallBold">
-                {phase === 'sending' ? 'Sending…' : 'Pick COA PDF'}
-              </ThemedText>
-            </Pressable>
+            <>
+              <Pressable
+                onPress={pick}
+                disabled={busy}
+                style={[
+                  styles.button,
+                  { backgroundColor: theme.backgroundElement },
+                  busy && styles.buttonDisabled,
+                ]}>
+                <ThemedText type="smallBold">
+                  {phase === 'sending' ? 'Sending…' : 'Pick COA PDF'}
+                </ThemedText>
+              </Pressable>
+              {/* The second entry point sits inside the Add flow beside the
+                  picker, not on the shelf header: both produce the same
+                  cache-local URI, so they belong at the same fork. */}
+              <Pressable
+                onPress={() => setPhase('scanning')}
+                disabled={busy}
+                style={[
+                  styles.button,
+                  { backgroundColor: theme.backgroundElement },
+                  busy && styles.buttonDisabled,
+                ]}>
+                <ThemedText type="smallBold">Scan package QR</ThemedText>
+              </Pressable>
+            </>
           )}
 
           <Pressable
