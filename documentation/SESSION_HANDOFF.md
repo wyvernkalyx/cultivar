@@ -1,193 +1,224 @@
-# Session handoff -- 2026-08-04
+# Session handoff -- 2026-08-04 (second)
 
-The repo is authoritative over this document. This session's own example:
-the incoming architect's carried copy of this very file predicted HEAD as
-the 2026-08-03 handoff commit and 15 migrations; observed reality was
-702da3b (five commits past it), 16 migrations, and an uncommitted D110
-slice 5 in the tree -- the prior session continued past its handoff
-without amending it (a 4.5 violation, cost paid in reconciliation time).
-And this paragraph's own first draft said "four commits past it" against
-a rev-list of five -- caught by the implementer before commit
-(refutation 8). Begin with a read-only Phase A audit.
+The repo is authoritative over this document. This session's opening
+Phase A verified all of the prior handoff's predictions clean -- and the
+session still produced nine architect refutations, including two chat
+hand-counts of the day's own commit total ("nine", "ten") against
+rev-lists of six and seven. Begin with a read-only Phase A audit.
 
 ## Start here (Phase A, read-only)
 
-- HEAD's parent is a0b4c8e (feat: D114). Predicted subject of the handoff
-  commit itself: "docs: session handoff 2026-08-04 -- D110 closed,
-  D113-D114 shipped". Sync 0 0 after the operator's push. If HEAD is
-  neither, work continued past this handoff -- reconcile before
-  proceeding.
+- HEAD's parent is 8dfded2 (feat: slice d). Predicted subject of the
+  handoff commit itself: "docs: session handoff 2026-08-04 second --
+  QR docs+deps, effects shipped end to end". Sync 0 0 after the
+  operator's push. If HEAD is neither, work continued past this
+  handoff -- reconcile before proceeding.
 - git status --porcelain: exactly seven ?? reference/handoff/0N-screens.png
   lines (N=1..7), the standing noise.
-- Migrations: 16 on disk by name-form count, 16 in the ledger.
-- npm test -> 52 passed (npm test, never npx jest). npx tsc --noEmit -> 0.
-  npx expo lint -> 1 error 0 warnings, template file only.
-- DB via MCP, observed 2026-08-04 post-D114-gate: coas 6, session_entries
-  39 raw / 3 current, retirements 7 (4 reason Profile reset, 1 from
-  today's device gate), profile_resets 1, favorites set 3,
-  sum(on_shelf_count) 1, storage objects 3, anon grants in public 0.
+- Migrations: 17 on disk by name-form count, 17 in the ledger.
+- npm test -> 52 passed. npx tsc --noEmit -> 0. npx expo lint -> 1 error
+  0 warnings, template file only.
+- DB via MCP, observed 2026-08-04 post-slice-(d) gates: coas 6,
+  session_entries 57 raw / 11 current, 8 of the 11 at lexicon_version 5,
+  tombstoned chains 14 (12 profile-reset, 2 slice-(d) discards),
+  retirements 7, storage objects 3, anon grants in public 0.
+- EAS build status: UNKNOWN. The operator was asked to run the build
+  after 635ac01 and never pasted a result. Do not assume it ran; ask.
 If any of these do not match, the repo wins -- re-baseline before
 proceeding.
 
-## What shipped (newest first)
+## What shipped (newest first, seven commits -- rev-list verified at
+commit time, not hand-counted)
 
-- a0b4c8e feat: retire is destructive-styled and card-reachable (D114)
-- c4a9a8e feat: favorite is a card control on both surfaces (D113)
-- fc148a3 docs: amend dashboard.md with D113-D114 (card favorite, retire discoverability)
-- cdecc16 feat: profile reset UI from the account sheet (D110 slice 5)
-
-Three product commits to one docs commit -- the 4.7 ratio leaned product
-for the first time, driven entirely by first real usage.
+- 8dfded2 feat: post-close bloom, outcome-from-state, discard, closing header (slice d)
+- 8f11374 feat: closing-screen effect tags and lexicon v5 (D119, D120)
+- 2e80a5b docs: rewrite session-entries column table to live schema
+- 610d299 feat: effects column and session_current republish (D119, D121)
+- 635ac01 chore: QR slice (b) -- expo-camera dep and config plugin (D118)
+- 16cb0c2 docs: session effects tags design (D119-D121)
+- 03a503f docs: QR import design (D115-D118)
 
 ## The arcs
 
-**D110 close-out.** The prior session ended mid-slice without a handoff:
-slice 5 (reset UI) sat uncommitted while slices 1-4 were pushed. The
-operator ran a real profile reset and ~3 real sessions from that
-uncommitted code via Metro on 2026-08-03. This session diagnosed the
-slice (Phase A confirmed it as exactly the ratified slice 5 plus two
-in-service ride-alongs), gated it retroactively -- operator testimony
-for the UI half, MCP forensics for the server half (12 tombstones at one
-created_at, 4 system retirements matching the pre-reset shelf sum, 5-key
-snapshot) -- and shipped it as cdecc16. Grounds for retroactive rather
-than re-run gating: re-running the reset would tombstone the operator's
-real sessions, and undo is banked.
+**QR import, D115-D118 (docs + deps shipped; slice (c) waits).** Design:
+scan -> in-app WebView -> user clicks through -> URL-detect ->
+CLIENT-SIDE download into the unchanged ingest pipeline. D116 supersedes
+the recon's Edge-Function fetch with grounds: D87.4 uploads from the
+client cache URI at save, so the client needs the bytes regardless; no
+SSRF surface; RN fetch has no CORS. Named shared risk: cookie-gated PDF
+URLs fail either design; fallback (WebView-native download) is a doc
+amendment, never improvisation. Slice (b) shipped one new native module
+(expo-camera 56.0.8 -- react-native-webview was already pinned at HEAD)
+plus the config plugin: ratified camera permission copy, iOS microphone
+suppressed via the strict === false deletion branch (omission would have
+written the default string), Android RECORD_AUDIO suppressed. Slice (c)
+is pure design-complete but double-blocked: the EAS build boot gate
+(status unknown) and the operator's per-provider QR walks, both
+operator-side.
 
-**D113-D114, born from first real usage.** The operator could not find
-retirement and wanted the buy-again control on the card. Phase A refuted
-the architect's model on both counts (see refutations) and reclassified
-the report as a discoverability defect: the retire control existed but
-sat last on the longest screen, styled as the PDF link's twin, under the
-accent Log bar; the favorite chip existed but was display-only and
-absent when unanswered. The fix shape: shared writer-plus-ritual modules
-(coa-favorite.ts new, promptRetire beside retireCoa), cards receive
-callbacks and never writers, archive excluded by prop omission with
-count checks as defense in depth, one question wording everywhere with
-Skip-vs-Clear kept distinct by operator ruling.
+**Effects tags, D119-D121, end to end in one day.** Operator ruled
+tags-only, then a 20-tag vocabulary (Spacey/Forgetful split by ruling;
+other slash forms are permanent synonym-pair tokens). D119: one flat
+valence-free text[]; groups are presentation only; the same effect flips
+valence by session, the score carries the judgment. D120: closing
+screen, one insert on Close carrying tags + notes (D95's exception
+extended to the screen). D121 migration replaced session_current IN
+PLACE with effects appended last -- replace-not-drop preserved ACLs (the
+D105 anon revocation re-observed 0 post-apply) and never touched
+coa_session_stats; both views re-observed security_invoker=true.
+LEXICON_VERSION moved 4->5 with the UI, not the schema: the version
+stamps what the user was SHOWN, and the pre-UI 2026-08-04 session
+correctly reads 4 in the live data.
 
-**Milestone: first real usage happened.** 2026-08-03, ~3 sessions on a
-freshly reset profile, MCP-observed. The oldest open milestone is
-closed. Current-session rows are real data now; the all-test-data
-assumption in prior handoffs no longer holds.
+**Slice (d): the operator's gate caught a real defect, and the fix
+reshaped dismissal.** Page-1 Close after a Back announced 'cancelled'
+about a session already on the shelf (tap-is-the-save had already
+written it). Fix: outcome derives from STATE (lastConfirmed), never from
+the control that fired. Closing from the top keeps a rated session
+(operator ruling). Page-1 Close on a rated session asks Keep/Discard;
+Discard appends a D52 soft-delete tombstone through the one insert
+pipeline, fail-closed -- D52's append-only delete acquiring its UI,
+deliberately NOT a new D-number. Every write now states deleted
+explicitly. CloseOutcome gained 'discarded' (a discard writes a row;
+reporting it 'cancelled' would be a false report). onLoggedChange prop
+added and KEPT despite the host dismissal path being iOS-unreachable
+(fullScreen has no interactive dismissal): the code states truth on
+every platform. Also in (d): bloom relocated off closing to a post-close
+transient over opaque Dash.bg with tap-anywhere skip ("never eats a tap"
+honestly translated to "costs at most one tap" under an opaque ground);
+closing's header became "Anything else? (optional)" in the heading
+idiom, knowingly amending D81 for that one screen; closing's middle
+renders nothing, keeping only the bottom-anchor flex slack.
 
-**QR-import recon (design not started).** Operator: package QRs never
-reach a COA directly -- age gates, summary pages, per-provider landing
-pages. Architect fetched a live 1a4.com landing URL: JS-rendered SPA,
-empty shell server-side. Server-side URL-to-PDF resolution is dead as
-the primary path. Leading design: scan QR -> in-app WebView -> user
-clicks through -> app detects a loaded PDF and offers one-tap import ->
-Edge Function fetches the PDF URL server-side into the existing ingest
-pipeline. Cost: camera scanner and WebView are both native modules --
-one combined dependency chore commit, one EAS build, then code.
+**session-entries-schema.md rewrite.** Its "table below still describes
+the live schema" had been false since the survey-cut migration applied
+-- the rewrite that doc promised from the applying commit never landed.
+Corrected, late, with the correction paragraph saying so. Table now
+matches the MCP-observed live schema including notes and effects.
 
 ## Refuted hypotheses / corrections -- read before trusting anyone
 
-Architect's, eight, all caught by the implementer or a gate:
-1. H1: believed retirement reachable only via the survey and absent from
-   the detail. Both clauses false -- the survey never had it; the detail
-   has had it since slice 6 (1802dbf).
-2. H2: believed favorite settable only in the retirement prompt. False --
-   the direct detail control predates it and implements D91 exactly.
-3. Cited the reset's 4 retirement rows as evidence retire_coa works.
-   Wrong per D110.1: reset inserts its events directly. The real
-   evidence is the slice 6 gate record.
-4. D113 prompt's gate enumeration anticipated setFavorite hits in both
-   lists while the same prompt's extraction clause mandated the build
-   that removes them. Implementer read the enumeration as an upper
-   bound and refused to add redundant references to satisfy a count.
-5. D114 prompt: "minimum fields the confirm copy needs" against a
-   five-field enumeration including favorite, which nothing reads.
-   Kept per enumeration, documented as named-but-unread.
-6. D114 prompt: "moved verbatim in behavior" contradicted its own
-   onDone-on-failure clause. Implementer followed the explicit clause;
-   the delta (failed retire now refetches) was ratified as better.
-7. Absolute non-ASCII gate (expect 3, control 0) written against a file
-   carrying 21 pre-existing non-ASCII bytes the architect had read in
-   diffs that same session. Unmeetable by construction. Implementer
-   pre-measured the delta (21 -> 24, exactly the glyph), proceeded, and
-   reported. Delta-with-control is the only sound form for this gate.
-8. This handoff's first draft stated the stale-handoff distance as four
-   commits; rev-list measures five. The architect does not hand-count,
-   including in the sentence written to demonstrate repo-over-memory.
+Architect's, nine, caught by the implementer, a gate, or the operator:
+1. D120 draft claimed the required path "stays exactly one tap" against
+   four ratified/observed two-tap statements (survey-cut.md:85, :354,
+   :446; session-ladder.tsx:442). Implementer STOPped a Tier 1 combined
+   prompt on it -- the STOP is the only human-free check Tier 1 has, and
+   it worked.
+2. QR deps prompt treated react-native-webview as a new install; it was
+   pinned at HEAD. Manifest delta was one package, not two.
+3. Effects build prompt said "19 tags" and "Off-Key eight" against the
+   doc's 20/nine -- the architect hand-counted the pre-split vocabulary
+   after authoring the split. Implementer built the doc per the
+   conflict rule.
+4. Predicted session count 3->5 at the slice (c) gate; observed 6. The
+   operator logged three sessions, not the requested two. Benign;
+   testimony-vs-observation discrepancy recorded, not resolved.
+5. A reanimated absence gate used a bare token and collided with the
+   repo's own autolinking EXCLUSION -- the already-promoted
+   import-construct rule, violated by its author. Discriminating forms:
+   dependency-entry grep on package.json + src/-scoped grep.
+6. A VERIFY glob (src/app/**/*.tsx) matched nothing; grep exited 2,
+   masked by 2>/dev/null -- the vacuous-gate family, again.
+7. Cited coa-detail.tsx as the two-button Alert precedent; it has none.
+   The idiom lives at coa-editor.tsx:247-249. Cosmetic; the built shape
+   was the intended one.
+8. Asserted art-direction.md and survey-cut.md "may carry pre-existing
+   non-ASCII"; both are pure ASCII at HEAD. The delta gate degenerated
+   to absolute-zero and still held.
+9. Chat prose said "nine commits" then "ten commits" shipped; rev-list
+   at those moments read six and seven. Hand-counting, in the session
+   where the no-hand-count promotion sat banked.
 
-Implementer's, self-corrected: one line-count misreport (625 for a
-624-line doc), caught and corrected in its own next report.
+Also recorded: three-then-four phrase-level edit targets spanned line
+wraps (now a standing form, see prompts); a tail -3 criterion truncated
+the very line it gated; one implementer-report diff hunk arrived
+MANGLED IN TRANSIT (shelf-list onRequestClose minus-line showed the
+post-edit call) and was caught by whole-diff review plus an operator
+paste -- transport corruption, not an implementer defect, and the
+whole-diff rule is what caught it.
 
-Prior-session conduct finding: work continued past the 2026-08-03
-handoff without amendment (4.5), ending in an uncommitted slice and a
-handoff wrong by construction. Cost was real; recorded without blame --
-the mechanism (amend or write-last) exists and was simply not run.
+Operator's catch: the page-1-Close-after-Back defect (arc above). Three
+reviewers missed it; the device gate did not.
 
 ## Ratified decisions
 
-- D113, D114: dashboard.md tail amendment (fc148a3) carries decisions
-  and grounds. Post-ratification rulings absorbed into the commits:
-  converged question copy (one wording, Skip only at retirement),
-  archive exclusion by prop, RetireTarget keeps its unread field,
-  failed-retire refetch, strain-name menu title, baseline U+2026 glyph.
-- Retroactive gate for cdecc16: testimony plus MCP forensics accepted in
-  lieu of re-run where re-running destroys real data.
-- favorites_cleared stays unsurfaced (cdecc16 body records it).
-- Un-retire: BANKED with grounds -- no lived instance of a mistaken
-  retirement; the only count-raising path is the dedupe modal's
-  bought-another, and that is accepted until demand exists.
+- D115-D118 (qr-import.md) and D119-D121 (effects-tags.md) carry
+  decisions and grounds; slice (d)'s four rulings are in survey-cut.md's
+  2026-08-04 amendment tail; the bloom placement supersession is in
+  art-direction.md's amendment.
+- Post-ratification rulings absorbed into commits: recordAudioAndroid
+  false (no platform records audio); 'discarded' as a third
+  CloseOutcome; explicit deleted on every write; onLoggedChange kept;
+  Dash.bg (not #000) as the transient's ground; discard-dialog copy
+  approved as built; 'note'->'closing' InsertSource rename; Off-Key as
+  one rendered group; package-lock.json diff-stat exemption (explicit
+  architect ruling for machine-generated lockfiles, not a precedent for
+  authored files).
+- Keyboard-scroll defect (carried from 2026-07-27): RESOLVED by
+  operator observation at the slice (d) gate -- the note field scrolls
+  into view now that the tags give closing scroll slack.
 
 ## Promotion candidates for CLAUDE.md (next docs pass)
 
-- Non-ASCII file gates state the DELTA with a paired control (HEAD vs
-  worktree equal, or HEAD~1 vs HEAD plus expected delta), never an
-  absolute count. Two instances 2026-08-04: the dashboard.md equality
-  gate (clean) and refutation 7 (absolute form, failed). Meets the
-  corrected-twice bar.
-- Carried from prior handoff: npm-test-as-Phase-A-instrument (one
-  instance), grep-context rule, octal printf control form, blob-hash
-  identity, D-registry renumber for doubled D87.
+- Phrase-level edit targets against the ~70-column doc family are
+  written as LINE-ANCHORED BLOCKS, never sentence fragments; every
+  phrase-gate assumes wrap-spanning. Four instances 2026-08-04. Over
+  the bar.
+- The architect does not hand-count -- now including commit totals in
+  chat prose (refutations 3 and 9 this session; carried instances
+  prior). Over the bar.
+- Carried: non-ASCII delta-with-control form; npm-test-as-Phase-A
+  instrument; grep-context rule; octal printf control form; blob-hash
+  identity; D-registry renumber for doubled D87.
 
 ## Open items
 
-**Runnable now:** QR-import design doc -- recon complete (see arc), no
-prompt drafted yet; drafting it is the entry point.
+**Runnable now:** the doc-staleness pass -- one Tier 1 commit bundling:
+art-direction.md status line (unaware of its 2026-08-04 amendment);
+survey-cut.md status line (no pointer to its new tail);
+session-entries-schema.md "Column decisions" bullets (still name the six
+retired classes); effects-tags.md's "if this document shipped, that
+check passed" sentence (reads stronger than the re-check it records).
 
-**Blocked:** mood-capture design (two bipolar axes vs tags vs both) --
-blocked on an operator decision the architect has framed but not
-received. Relevant tension, recorded so it is not re-derived: the
-operator simultaneously wants more resolution (sliders, doubts the
-5-point scale) while real data volume is ~3 sessions; continuous
-capture is harmless to the math and favored by recover-later
-asymmetry, but any new axis amends the ratified lexicon (D85 family),
-and the doc governs.
+**Blocked:** QR slice (c) -- on the EAS build boot gate (status UNKNOWN,
+ask the operator) and the operator's per-provider QR walks (click path +
+final PDF URL per lab, appended to qr-import.md before the slice is
+prompted). Both operator-side; the architect owes nothing until they
+land.
 
-**Banked:** committing the seven reference/handoff 0N-screens.png
-(operator to vet for personal info first -- one shows the email);
-"Expo Starter" web tab-bar template chrome; empty-shelf double
-statement (ON SHELF - 0 above the empty-state copy -- unreachable
-in current data); npm-test-as-Phase-A-instrument promotion (one
-instance); grep -A-context-derived-from-block-length rule (one
-instance); octal-only printf escapes as the standing control form
-(one instance, already used in three prompts); blob-hash identity
-promotion (carried); D-registry renumber for doubled D87 (carried);
-authenticated TRUNCATE; off-shelf log; preference_summary view;
-never_again; retirement last-log step; third retirement reason;
-Android; app-code test wiring; un-retire path (2026-08-04, grounds
-above); 5-point scale resolution (operator's own doubt, banked by
-operator ruling; re-examine before the friend cohort onboards -- a
-scale change costs nothing at 3 sessions and a lot at 1000);
-session-logging mood axes and tags (moves to Blocked the moment the
-operator decides; listed here so it survives if Blocked is cleared).
+**Banked:** committing the seven reference screenshots (operator to vet;
+one shows the email); "Expo Starter" web tab chrome; empty-shelf double
+statement; authenticated TRUNCATE; off-shelf log; preference_summary
+view; never_again; retirement last-log step; third retirement reason;
+Android (note: expo-camera plugin writes android.permission.CAMERA;
+RECORD_AUDIO suppressed; barcodeScannerEnabled's ABSENCE from
+Podfile/Gradle properties is the enabled state -- do not misread a
+prebuild); app-code test wiring; un-retire; 5-point scale resolution
+(re-examine before friend cohort); user-authored custom tags (entry
+surface); EXPLAINERS.closing line 3 -- return it to closing's vacated
+middle or retire it (copy decision, operator's); the 220ms
+invisible-but-armed bloom window (flagged, accepted, unexercised); the
+Alert-under-external-dismissal interaction (unreachable in ordinary
+use, unexercised); source_url on coas (defused by D87 retention);
+commit-body/doc phrase collision ("no platform records audio" -- any
+future gate on it pins the doc path); anon-grants durable-ACL solution
+(pg_default_acl rot, carried); CLAUDE.md promotion pass itself.
 
 ## Working rhythm
 
-Unchanged from CLAUDE.md and handoff-specs 4. One live observation: the
-operator-pasted-my-DECIDE-as-a-prompt event (2026-08-04) was handled
-correctly by the implementer (STOP, no rules header) -- if it recurs,
-consider a standing one-line prompt header even on DECIDE messages.
+Unchanged from CLAUDE.md and handoff-specs 4. Two live observations:
+Tier 1's only defect check is the implementer's STOP -- refutation 1
+proved it load-bearing, so Tier 1 prompts should keep stating explicit
+STOP conditions rather than relying on goodwill. And a prompt that
+self-retracts an instruction inline was followed correctly once
+(2026-08-04, tombstone commit prompt) but the implementer flagged the
+skim hazard; prefer clean re-issues.
 
 ## Entry point
 
-Draft the QR-import design doc. It is the largest friction named from
-first real usage ("I never know where to find the COA on my iPhone"),
-the recon is done, the design shape is chosen pending validation
-against the operator's other lab providers, and its first commit is a
-Tier 1 docs slice requiring no build. The mood-capture DECIDE should be
-put to the operator at the same session's start, so its design can
-proceed if the QR arc stalls on the EAS build.
+Run the doc-staleness pass (Runnable above): four small amendments, one
+Tier 1 commit, no build, no operator dependency. It clears every stale
+status claim the session accumulated while QR slice (c)'s two blockers
+(EAS build status, provider walks) sit with the operator. Ask about the
+EAS build in the same breath -- its status is the one fact this handoff
+could not observe.
