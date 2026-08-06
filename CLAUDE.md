@@ -95,6 +95,13 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   extensionless imports appear to work under a local check while production, which has
   no such flag, rejects them. A green check under different config than production is
   weaker evidence than it looks.
+- **A parser or shared-normalization commit is not live until the operator
+  deploys it.** Edge Function code is bundled at deploy time: after any
+  commit touching `supabase/functions/`, the operator runs
+  `npx supabase functions deploy ingest-coa` (credentialed, operator-only)
+  before any device gate or import exercises the new code. Analyte names
+  are written at insert, so a canon change reaches future imports only;
+  rows already stored keep the spelling they were written with.
 
 ---
 
@@ -111,6 +118,12 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   reproducing after any fresh checkout on this machine. A worktree sha256
   is valid only for first-placement verification, never for re-verifying
   committed state.
+- **Ratified bytes are verified by blob hash before push authorization.**
+  For architect-authored content, the architect hashes the ratified text
+  and compares it against `git show <sha>:<path> | sha256sum` from the
+  operator's paste. A match is the only evidence that the commit ships
+  the bytes that were ratified; the check caught its first real
+  divergence, tested bytes against shipped bytes, on 2026-08-05.
 - **ASCII commit messages** via stdin heredoc:
   ```bash
   git commit -F - <<'EOF'
@@ -227,6 +240,16 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   accessibilityLabel, a D108 comment, and an architect-authored D109
   criterion, all corrected 2026-08-03). Describe the construct; count
   the construct form.
+- **Shas in prompt preconditions are pasted full-length (40), never
+  abbreviated by hand.** An architect-typed short sha is a hand-count
+  with extra steps: one fabricated eighth character made a precondition
+  name no object (2026-08-05).
+- **Bytes-before-prompt applies to the artifact, not the prompt text.**
+  An edit made only inside a prompt is untested code: change the file,
+  re-run its tests, and excerpt the tested bytes into the prompt --
+  never edit the excerpt. One unused import edited in prompt text
+  diverged from the tested file and was caught only by the blob-hash
+  channel (2026-08-05).
 
 ---
 
