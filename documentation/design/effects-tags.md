@@ -1,9 +1,10 @@
 # Session Effects Tags -- Design
 
-Status: design ratified D119-D121, 2026-08-04. D121 migration and
-the slice (c) closing-screen UI both applied and
-gated 2026-08-04; LEXICON_VERSION is 5. This line is amended by
-the commit that changes its truth.
+Status: design ratified D119-D121, 2026-08-04; vocabulary v6
+ratified D126, 2026-08-06. D121 migration and the slice (c)
+closing-screen UI applied and gated 2026-08-04; LEXICON_VERSION is 5
+until the D126 UI slice ships. This line is amended by the commit
+that changes its truth.
 
 ## Purpose
 
@@ -152,3 +153,55 @@ contradiction exists.
   bump to 5. Gate: device -- log a real session selecting tags across
   groups plus one with tags skipped, MCP read-back showing the exact
   array on one and null on the other.
+
+## D126 -- Streamlined vocabulary, v6 (2026-08-06)
+
+The v5 vocabulary is replaced by a 14-tag streamlined core list,
+operator-authored and ratified verbatim -- exact strings including
+the spaces around every slash:
+
+- Head Space: Focused, Creative, Uplifted / Happy, Mellow / Chill,
+  Aroused / Sensual
+- Body Feel: Energized, Heavy Body / Couch-lock, Pain Relief / Soothed,
+  Sleepy / Sedated
+- Off-Key: Dry Mouth / Eyes, Munchies, Anxiety / Mind Racing,
+  Brain Fog / Forgetful, Dizziness / Lightheaded
+
+Group labels change case (Head Space, Body Feel). Groups remain
+presentation only; D119's flat, valence-free text[] storage and null
+semantics are unchanged.
+
+**The D119 feeling-words-only constraint is revoked**, operator ruling
+2026-08-06. Grounds, the operator's own: users are self-assessing,
+not taking medical advice from the app; they record what they
+experience in common vernacular, and excluding the most common terms
+people actually use when discussing their experiences would be
+counterproductive. "Anxiety" and "Pain Relief" enter on those
+grounds. The personal-empirical invariant is untouched: a logged
+outcome word is the user's own report, and predictive copy still
+never claims a chemotype causes any of it.
+
+Against v5, by mechanical comparison: six tags survive (two of them
+gaining spaces around a slash), six are absorbed verbatim into
+broader pairs (Heavy Body, Couch-lock, Dry Mouth, Mind Racing,
+Forgetful, Lightheaded), eight are dropped (Giggly, Clear-headed,
+Unwound/Unstressed, Heavy Eyelids, Dry Eyes, Jittery, Spacey,
+Heavy-headed -- Dry Eyes textually dropped though conceptually
+folded into Dry Mouth / Eyes), and three concepts are new
+(Aroused / Sensual, Pain Relief / Soothed, Sleepy / Sedated).
+Grounds for the merges and drops: streamlining by operator ruling --
+the v5 granularity was finer than lived usage needed. This narrows
+the 2026-08-04 Spacey/Forgetful distinctness ruling to its facts:
+that ruling kept a compound apart before real data existed; this one
+merges and drops with usage in hand, and it is the later ruling.
+
+History is untouched. Rows stamped lexicon_version 5 keep their v5
+strings; nothing is rewritten, per append-only. LEXICON_VERSION
+moves 5 -> 6 in the UI slice that ships the new picker, on D121's
+own grounds: the stamp records the vocabulary the user was shown.
+
+Slice plan: (a) this amendment, docs. (b) feat: the lexicon.ts
+EFFECTS constant and the version bump, device-gated -- log one
+session selecting tags from all three groups and one skipping tags,
+MCP read-back showing the exact new strings on one and null on the
+other.
