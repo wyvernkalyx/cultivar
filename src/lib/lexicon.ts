@@ -23,7 +23,14 @@
 // scale-shape change — the hidden 5/4/3/2/1 mapping is UNCHANGED, tags never
 // touch overall_word or overall_score, so cross-version averaging stays valid
 // and no ratified recompute is triggered (effects-tags.md, D121).
-export const LEXICON_VERSION = 5;
+//
+// v6 swaps the vocabulary itself for the D126 streamlined core list
+// (effects-tags.md, D126): 14 tags, groups recased. Still a field-set
+// change -- the hidden 5/4/3/2/1 mapping is UNCHANGED, tags never touch
+// overall_word or overall_score, cross-version averaging stays valid, no
+// recompute. Rows stamped 5 keep their v5 strings, append-only: the
+// stamp records what the user was shown, and v5 users saw v5.
+export const LEXICON_VERSION = 6;
 
 // Ordered top rung first (D51: up = better, "Neutral" at dead center) — index
 // i here IS rung index i on the ladder. The ladder reads this array; the rung
@@ -41,42 +48,34 @@ export const RUNGS = [
   { word: 'Hated', score: 1 },
 ] as const;
 
-// The effects vocabulary (D119), copied character-for-character from the
-// ratified list in documentation/design/effects-tags.md — operator-authored
-// copy, so it is transcribed, never paraphrased or re-ordered.
+// The effects vocabulary: D119 shape, D126 streamlined list, copied
+// character-for-character from the ratified bullets in
+// documentation/design/effects-tags.md -- operator-authored copy, so it
+// is transcribed, never paraphrased or re-ordered.
 //
 // The three groups here are PRESENTATION ONLY. The column is one flat text[]
 // with no valence (D119): the same effect flips valence by session, so the
 // score carries the judgment and the tags record only what showed up. Nothing
-// downstream may read a tag's group as data — moving a tag between groups is
+// downstream may read a tag's group as data -- moving a tag between groups is
 // free precisely because the stored array never knew them.
-//
-// The doc splits the Off-Key material across two lines (common discomforts,
-// then head and body flags). They merge into the one group the closing screen
-// renders, discomforts first, order preserved: the sub-split is authoring
-// structure in the doc, not a surface the user sees.
 export type EffectGroup = { readonly label: string; readonly tags: readonly string[] };
 export const EFFECTS: readonly EffectGroup[] = [
   {
-    label: 'Head space',
-    tags: ['Focused', 'Creative', 'Uplifted/Happy', 'Giggly', 'Clear-headed', 'Mellow/Chill'],
+    label: 'Head Space',
+    tags: ['Focused', 'Creative', 'Uplifted / Happy', 'Mellow / Chill', 'Aroused / Sensual'],
   },
   {
-    label: 'Body feel',
-    tags: ['Heavy Body', 'Couch-lock', 'Unwound/Unstressed', 'Heavy Eyelids', 'Energized'],
+    label: 'Body Feel',
+    tags: ['Energized', 'Heavy Body / Couch-lock', 'Pain Relief / Soothed', 'Sleepy / Sedated'],
   },
   {
     label: 'Off-Key',
     tags: [
-      'Dry Mouth',
-      'Dry Eyes',
+      'Dry Mouth / Eyes',
       'Munchies',
-      'Mind Racing',
-      'Jittery',
-      'Spacey',
-      'Forgetful',
-      'Lightheaded',
-      'Heavy-headed',
+      'Anxiety / Mind Racing',
+      'Brain Fog / Forgetful',
+      'Dizziness / Lightheaded',
     ],
   },
 ] as const;
