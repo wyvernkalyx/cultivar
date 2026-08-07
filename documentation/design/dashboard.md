@@ -371,3 +371,58 @@ gate); D114 as one feat (Tier 2, device gate). Non-goals: un-retire
 (banked 2026-08-04, no lived instance); any change to retire_coa or the
 RPC surface; any change to the survey's two user-facing reasons;
 session-ladder.tsx; any schema change.
+
+## Amendments -- 2026-08-07 (D131-D132: card analyte percentages)
+
+Ratified by the operator 2026-08-07 in chat, per-decision. Grounds:
+operator request to surface per-analyte percentages on the shelf
+card, audited against the ratified visual authority
+(reference/handoff/cultivar-reference.html) this session.
+
+- **D131 -- terpene legend percentages, per the reference.** The
+  card legend renders each top-3 terpene as dot + name + percentage
+  in the faint tabular style. This closes a shipped-vs-mock gap,
+  not new design: the mock's card legend template renders name and
+  pct, while the prose spec (cultivar-reference.md, the "legend
+  with hue dots" card line) under-described its own mock, and the
+  implementation followed the prose. Precision: truncate2 governs
+  -- cards truncate to two decimals, never round (D102). The mock's
+  toFixed(2) rounds; the ratified rule wins over a reference
+  defect (the D109.1 precedent). No ND case arises in the legend:
+  null-pct analytes are excluded upstream, so every legend entry
+  is a lab-reported value.
+- **D132 -- cannabinoid line, top-3 reported, text only.** Operator
+  ruling 2026-08-07: per-cannabinoid values join the card.
+  Architect recommended detail-only (the reference card carries no
+  per-cannabinoid list); dissent recorded, ruling followed.
+  Presentation ratified as option A, a single text line of the
+  top-3 reported cannabinoids (register: THCA 25.10 - D9-THC 0.56
+  - CBGA 0.38) in the legend's faint tabular style, placed after
+  the terpene fingerprint per the detail's terpenes-before-
+  cannabinoids order. Rejected: a second fingerprint bar (no
+  honest denominator exists -- coas carries no total-cannabinoids
+  column, so segment shares would divide by a computed sum, and
+  the terpene track's remainder-is-unclaimed-lab-total property
+  has no analog; the bar would imply a whole the lab never
+  reported, and it invents a cannabinoid hue system); the full
+  reported list (2-10 reported cannabinoids per COA observed live
+  2026-08-07 -- up to ten rows is a wall, and the detail already
+  does this job).
+  - Ranking: the groupTopTerpenesByCoa convention exactly -- null
+    pct excluded outright (absence never ranks as a zero), pct
+    descending, name tiebreak, top 3. Precision: truncate2.
+  - Absence state: zero reported cannabinoids renders the italic
+    "Cannabinoids not reported by lab." line, symmetric with the
+    terpene treatment. No live instance (observed minimum is 2).
+  - Data: one parallel coa_cannabinoids select (coa_id, name, pct)
+    joining the D98 parallel-select family in shelf-list.tsx, and
+    a groupTopCannabinoidsByCoa sibling in card-data.ts. No
+    schema, no view, no migration.
+  - Casing variance across labs (THCa/THCA, CBGa/CBGA) is real but
+    per-card rows come from one lab, so nothing collides on a
+    card. Canonicalize-at-read stays banked, untouched.
+
+Slice plan: this amendment (Tier 1); D131 as one feat (Tier 2,
+device gate); D132 as one feat (Tier 2, device gate, with a
+read-back comparing one card's rendered top-3 against a direct
+coa_cannabinoids query for that COA). Both display-only.
