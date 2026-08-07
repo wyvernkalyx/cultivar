@@ -162,7 +162,14 @@ function Fingerprint({ total, terpenes }: { total: number; terpenes: CardTerpene
         {terpenes.map((terpene) => (
           <View key={terpene.name} style={styles.legendItem}>
             <View style={[styles.legendDot, { backgroundColor: terpeneHue(terpene.name) }]} />
-            <Text style={styles.legendText}>{terpene.name}</Text>
+            {/* D131: the reported value beside the name, truncated to two
+                decimals (D102 -- truncate, never round), fainter tabular
+                figures per the reference mock. Every entry here is a
+                lab-reported value: null pct never reaches the legend. */}
+            <Text style={styles.legendText}>
+              {`${terpene.name} `}
+              <Text style={styles.legendPct}>{`${truncate2(terpene.pct)}%`}</Text>
+            </Text>
           </View>
         ))}
       </View>
@@ -506,6 +513,14 @@ const styles = StyleSheet.create({
     fontFamily: SORA_REGULAR,
     fontSize: 10,
     color: Dash.textMuted,
+  },
+  // D131: the value token is one step fainter than the name it follows,
+  // tabular so columns of legends do not shimmer across cards.
+  legendPct: {
+    fontFamily: SORA_REGULAR,
+    fontSize: 10,
+    fontVariant: ['tabular-nums'],
+    color: Dash.textFaint,
   },
   ndTerpenes: {
     fontFamily: SERIF_ITALIC,
