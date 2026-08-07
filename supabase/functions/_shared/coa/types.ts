@@ -6,7 +6,7 @@
 // field the document does not state is `null`, never `''` -- an empty string
 // would assert that the document says blank, which is a different claim.
 
-export type SourceLab = 'kaycha' | 'drs-confident' | 'green-analytics' | 'act' | 'unknown';
+export type SourceLab = 'kaycha' | 'drs-confident' | 'green-analytics' | 'act' | 'ctnd' | 'unknown';
 
 /** A single measured analyte. `pct` is null for ND / <LOQ / not-reported. */
 export interface Analyte {

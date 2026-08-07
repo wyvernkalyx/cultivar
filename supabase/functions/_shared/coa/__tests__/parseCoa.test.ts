@@ -128,6 +128,21 @@ const CASES: FixtureCase[] = [
     sampledDate: '2026-05-21',
     testedDate: '2026-05-26',
   },
+  {
+    strain: 'Stank Breath',
+    parsedStrain: 'Stank Breath',
+    file: 'stank-breath.pdf',
+    sourceLab: 'ctnd',
+    totalThc: 28.4,
+    totalTerp: 2.7841,
+    dominant: 'Caryophyllene',
+    myrcene: 0.076,
+    limonene: 0.2991,
+    batch: 'STBR-028-FL8',
+    brand: 'Moby & Zeke LLC (dba Sapphire Farms)',
+    sampledDate: '2026-05-08',
+    testedDate: '2026-05-15',
+  },
 ];
 
 describe('parseCoa on real COA fixtures', () => {
@@ -219,6 +234,23 @@ describe('parseAct name fidelity', () => {
     for (const n of ['(6aR,9S)-d10-THC', '(6aR,9R)-d10-THC']) {
       expect(coa.cannabinoids.find((c) => c.name === n)?.pct).toBeNull();
     }
+  });
+});
+
+describe('parseCtnd delta-THC positional attribution', () => {
+  // The extractor detaches superscript digits, so the printed delta-THC
+  // rows arrive as three rows all named the bare delta fragment. Operator
+  // ruling (2026-08-07): attribute by document position -- 8, 9, 10 --
+  // and only when exactly three such rows appear; any other count stores
+  // none. These assertions pin both the attribution and the guard's
+  // fail-closed shape.
+  it('stores exactly three delta rows, attributed 8/9/10 in order', async () => {
+    const coa = await loadCoa('stank-breath.pdf');
+    const deltas = coa.cannabinoids.filter((c) => c.name.startsWith('Δ'));
+    expect(deltas.map((c) => c.name)).toEqual(['Δ8-THC', 'Δ9-THC', 'Δ10-THC']);
+    expect(deltas[0].pct).toBeNull();
+    expect(deltas[1].pct).toBeCloseTo(5.73, 2);
+    expect(deltas[2].pct).toBeNull();
   });
 });
 

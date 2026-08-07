@@ -1,9 +1,9 @@
 # ACT Laboratories and CTND parsers -- Design
 
 Status: design ratified D127-D130, 2026-08-06. Fixtures committed
-at bfc6ae4. Canon entries (D129) shipped at aca0209; ACT parser
-implemented (slice c); CTND parser not yet. This line is amended by
-the commit that changes its truth.
+at bfc6ae4. Canon entries (D129) shipped at aca0209; both parsers
+implemented (slices c and d). This line is amended by the commit
+that changes its truth.
 
 Two real jars failed to import on 2026-08-06. Neither failure was
 in acquisition: the QR walk, detection, download, and hash all

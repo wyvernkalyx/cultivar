@@ -17,5 +17,7 @@ export function identifyLab(text: string): SourceLab {
   // D128: the anchor is the literal lab name, exact case; 24 hits on the
   // fixture, 0 on every other lab's fixture (cross-fixture negative case).
   if (text.includes('ACT Laboratories')) return 'act';
+  // D128: 36 hits on the CTND fixture, 0 on every other lab's fixture.
+  if (text.includes('CTND')) return 'ctnd';
   return 'unknown';
 }
