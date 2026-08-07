@@ -232,6 +232,39 @@ describe('displayTerpene canonical forms', () => {
   });
 });
 
+describe('displayTerpene ACT canonical forms (D129)', () => {
+  // ACT Laboratories prints ASCII single-letter isomer prefixes. Each pair
+  // is [printed form, display form]; the entries exist so an ACT jar's
+  // compounds merge with the same compounds as printed by the other labs.
+  const EXPECTED: [string, string][] = [
+    ['b-Caryophyllene', 'Caryophyllene'],
+    ['a-Humulene', 'Humulene'],
+    ['b-Myrcene', 'Myrcene'],
+    ['b-Pinene', 'beta-Pinene'],
+    ['a-Pinene', 'alpha-Pinene'],
+    ['a-Bisabolol', 'Bisabolol'],
+    ['trans-b-Farnesene', 'Farnesene'],
+    ['trans-b-Ocimene', 'Ocimene'],
+    ['Borneol', 'Borneol'],
+  ];
+
+  for (const [printed, display] of EXPECTED) {
+    it(`${printed} is known and displays as ${display}`, () => {
+      expect(isKnownTerpene(printed)).toBe(true);
+      expect(displayTerpene(printed)).toBe(display);
+    });
+  }
+
+  it('merges the ASCII-prefixed forms with the Greek-prefixed forms', () => {
+    expect(displayTerpene('b-Caryophyllene')).toBe(displayTerpene('β-Caryophyllene'));
+    expect(displayTerpene('a-Humulene')).toBe(displayTerpene('α-Humulene'));
+  });
+
+  it('keeps the two pinene isomers distinct', () => {
+    expect(displayTerpene('b-Pinene')).not.toBe(displayTerpene('a-Pinene'));
+  });
+});
+
 describe('normalizeUsDate', () => {
   it('pivots a 2-digit year to 20YY and zero-pads', () => {
     expect(normalizeUsDate('04/17/26')).toBe('2026-04-17');

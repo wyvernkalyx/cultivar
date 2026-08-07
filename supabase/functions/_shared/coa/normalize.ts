@@ -75,6 +75,20 @@ const TERPENE_CANON: Record<string, string> = {
   ALPHACEDRENE: 'alpha-Cedrene',
   CISNEROLIDOL: 'cis-Nerolidol',
   TRANSNEROLIDOL: 'trans-Nerolidol',
+  // Added 2026-08-07 for ACT Laboratories (D129), which prints ASCII
+  // single-letter isomer prefixes where other labs print Greek or the
+  // full word. Explicit entries, not a key-function fold: a one-letter
+  // prefix is too weak a signal to fold globally. Borneol is new to the
+  // corpus; the rest map to canonical values that already exist above.
+  BCARYOPHYLLENE: 'Caryophyllene',
+  AHUMULENE: 'Humulene',
+  BMYRCENE: 'Myrcene',
+  BPINENE: 'beta-Pinene',
+  APINENE: 'alpha-Pinene',
+  ABISABOLOL: 'Bisabolol',
+  TRANSBFARNESENE: 'Farnesene',
+  TRANSBOCIMENE: 'Ocimene',
+  BORNEOL: 'Borneol',
 };
 
 /** Collapse a terpene name to its canonical lookup key. */
