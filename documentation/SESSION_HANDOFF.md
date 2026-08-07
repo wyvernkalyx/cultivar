@@ -1,307 +1,239 @@
-# Session handoff -- 2026-08-06
+# Session handoff -- 2026-08-07
 
-The repo is authoritative over this document. This session's ledger,
-and it has a shape worth naming: eight architect refutations, six
-of them one error in two forms -- a claim restated in prose after
-the correct value already existed, and a prompt asserting a
-handover that had not happened. The blob-hash, observation, and STOP channels caught
-every one. A rule promoting the fix is
-the first open item. Begin with a read-only Phase A audit.
+The repo is authoritative over this document. This session opened by
+refuting the previous handoff's own Phase A: "HEAD's parent is
+bfc6ae4" was false at birth -- the parent was 8fe4c21, which that
+handoff's own What-shipped list names as its newest commit. The
+error survived because a parent sha was written from memory rather
+than from git log, in the one line handoff-specs 2.2 exists to
+police. Begin with a read-only Phase A audit.
 
 ## Start here (Phase A, read-only)
 
-- HEAD's parent is bfc6ae4 (data: ACT Laboratories and CTND COA
-  fixtures). Predicted subject of the handoff commit itself:
-  "docs: session handoff 2026-08-06 -- v6 vocabulary shipped, two
-  parsers designed". Sync 0 0 after the operator's push. If HEAD is
-  neither, work continued past this handoff -- reconcile first.
+- The parent of the handoff commit is
+  014ec55f1e4aeaf6a6d3350b8bbb785df9bf77ae (feat: CTND parser --
+  parser arc complete). Predicted subject of the handoff commit
+  itself: "docs: session handoff 2026-08-07 -- parser arc shipped
+  end to end, two jars imported". Sync 0 0 after the operator's
+  push. If HEAD is neither, work continued past this handoff --
+  reconcile first.
 - git status --porcelain: exactly seven ?? reference/handoff/
   0N-screens.png lines (N=1..7), the standing noise.
-- Migrations: 17 on disk by name-form count, unchanged. No
-  migration this session; D126 needed none because D119 made the
-  tags column text[] rather than an enum.
-- Fixtures: 7 PDFs in supabase/functions/_shared/coa/__fixtures__/,
-  up from 5.
-- NOT RUN THIS SESSION, carried unverified from 2026-08-05: npm
-  test -> 77 passed; npx expo lint -> 1 error 0 warnings, template
-  file only, exit 1; npx tsc --noEmit -> 0 in the operator's
-  worktree only. The v6 slice ran tsc and lint (both matched) but
-  no session this day ran the suite. Treat 77 as a carried number,
-  not an observation, and re-baseline it at the start of slice (b).
-- tsc does not cover the parsers at all. tsconfig.json excludes
-  supabase/functions/** outright. Parser types are checked by
-  ts-jest inside npm test. A tsc pass is not evidence about parser
-  code. Carried, still true, still load-bearing for the arc ahead.
-- DB via MCP, observed at write time: coas 12, session_entries 67
-  raw / 16 current, entries stamped lexicon_version 6 three, entries
-  with a non-null effects array 7, entries with an empty effects
-  array 0, distinct source_lab values kaycha / drs-confident /
-  green-analytics, COAs from act or ctnd 0.
-- The installed dev-client binary is the 2026-08-03 EAS build from
-  dbfe1cc. It ran this session's device gate unchanged, over Metro
-  reload only. No new build is owed; nothing this session added a
-  native module.
+- Migrations: 17 on disk by name-form count, unchanged; no
+  migration this session. Fixtures: 7 PDFs, unchanged.
+- npm test -> 121 passed. Observed twice at session close: in the
+  operator's worktree and on a fresh clone of 014ec55. npx expo
+  lint -> 1 error 0 warnings, template file only, exit 1. npx tsc
+  --noEmit -> 0 in the operator's worktree only; a fresh checkout
+  fails on the generated-typings side-effect import (re-observed
+  2026-08-07, still the banked item).
+- DB via MCP, observed at write time: coas 14 (was 12), source_lab
+  set kaycha / drs-confident / green-analytics / act / ctnd, one
+  act row and one ctnd row, both matching their fixture cases field
+  for field (Hooch AP-FE-GH0526 27.91/2.819 2026-05-21/26; Stank
+  Breath STBR-028-FL8 28.4/2.7841 2026-05-08/15). session_entries
+  67 raw / 16 current, lexicon 6 stamps 3, non-null effects 7 --
+  unchanged all day; the two imports added COAs, not sessions.
+- The installed dev-client binary is still the 2026-08-03 EAS build
+  from dbfe1cc. Today's device gate ran over Metro reload; nothing
+  added a native module; no build owed.
+- The deployed ingest-coa bundle was pushed twice today by the
+  operator, observed both times; the second deploy carried HEAD
+  (parseCtnd.ts and the updated dates.ts in the asset list). npx
+  resolves supabase CLI 2.112.0 now, up from the recorded 2.111.0.
 If any of these do not match, the repo wins -- re-baseline.
 
-## What shipped (newest first, five commits, plus this handoff)
+## What shipped (newest first, seven commits, plus this handoff)
 
-- 8fe4c21 docs: ACT Laboratories and CTND parser design (D127-D130)
-- bfc6ae4 data: ACT Laboratories and CTND COA fixtures
-- 9eb03c3 feat: streamlined effects vocabulary v6 (D126)
-- ca193d7 docs: streamlined effects vocabulary v6 (D126)
-- d952ab6 docs: promote deploy step, sha, bytes-before-prompt,
-  blob-hash rules
+- 014ec55 feat: CTND parser (D127, D128, D130) -- parser arc complete
+- b3150b8 feat: month-name US date normalizer (slice d1)
+- d29145e feat: path-agnostic copy for the unsupported-lab guard
+- 9a8a751 feat: ACT Laboratories parser (D127, D128, D130)
+- aca0209 feat: canonical entries for ACT's ASCII-prefixed analyte
+  names (D129)
+- d45710e docs: promote pasted-not-retyped prose rule to prompt
+  conventions
 
 ## The arcs
 
-**Four process rules moved out of memory and into the handbook.**
-The deploy step for Edge Function commits, full-length shas in
-prompt preconditions, bytes-before-prompt applies to the artifact
-rather than the prompt text, and the blob-hash ratification check.
-All four were earned by the previous session's ledger; the fourth
-had been over the bar for two sessions. The deploy command in the
-Ingestion bullet is inferred from the function's path and has never
-been executed by the architect's observation -- it stays an
-inference until a parser arc runs it.
+**The parser arc shipped end to end, and the jars that started it
+are on the shelf.** Slices (b) through (d) landed as four commits
+-- canon entries, ACT parser, shared date normalizer, CTND parser
+-- and after the second deploy the operator re-scanned both jars
+from 2026-08-06. Both cleared the guard, and the DB read-back shows
+both stored rows byte-identical to the fixture-case values,
+including CTND's full-precision 2.7841 total-terpenes over the
+rounded 2.78 cover -- D130 doing in production exactly what it was
+ratified to do. Five labs now parse.
 
-**The effects vocabulary was replaced end to end in one session,
-and the schema did not move.** The operator asked for a streamlined
-list; D126 replaced the v5 twenty-tag vocabulary with fourteen tags
-in recased groups and bumped LEXICON_VERSION to 6. The whole change
-was a client constant plus a version bump, which is D119's
-text[]-not-enum choice paying off exactly as designed. History is
-untouched: rows stamped 5 keep their v5 strings, append-only, and
-the device gate confirmed the boundary in the data -- three new
-rows at version 6 carrying byte-exact new strings on the closing
-entry and null, not an empty array, on the session where tags were
-skipped.
+**The architect ran the observation runs itself, and every prompt
+shipped tested bytes.** New working rhythm, promoted from last
+session's one-round-trip pattern: the architect clones origin, runs
+the repo's own extractor, key function, and full suite in its own
+environment, applies the intended edits there, and authors the
+prompt from the tested files with pre-computed blob hashes. The
+blob-hash channel then compares two independent constructions of
+the same bytes -- architect's clone against implementer's worktree
+-- and matched on every commit today, at staging and again at HEAD.
+The suite ran 77 -> 88 -> 102 -> 107 -> 121 across the arc, each
+transition predicted from an architect-side run before the prompt
+shipped.
 
-**D126 also revoked a standing constraint, on the record.** D119
-had ruled the vocabulary feeling-words-only, naming "anxiety"
-specifically as excluded. The operator overturned it: users are
-self-assessing rather than taking medical advice, they record what
-they experience in common vernacular, and excluding the most common
-terms would be counterproductive. The revocation and its grounds
-are written into the design doc rather than left as a silent
-contradiction of the earlier ruling. The personal-empirical
-invariant is untouched -- a logged outcome word is the user's own
-report, and predictive copy still never claims a chemotype causes
-anything.
+**CTND's extraction produced three distinct token-displacement
+artifacts, and each got a different answer.** Superscript digits
+detach: the three delta-THC rows arrive identically named, handled
+by the operator's positional ruling below. The superscripted carene
+row fragments, and a truncated capture could land on a canonical
+name the row did not print whole -- guarded by a space lookbehind.
+And an unconsumed absence cell's LOQ token glued onto the next
+row's name, silently swallowing Eucalyptol's ND record with no
+error surface -- D124's shift class in a new form, caught only
+because the architect's probe compared output row counts against
+the document, guarded by a second lookbehind and commented in the
+module. The pattern to carry: this extractor displaces tokens, and
+every capture that survives does so by refusing to match rather
+than by guessing.
 
-**Three new jars failed to import, and the diagnosis inverted the
-operator's hypothesis.** The report was that scanning had become
-unreliable. It had not: on both provider-hosted jars the QR walk,
-detection, download, and hash all worked, "A lab report is on this
-page" fired, and the PDF reached the parse layer. Both died in the
-empty-parse guard for the same reason as the Aeterna jar before
-them -- no parser for the lab. The two labs are ACT Laboratories
-(NY) and Certified Testing and Data (CTND), the fourth and fifth in
-the corpus. The third jar, hosted on Google Drive, imported fine
-through the existing file-picker fallback of last resort, and its
-COA turned out to be Kaycha, a lab already read. Acquisition is not
-the frontier; parser coverage is, and it advances one lab per
-lived-demand request.
-
-**The design doc was written from the repo's own extractor, not
-from a lookalike.** The architect's observations on the two new
-PDFs came from pdftotext, which is not what the Edge Function uses.
-Rather than design patterns from it, the arc spent one round trip
-on a read-only observation run: the implementer ran the repo's
-extractor over both committed fixtures and pasted the header block,
-a table region, and cross-fixture substring counts. That paste
-refuted one architect claim outright and grounded every observed
-number in the doc. Claims that could not be grounded are marked
-predicted and carry gate cases rather than being quietly promoted.
-
-**The find that justified the whole detour is in D129.** Eight of
-the seventeen terpene names ACT prints do not resolve through the
-shared canonical-name path, because ACT prints ASCII single-letter
-prefixes (b-Caryophyllene, a-Humulene) where every other lab in the
-corpus prints Greek or the full word, and terpeneKey folds Greek
-only. CTND, by contrast, resolves eleven of eleven. Unaddressed,
-an ACT jar's Caryophyllene would sit in the data under a second
-name and never merge with the same compound on a Kaycha or CTND
-jar -- cross-COA comparison fragmenting silently with no error
-surface anywhere. That is the one failure class the product cannot
-absorb, and it is now a slice of its own, before either parser.
+**The error copy became true for every path.** The empty-parse
+guard fires for both the jar-QR and file-picker routes, so its
+file-picker advice was wrong for a user holding a jar. The
+operator-ratified replacement names the actual state and promises
+nothing about retention. Its own commit, device-gated with a
+screenshot, resolving a contradiction between the design doc's
+non-goal and the prior handoff's ride-along ruling -- the ruling
+recorded in this session's DECIDEs.
 
 ## Refuted hypotheses / corrections
 
 Architect's, in order:
-1. Carried context claimed the entry point was an EAS build-status
-   check and a doc-staleness pass for the QR arc. The repo refuted
-   it: slice (c) had landed and an entire GA parser arc had shipped
-   after it. Carried context is always potentially stale; the Phase
-   A audit is what catches it.
-2. Wrote "five merged, seven dropped" into ratified doc text after
-   the comparison script had already produced the correct
-   partition. Self-caught by running the script again.
-3. Wrote "four of them gaining spaces around a slash" into the same
-   paragraph. Two survivors carry a slash. The implementer STOPped
-   rather than landing a false mechanical claim in a design doc.
-   The corrected sentence now carries its own presence gate.
-4. Described the EFFECTS array as ending at line 81 in one clause
-   and named the content-anchored endpoint in another; the array
-   closes at 82. Also described a seven-line insertion block as
-   eight lines. Both resolved correctly by the implementer against
-   the criteria and the blob hash.
-5. Raised the "< LOQ" storage question as an open DECIDE twice.
-   It is not open: parsePct already maps ND, NR, NT, N/A and any
-   less-than capture to null, and the Analyte type's own comment
-   says so. A settled invariant presented as an open ruling, twice,
-   because the architect worked from memory of the code instead of
-   the code.
-6. Predicted CTND's "Certified" would arrive mangled by ligature
-   loss and used that as the ground for choosing the CTND anchor.
-   It arrives intact. What mangled was "Testing", once, in
-   "Regulatory Compliance Tesng". The anchor choice survives on
-   other grounds; the ground given for it was wrong.
-7. Shipped this handoff's own commit prompt with the ratified text
-   named but not carried -- "supplied below this prompt block" was
-   prose describing a handover that did not happen, because the
-   bytes went out as a download link instead. The implementer
-   STOPped rather than composing 285 lines itself, which
-   handoff-specs 2 forbids and which would have made the blob hash
-   a check agreeing with its own guess.
-8. Re-issued that prompt with the bytes moved to a file and a hash
-   gate on both ends -- the right fix -- and then wrote "The
-   operator has saved the ratified handoff to /d/Projects/
-   handoff-new.md" in the observed voice about something not
-   observed. The file was not there. The mechanism changed; the
-   unverified-handover assumption did not. Caught by the
-   precondition the same prompt had correctly made checkable.
+1. Carried the prior handoff's "HEAD's parent is bfc6ae4" into
+   Phase A and refuted it against origin: the parent was 8fe4c21.
+   Ninth instance of that session's error family, in the line the
+   spec exists to police.
+2. Flagged D129's "8 of the 17" as internally inconsistent with
+   its nine entries. Observation refuted the flag, not the doc: 17
+   counts the terpene names printed with measured values, 8 counts
+   the prefix-caused failures among them, and Borneol is the ninth
+   entry for a different cause. The doc was right; the architect's
+   tension claim was the error.
+3. Wrote "predicted 66" for a grep line number that had never been
+   executed -- a hand-derived number, one commit after promoting
+   the rule that forbids exactly that. Observed 65. The implementer
+   resolved it correctly against the matching full-file hash and
+   showed the arithmetic.
+Self-caught before any prompt shipped: a test-insert boundary
+constructed with a double blank line, rebuilt a second time to the
+byte-identical wrong file (the unchanged full-file hash was the
+tell), correct on the third; and a python edit whose escaping did
+not match the file's bytes, refused by its own assert rather than
+mis-landed.
 
-Six of these eight are one error in two forms: a claim restated in
-prose after the correct value already existed, and a prompt
-asserting a handover that had not happened. The rule the first open
-item promotes covers both forms, and the second form is worth
-stating in its own words because it survived one correct fix to the
-first: moving bytes into a hash-gated file did not stop the
-sentence introducing them from being written as fact.
+Implementer's slips: three assertions about deploy state ("still
+owed", "covers these commits"), which is outside worktree-only
+evidence in either direction. After the second, every commit prompt
+carries an explicit no-deploy-claims Rules line, and the slip did
+not recur under it.
 
-Implementer's catches, all unprompted and all correct:
-- The survivors-gaining-spaces miscount, with the partition
-  derived from the file's own v5 list rather than from the prompt.
-- The filename for the new design doc, which the architect's
-  ratified paste never specified. It chose the sibling's form and
-  flagged that a rename was free until staged.
-- That slice (b)'s "call the real key function first" requirement
-  needs to be a numbered runnable block in the prompt, not prose in
-  the doc. Adopted.
-- That the "< LOQ" and ND frequency counts are predicted and gate
-  nothing, and should be promoted to observed inside the slice
-  (c)/(d) observation rather than by a separate run. Adopted.
-- That its own extra grep used a pipeline whose reported exit codes
-  belonged to tr rather than grep, so the file lists were the
-  evidence and the exit codes were not. Reported against itself.
+Implementer's catches, all correct: the line-65 resolution above;
+an unprompted self-note that the commit body's device-gate sentence
+was architect-carried text it reports as committed, not verified;
+unique-anchor pre-verification before every multi-file edit.
+
+Operator channel: one cat -A paste truncated mid-trailer at "Co".
+The tail re-observation settled it as paste truncation, not a
+commit defect -- the artifact settles it, never the paste.
 
 ## Ratified decisions
 
-- D126 the v6 streamlined vocabulary, fourteen tags, groups recased
-  to Head Space / Body Feel / Off-Key. The D119 feeling-words-only
-  constraint is revoked by operator ruling with grounds recorded.
-  Groups remain presentation only; storage stays one flat
-  valence-free text[].
-- LEXICON_VERSION moves 5 -> 6 in the UI slice that ships the
-  picker, on D121's grounds: the stamp records the vocabulary the
-  user was shown.
-- D127 act and ctnd become separate SourceLab members. Both
-  documents are label-adjacent, so D123's positional machinery is
-  not copied in.
-- D128 identification anchors are the literals ACT Laboratories and
-  CTND, chosen on observed cross-fixture counts and gated with a
-  cross-fixture negative case.
-- D129 ACT's ASCII-prefixed analyte names get explicit canon
-  entries; the shared key function is not extended. Localized and
-  visible over global and blind.
-- D130 all capture binds to the detail tables, never the rounded
-  cover panel. Repeated total labels and the two-token absence
-  marker are named hazards.
-- The error-copy fix rides along with slice (c) rather than
-  becoming its own arc: it is one string, and slice (c) is the
-  commit that makes the current message wrong for ACT jars.
+- The pasted-not-retyped rule is in CLAUDE.md Prompt conventions
+  (d45710e): prose claims are excerpted from executed output, and
+  ratified content travels inside the prompt.
+- The unsupported-lab error copy landed as its own commit
+  immediately after slice (c) -- resolving the contradiction
+  between the design doc's non-goal ("not a parser change") and
+  the prior handoff's ride-along phrasing, honoring both. The
+  ratified string: "Cultivar doesn't support this lab's reports
+  yet." Nothing implying retention, which stays a banked DECIDE.
+- Delta-THC positional attribution, operator ruling: the three
+  identically-named delta rows attribute by document position --
+  8, 9, 10, the order the document prints and its own Definitions
+  formula corroborates -- as transcription-by-position, and only
+  when exactly three such rows appear; any other count stores
+  none, failing closed to omission rather than misattribution.
+  Grounds: the Delta-9 value (5.73 on this fixture) is worth
+  keeping. Architect recommended omission; dissent recorded,
+  ruling followed, both the attribution and the fail-closed guard
+  pinned by a dedicated test.
+- Slice (d) split into (d1) shared month-name date normalizer and
+  (d2) parser, on D125's precedent: shared normalization changes
+  separately from the parser that motivated it.
+- Deploys batch per arc segment: one deploy after (d2) carried
+  both functions commits. Per-commit deploys remain available on
+  operator request.
 
 ## Open items
 
-**Runnable now: promote one rule to CLAUDE.md.** Claims in prompt
-prose are pasted from executed output, never retyped, and ratified
-content a prompt depends on travels inside the prompt rather than
-being named as arriving separately; a number or a body of text in
-prose that cannot be traced to something the prompt itself carries
-is a guess. Six instances this session, listed above as
-refutations 2 through 4 and 7 through 8. It belongs in Prompt
-conventions, beside the full-length-sha rule it generalizes. Tier
-1, one prompt.
-
-**The parser arc, slices (b) through (d)**, per the slice plan in
-act-ctnd-parsers.md. Slice (b) is the canon entries and must open
-with a numbered block that calls the real terpeneKey and pastes its
-output before any entry is added -- the key forms in the doc are
-predicted from a scratch reimplementation. Slices (c) and (d) are
-the two parsers. All three are pure logic; the gate is the suite
-passing, pasted raw, plus the cross-fixture identification negative
-case. Re-baseline npm test at the start of slice (b), since 77 is
-carried rather than observed.
+**Runnable now: nothing drafted.** The entry point below needs no
+prompt until a document exists.
 
 **Blocked:** nothing.
 
-**Banked (new this session, ahead of the carried list):** the
-unsupported-lab error copy, which reads as file-picker advice to a
-user holding a jar -- now assigned to slice (c) rather than left
-loose. A WebView download amendment for Drive-hosted COAs, which
-the file-picker fallback already covers at the cost of extra taps,
-so it is convenience rather than capability. Whether a parse-failed
-PDF should be retained as a pending-support shelf item so a future
-parser makes it readable without a re-scan -- this touches D87's
-no-orphans ground and needs its own DECIDE. A second COA from ACT
-and from CTND, since every rule in the new design doc is
-generalized from exactly one document per lab.
-Carried, unchanged: the second Green Analytics fixture, for the
-same reason; Rainbow Runtz upper-case strain; the Gelato row's four
-title-cased analyte names; canonicalize-at-read as a real design
-question; stale hasher comment in add-to-shelf-modal.tsx;
-fresh-checkout tsc dependency on generated typings; DRS Testing
-walk detail; support-copy reword window; the seven reference
-screenshots (one shows the email); "Expo Starter" web tab chrome;
-empty-shelf double statement; authenticated TRUNCATE; off-shelf
-log; preference_summary view; never_again; retirement last-log
-step; third retirement reason; Android; app-code test wiring;
-un-retire; 5-point scale resolution; user-authored custom tags;
+**Banked (new this session):** the guard's heading/body pairing --
+"Couldn't read this COA" frames a read failure over a body that now
+frames lab support; implementer flagged it, operator saw the pair
+at the device gate and proceeded; one string if it ever grates. The
+9R/9S delta isomer rows are not stored (hyphen-fragmented names,
+both < LOQ on the fixture) -- omission by the same fail-closed
+posture, revisit only if one ever carries a value. Whether
+superscript detachment should be fixed once in extractText rather
+than handled per-parser -- an extractor-level design question,
+touch nothing until a third document exhibits it. CLI drift:
+supabase 2.112.0.
+
+**Banked, carried:** a second COA from ACT and from CTND -- every
+rule in the parser designs is generalized from exactly one document
+per lab, and with both parsers live, the operator's next import of
+either lab is free promotion evidence. The WebView download
+amendment for Drive-hosted COAs. The parse-failed-PDF
+pending-support shelf DECIDE (touches D87's no-orphans ground).
+The second Green Analytics fixture; Rainbow Runtz upper-case
+strain; the Gelato row's four title-cased analyte names;
+canonicalize-at-read; stale hasher comment in
+add-to-shelf-modal.tsx; fresh-checkout tsc dependency on generated
+typings (re-observed this session); DRS Testing walk detail;
+support-copy reword window; the seven reference screenshots (one
+shows the email); "Expo Starter" web tab chrome; empty-shelf double
+statement; authenticated TRUNCATE; off-shelf log;
+preference_summary view; never_again; retirement last-log step;
+third retirement reason; Android; app-code test wiring; un-retire;
+5-point scale resolution; user-authored custom tags;
 EXPLAINERS.closing line 3; the 220ms bloom window;
 Alert-under-external-dismissal; anon-grants durable ACL;
-commit-body/doc phrase collisions; the download-event prong,
-unexercised because no known provider produces it.
+commit-body/doc phrase collisions; the download-event prong.
 
 ## Working rhythm
 
-Unchanged from CLAUDE.md and handoff-specs 4. The three-deep commit
-check ran on every commit this session and matched every time,
-including on two binary fixtures where it proved no text filter had
-touched them. The blob-hash channel did something new on the design
-doc: the architect reconstructed the ratified text independently and
-the hash matched the implementer's placement byte for byte, which
-is a stronger result than checking a file against itself. The
-observation-run pattern is new this session and should be reused --
-when the architect cannot run the tool the code runs, the honest
-move is one read-only round trip rather than a doc full of
-lookalike evidence.
+Unchanged in the large, from CLAUDE.md and handoff-specs 4, with
+one promotion-grade addition: architect-side observation runs, as
+described in the arcs. The standing preamble's status expectation
+is adapted to the standing noise (seven ?? lines pinned exactly,
+never "silent"), and every commit prompt now carries the explicit
+no-deploy-claims Rules line. The three-deep commit check and the
+two-channel push verification ran on all seven commits and matched
+every time; the tail-check rule caught one real paste truncation.
 
 ## Entry point
 
-The CLAUDE.md promotion pass (Runnable above). One rule, earned
-four times over in this session's ledger, Tier 1, one prompt.
-Doing it first means the parser arc starts with the numeric-prose
-rule written down rather than remembered, and that arc is where it
-matters most.
+A second COA from any lab already parsed. Every rule flagged as
+generalized from one document stays flagged until a second document
+exists, and with five parsers live the evidence is free: the next
+jar the operator scans from any known lab either confirms the
+rules or refutes one, and either outcome is the next arc's Phase A.
+No prompt is owed until a document arrives.
 
-The product finding handoff-specs 4.7 asks for: this session
-shipped one feat commit, one data commit, and three docs commits,
-and the product moved in the way that matters -- the vocabulary the
-operator types into every session is now the one he asked for, and
-it is stamped so the old sessions stay readable. The parser work
-did not ship code, deliberately: the arc bought grounded evidence
-instead, and the D129 find is what that bought. After the promotion
-pass, the next arc is the parser slices, and the strongest
-candidate for the arc after that is a second COA from any lab
-already parsed, because every rule flagged as generalized from one
-document stays that way until a second document exists.
+The product finding handoff-specs 4.7 asks for: five feat commits,
+two docs commits, and the strongest product result available -- the
+two jars that died in the empty-parse guard on 2026-08-06 imported
+on 2026-08-07 with correct chemistry, verified against the lab
+documents by test and against the database by read-back. The
+verification apparatus and the product moved together today.
