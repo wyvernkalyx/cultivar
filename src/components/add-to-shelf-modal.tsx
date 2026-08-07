@@ -480,7 +480,7 @@ function ReviewOrGuard({
           {"Couldn't read this COA"}
         </ThemedText>
         <ThemedText style={styles.centered}>
-          {"This PDF doesn't look like a lab certificate of analysis Cultivar can read. Try picking a different file."}
+          {"Cultivar doesn't support this lab's reports yet."}
         </ThemedText>
       </ThemedView>
     );
