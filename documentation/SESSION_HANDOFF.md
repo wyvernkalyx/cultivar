@@ -237,3 +237,84 @@ two jars that died in the empty-parse guard on 2026-08-06 imported
 on 2026-08-07 with correct chemistry, verified against the lab
 documents by test and against the database by read-back. The
 verification apparatus and the product moved together today.
+
+## Amendment -- 2026-08-07, afternoon session (cards arc; baseline moved)
+
+Work continued past this handoff (handoff-specs 4.5). The morning
+Phase A above was verified in full and then superseded in part by
+operator action; this amendment is the corrected baseline. Written
+against a confirmed end state: 6cef60c pushed, sync 0 0 observed.
+
+### Start here instead (Phase A, read-only)
+
+- The parent of the amendment commit is
+  6cef60cb1b5663c85ec31857c5bb0df6086ed00b (docs:
+  post-implementation record for D131-D132). Predicted subject of
+  the amendment commit itself: "docs: amend session handoff --
+  cards arc shipped, profile reset moved the baseline". Sync 0 0
+  after the operator's push. If HEAD is neither, work continued
+  past this amendment -- reconcile first.
+- git status --porcelain: the seven standing ?? lines, unchanged.
+- npm test -> 121 passed, observed on the D132 worktree (be8fd1b
+  content) in both the operator's environment and the architect's
+  fresh clone; the two commits above it are docs-only. npx tsc
+  --noEmit -> 0 and npx expo lint -> 1 error 0 warnings (template
+  only), both observed on the D132 worktree, operator environment.
+- DB via MCP, observed at write time: coas 14, on-shelf 1 (Fuel
+  Pump), per-lab act:1 ctnd:1 drs-confident:4 green-analytics:1
+  kaycha:7. session_entries 83 raw, session_current 0. Retirements
+  dated 2026-08-07: 9, reason "Profile reset"; lifetime
+  Profile-reset rows: 13 (an earlier, smaller reset predates
+  today's).
+If any of these do not match, the repo wins -- re-baseline.
+
+### What shipped since the handoff (newest first)
+
+- 6cef60c docs: post-implementation record for D131-D132
+- be8fd1b feat: top-3 cannabinoid line on shelf cards (D132)
+- 94ae074 feat: terpene legend percentages on shelf cards (D131)
+- 0fbd365 docs: D131-D132 -- card analyte percentages
+
+### The arc, one paragraph
+
+Operator request: per-analyte percentages on the shelf cards. Audit
+against the ratified mock found the terpene legend percentages were
+in the mock all along and the prose spec under-described it (D131,
+a shipped-vs-mock gap, not new design); per-cannabinoid values on
+cards were not in the mock, architect recommended detail-only,
+operator overruled, dissent recorded (D132, top-3 text line, both
+surfaces per D101). Every prompt shipped architect-tested bytes;
+every staged and committed blob matched the architect's clone
+hashes; every device-gate prediction matched digit for digit.
+Corrections and the escape-normalization implementer finding are in
+dashboard.md's post-implementation record -- read it before
+touching these files.
+
+### Baseline corrections (supersede the morning Phase A)
+
+1. The operator ran a profile reset mid-afternoon: 9 retirements
+   ("Profile reset", 2026-08-07), 16 session tombstones appended
+   (67 -> 83 raw), session_current 16 -> 0. Confirmed by artifact
+   (stored retirement reason and dated rows), not inference. The
+   morning DB numbers are historical, not wrong.
+2. The entry point's one-document framing is narrower than stated:
+   per-lab counts show DRS (Animal Face, Fuel Pump -- two distinct
+   documents) and Kaycha (five distinct documents) already carry
+   second-document evidence, imported cleanly before this session.
+   The one-document flag genuinely applies to ACT, CTND, and Green
+   Analytics only.
+3. Architect refutations this session, for calibration: carried
+   memory said the session-entries effects column is effects_tags
+   (live schema: effects); a file line count recalled from a view
+   read 560 (blob wc -l: 559); a grep anchor drafted across a
+   line-wrap failed its own uniqueness check before shipping (the
+   standing single-unbroken-token rule, self-caught).
+
+### Entry point (unchanged in kind, narrowed in scope)
+
+A second document from ACT, CTND, or Green Analytics -- the three
+parsers still generalized from one document each. DRS and Kaycha
+are already multi-document. No prompt owed until a document
+arrives. The 4.7 ratio for the afternoon: two feat commits, two
+docs commits, and the product result is visible chemistry on every
+card, gated against the database digit for digit.
