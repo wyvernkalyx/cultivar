@@ -244,6 +244,17 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   abbreviated by hand.** An architect-typed short sha is a hand-count
   with extra steps: one fabricated eighth character made a precondition
   name no object (2026-08-05).
+- **Prose claims are pasted, never retyped, and carried content travels
+  inside the prompt.** Any number, sha, or body of text asserted in
+  prompt or doc prose is excerpted from executed output or from the
+  artifact itself, never restated from memory of it -- a correct value
+  already produced does not license a retyped copy (three
+  retyped-after-computed claims, 2026-08-06). Ratified content a prompt
+  depends on is carried inside the prompt, never described as arriving
+  separately: a handover asserted in prose before it is observed is a
+  state claim about nothing (two instances, 2026-08-06, the second
+  surviving a correct fix to the first). A claim that cannot be traced
+  to something the prompt carries or the session observed is a guess.
 - **Bytes-before-prompt applies to the artifact, not the prompt text.**
   An edit made only inside a prompt is untested code: change the file,
   re-run its tests, and excerpt the tested bytes into the prompt --
