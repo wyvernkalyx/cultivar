@@ -113,6 +113,21 @@ const CASES: FixtureCase[] = [
     sampledDate: '2026-04-17',
     testedDate: '2026-04-28',
   },
+  {
+    strain: 'Hooch',
+    parsedStrain: 'Hooch',
+    file: 'hooch.pdf',
+    sourceLab: 'act',
+    totalThc: 27.91,
+    totalTerp: 2.819,
+    dominant: 'Caryophyllene',
+    myrcene: 0.1615,
+    limonene: 0.6684,
+    batch: 'AP-FE-GH0526',
+    brand: 'Alchemy Pure LLC',
+    sampledDate: '2026-05-21',
+    testedDate: '2026-05-26',
+  },
 ];
 
 describe('parseCoa on real COA fixtures', () => {
@@ -188,6 +203,23 @@ describe('parseCoa on real COA fixtures', () => {
       });
     });
   }
+});
+
+describe('parseAct name fidelity', () => {
+  // The d10-THC isomer names open with a parenthesis and carry digits and
+  // commas. An earlier capture class started at a letter and stored
+  // `aR,9S)-d10-THC` -- a name the document never printed. The assertion
+  // exists so that defect cannot be re-derived: names are stored as printed
+  // (no-fabrication), ND as null.
+  it('captures the parenthesized d10-THC isomers as printed, ND as null', async () => {
+    const coa = await loadCoa('hooch.pdf');
+    const names = coa.cannabinoids.map((c) => c.name);
+    expect(names).toContain('(6aR,9S)-d10-THC');
+    expect(names).toContain('(6aR,9R)-d10-THC');
+    for (const n of ['(6aR,9S)-d10-THC', '(6aR,9R)-d10-THC']) {
+      expect(coa.cannabinoids.find((c) => c.name === n)?.pct).toBeNull();
+    }
+  });
 });
 
 describe('parseCoa unknown-lab shell', () => {

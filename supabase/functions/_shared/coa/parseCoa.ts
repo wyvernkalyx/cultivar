@@ -3,6 +3,7 @@ import { identifyLab } from './identifyLab.ts';
 import { parseKaycha } from './parseKaycha.ts';
 import { parseDrsConfident } from './parseDrsConfident.ts';
 import { parseGreenAnalytics } from './parseGreenAnalytics.ts';
+import { parseAct } from './parseAct.ts';
 
 /**
  * Parse the extracted text of a COA into a normalized {@link CoaResult}.
@@ -20,6 +21,8 @@ export function parseCoa(text: string): CoaResult {
       return parseDrsConfident(text);
     case 'green-analytics':
       return parseGreenAnalytics(text);
+    case 'act':
+      return parseAct(text);
     default:
       return {
         lab: null,

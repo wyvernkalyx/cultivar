@@ -14,5 +14,8 @@ export function identifyLab(text: string): SourceLab {
   if (/DRS\s+Testing/i.test(text) || /Con\w*dent\s+LIMS/i.test(text)) {
     return 'drs-confident';
   }
+  // D128: the anchor is the literal lab name, exact case; 24 hits on the
+  // fixture, 0 on every other lab's fixture (cross-fixture negative case).
+  if (text.includes('ACT Laboratories')) return 'act';
   return 'unknown';
 }
