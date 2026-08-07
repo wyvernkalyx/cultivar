@@ -426,3 +426,40 @@ Slice plan: this amendment (Tier 1); D131 as one feat (Tier 2,
 device gate); D132 as one feat (Tier 2, device gate, with a
 read-back comparing one card's rendered top-3 against a direct
 coa_cannabinoids query for that COA). Both display-only.
+
+### Post-implementation record -- 2026-08-07 (D131-D132 shipped)
+
+Shipped: 0fbd365 (this amendment), 94ae074 (D131, one file),
+be8fd1b (D132, four files). Every commit's staged and committed
+blobs matched architect-tested hashes; the three-step device gate
+matched DB-derived predictions digit for digit on every rendered
+line (Fuel Pump, Hooch, Stank Breath, both surfaces).
+
+Corrections, each the Amendment 3 form -- a ratified premise
+refuted or under-specified, recorded rather than silently repaired:
+
+1. D132's Data bullet named shelf-list.tsx and card-data.ts only.
+   D101's same-card-language rule requires the archive to render
+   the identical card, so the slice necessarily touched
+   off-shelf-list.tsx (parallel select, grouping, prop) -- four
+   files, not two. Architect's under-naming; the build prompt
+   stated the gap rather than hiding it, and the commit body
+   records it.
+2. The amendment's register for the line ("THCA 25.10 - D9-THC
+   0.56 - CBGA 0.38") showed no percent signs; the shipped line
+   renders them, matching the D131 legend treatment. Register, not
+   ratified string; the operator saw the rendered form at the gate
+   and passed it. Recorded so the divergence is a decision, not a
+   drift.
+3. Implementer-environment finding, first occurrence: the editor
+   tool normalizes a backslash-u escape sequence into the literal
+   character it names, so the ASCII-escape separator initially
+   landed as a raw middot byte. Caught by the implementer via
+   cat -A rather than trusting the edit; landed correctly via a
+   placeholder-then-rename edit; verified three ways (added-lines
+   ASCII gate, cat -A read, matching blob hash). Promote to
+   CLAUDE.md if it bites a second time.
+
+Untested, not passed: the "Cannabinoids not reported by lab."
+absence state has no live instance (observed minimum is 2 reported
+rows per COA in the catalog at ship time).
