@@ -3,7 +3,7 @@ import { join } from 'path';
 
 import { extractText } from '../extractText.ts';
 import { parseCoa } from '../parseCoa.ts';
-import { normalizeUsDate } from '../dates.ts';
+import { normalizeMonthNameDate, normalizeUsDate } from '../dates.ts';
 import { displayTerpene, dominantTerpene, isKnownTerpene } from '../normalize.ts';
 import type { CoaResult } from '../types.ts';
 
@@ -219,6 +219,32 @@ describe('parseAct name fidelity', () => {
     for (const n of ['(6aR,9S)-d10-THC', '(6aR,9R)-d10-THC']) {
       expect(coa.cannabinoids.find((c) => c.name === n)?.pct).toBeNull();
     }
+  });
+});
+
+describe('normalizeMonthNameDate', () => {
+  it('normalizes a full month name with a zero-padded day', () => {
+    expect(normalizeMonthNameDate('May 08, 2026')).toBe('2026-05-08');
+  });
+
+  it('normalizes a single-digit day and is case-insensitive on the month', () => {
+    expect(normalizeMonthNameDate('may 8, 2026')).toBe('2026-05-08');
+    expect(normalizeMonthNameDate('December 1, 2025')).toBe('2025-12-01');
+  });
+
+  it('returns null for an unknown month name', () => {
+    expect(normalizeMonthNameDate('Maybe 08, 2026')).toBeNull();
+  });
+
+  it('returns null for an out-of-bounds day and a non-4-digit year', () => {
+    expect(normalizeMonthNameDate('May 32, 2026')).toBeNull();
+    expect(normalizeMonthNameDate('May 08, 26')).toBeNull();
+  });
+
+  it('returns null for null, undefined, and empty input', () => {
+    expect(normalizeMonthNameDate(null)).toBeNull();
+    expect(normalizeMonthNameDate(undefined)).toBeNull();
+    expect(normalizeMonthNameDate('')).toBeNull();
   });
 });
 
