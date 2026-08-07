@@ -40,6 +40,10 @@ export type CardSession = { word: string; at: string };
 // analytes are excluded upstream, so every entry here is a lab-reported value.
 export type CardTerpene = { name: string; pct: number };
 
+// Top reported cannabinoids (D132), same contract as CardTerpene: ranked
+// upstream, null pct excluded upstream, every entry a lab-reported value.
+export type CardCannabinoid = { name: string; pct: number };
+
 // The retirement event that took the last package off the shelf (D90's
 // record, D101's display). `reason` is the stored text, rendered verbatim --
 // never paraphrased, never mapped through a second vocabulary.
@@ -49,6 +53,7 @@ export type ShelfCardProps = {
   coa: ShelfCoa;
   sessions: CardSession[];
   topTerpenes: CardTerpene[];
+  topCannabinoids: CardCannabinoid[];
   onOpen: () => void;
   // Absent on the off-shelf archive (D101): a surface with no logging path
   // renders no Log button at all. Not a disabled one -- an affordance that
@@ -187,6 +192,7 @@ export function ShelfCard({
   coa,
   sessions,
   topTerpenes,
+  topCannabinoids,
   onOpen,
   onLog,
   onFavorite,
@@ -303,6 +309,27 @@ export function ShelfCard({
           <Fingerprint total={coa.total_terpenes as number} terpenes={topTerpenes} />
         ) : (
           <Text style={styles.ndTerpenes}>Terpenes not reported by lab.</Text>
+        )}
+
+        {/* D132: top-3 reported cannabinoids as one text line, after the
+            fingerprint per the detail's terpenes-before-cannabinoids order.
+            Values truncated two decimals (D102), value token fainter than
+            the name (the D131 legend treatment). The separator is the
+            card's established middot, written as an escape so the source
+            line stays ASCII. Zero reported rows states the absence in the
+            terpene ND line's own voice -- never a blank. */}
+        {topCannabinoids.length > 0 ? (
+          <Text style={styles.cannabinoidLine}>
+            {topCannabinoids.map((cannabinoid, index) => (
+              <Text key={cannabinoid.name}>
+                {index > 0 ? ' \u00b7 ' : ''}
+                {`${cannabinoid.name} `}
+                <Text style={styles.legendPct}>{`${truncate2(cannabinoid.pct)}%`}</Text>
+              </Text>
+            ))}
+          </Text>
+        ) : (
+          <Text style={styles.ndTerpenes}>Cannabinoids not reported by lab.</Text>
         )}
 
         <View style={styles.footerRow}>
@@ -521,6 +548,13 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontVariant: ['tabular-nums'],
     color: Dash.textFaint,
+  },
+  // D132: the cannabinoid line wears the legend's clothes -- same size,
+  // same muted name token; its values reuse legendPct above.
+  cannabinoidLine: {
+    fontFamily: SORA_REGULAR,
+    fontSize: 10,
+    color: Dash.textMuted,
   },
   ndTerpenes: {
     fontFamily: SERIF_ITALIC,

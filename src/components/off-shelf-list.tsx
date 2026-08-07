@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CoaDetail } from '@/components/coa-detail';
 import {
   ShelfCard,
+  type CardCannabinoid,
   type CardRetirement,
   type CardSession,
   type CardTerpene,
@@ -13,7 +14,9 @@ import {
 import { Dash } from '@/constants/theme';
 import {
   groupSessionsByCoa,
+  groupTopCannabinoidsByCoa,
   groupTopTerpenesByCoa,
+  type SummaryCannabinoid,
   type SummarySession,
   type SummaryTerpene,
 } from '@/lib/card-data';
@@ -64,6 +67,9 @@ export function OffShelfList({ visible, onClose }: { visible: boolean; onClose: 
   const [rows, setRows] = useState<ShelfCoa[] | null>(null);
   const [sessionsByCoa, setSessionsByCoa] = useState<Map<string, CardSession[]>>(new Map());
   const [terpenesByCoa, setTerpenesByCoa] = useState<Map<string, CardTerpene[]>>(new Map());
+  const [cannabinoidsByCoa, setCannabinoidsByCoa] = useState<Map<string, CardCannabinoid[]>>(
+    new Map()
+  );
   const [retirementByCoa, setRetirementByCoa] = useState<Map<string, CardRetirement>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [detailCoaId, setDetailCoaId] = useState<string | null>(null);
@@ -91,14 +97,18 @@ export function OffShelfList({ visible, onClose }: { visible: boolean; onClose: 
           .order('created_at', { ascending: false }),
         supabase.from('session_current').select('overall_word, coa_id, created_at'),
         supabase.from('coa_terpenes').select('coa_id, name, pct'),
+        // D132's line reads from the same parallel-select family (the
+        // shelf's pattern); same card language on both surfaces per D101.
+        supabase.from('coa_cannabinoids').select('coa_id, name, pct'),
         supabase.from('coa_retirements').select('coa_id, reason, created_at'),
-      ]).then(([coasResult, sessionsResult, terpenesResult, retirementsResult]) => {
+      ]).then(([coasResult, sessionsResult, terpenesResult, cannabinoidsResult, retirementsResult]) => {
         // One error state: any query's failure surfaces through the existing
         // path, no second banner.
         const queryError =
           coasResult.error ??
           sessionsResult.error ??
           terpenesResult.error ??
+          cannabinoidsResult.error ??
           retirementsResult.error;
         if (queryError) {
           setError(queryError.message);
@@ -111,6 +121,9 @@ export function OffShelfList({ visible, onClose }: { visible: boolean; onClose: 
         setRows(coasResult.data as ShelfCoa[]);
         setSessionsByCoa(groupSessionsByCoa(sessionsResult.data as SummarySession[]));
         setTerpenesByCoa(groupTopTerpenesByCoa(terpenesResult.data as SummaryTerpene[]));
+        setCannabinoidsByCoa(
+          groupTopCannabinoidsByCoa(cannabinoidsResult.data as SummaryCannabinoid[])
+        );
         setRetirementByCoa(latestRetirementByCoa(retirementsResult.data as RetirementRow[]));
       }),
     []
@@ -176,6 +189,7 @@ export function OffShelfList({ visible, onClose }: { visible: boolean; onClose: 
                 coa={item}
                 sessions={sessionsByCoa.get(item.id) ?? []}
                 topTerpenes={terpenesByCoa.get(item.id) ?? []}
+                topCannabinoids={cannabinoidsByCoa.get(item.id) ?? []}
                 onOpen={() => setDetailCoaId(item.id)}
                 // No onLog, by ruling (D101). The archive marker instead:
                 // absent when a COA reached count 0 by some path that left no

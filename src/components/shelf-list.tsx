@@ -13,6 +13,7 @@ import {
 import { SessionLadder, type CloseOutcome } from '@/components/session-ladder';
 import {
   ShelfCard,
+  type CardCannabinoid,
   type CardSession,
   type CardTerpene,
   type ShelfCoa,
@@ -21,7 +22,9 @@ import { ThemedText } from '@/components/themed-text';
 import { Dash, Spacing } from '@/constants/theme';
 import {
   groupSessionsByCoa,
+  groupTopCannabinoidsByCoa,
   groupTopTerpenesByCoa,
+  type SummaryCannabinoid,
   type SummarySession,
   type SummaryTerpene,
 } from '@/lib/card-data';
@@ -141,6 +144,9 @@ export function ShelfList({ onSummary }: ShelfListProps) {
   // that feeds the summary — no second query for either.
   const [sessionsByCoa, setSessionsByCoa] = useState<Map<string, CardSession[]>>(new Map());
   const [terpenesByCoa, setTerpenesByCoa] = useState<Map<string, CardTerpene[]>>(new Map());
+  const [cannabinoidsByCoa, setCannabinoidsByCoa] = useState<Map<string, CardCannabinoid[]>>(
+    new Map()
+  );
   // How many COAs sit at count 0 (D101), computed in load() from the summary's
   // unfiltered catalog select — the footer link needs a count, not the rows,
   // and the archive fetches its own when it opens.
@@ -206,14 +212,18 @@ export function ShelfList({ onSummary }: ShelfListProps) {
         supabase.from('session_current').select('overall_word, coa_id, created_at'),
         supabase.from('coas').select('id, favorite, total_thc, total_cbd, on_shelf_count'),
         supabase.from('coa_terpenes').select('coa_id, name, pct'),
-      ]).then(([coasResult, sessionsResult, allCoasResult, terpenesResult]) => {
+        // D132's line reads from the same parallel-select family; the merge
+        // stays a client-side coa_id Map like every other card input.
+        supabase.from('coa_cannabinoids').select('coa_id, name, pct'),
+      ]).then(([coasResult, sessionsResult, allCoasResult, terpenesResult, cannabinoidsResult]) => {
         // One error state: any query's failure surfaces through the
         // existing path, no second banner.
         const queryError =
           coasResult.error ??
           sessionsResult.error ??
           allCoasResult.error ??
-          terpenesResult.error;
+          terpenesResult.error ??
+          cannabinoidsResult.error;
         if (queryError) {
           setError(queryError.message);
           return;
@@ -231,6 +241,9 @@ export function ShelfList({ onSummary }: ShelfListProps) {
         onSummary?.(built);
         setSessionsByCoa(groupSessionsByCoa(sessions));
         setTerpenesByCoa(groupTopTerpenesByCoa(terpenes));
+        setCannabinoidsByCoa(
+          groupTopCannabinoidsByCoa(cannabinoidsResult.data as SummaryCannabinoid[])
+        );
         setOffShelfCount(allCoas.filter((coa) => coa.on_shelf_count === 0).length);
       }),
     // onSummary is in the closure, so it is in the deps. The caller passes a
@@ -319,6 +332,7 @@ export function ShelfList({ onSummary }: ShelfListProps) {
             coa={item}
             sessions={sessionsByCoa.get(item.id) ?? []}
             topTerpenes={terpenesByCoa.get(item.id) ?? []}
+            topCannabinoids={cannabinoidsByCoa.get(item.id) ?? []}
             onOpen={() => setDetailCoaId(item.id)}
             // One tap straight to the verdict screen (D99). The direct path,
             // not the pending chain: that chain exists only because the

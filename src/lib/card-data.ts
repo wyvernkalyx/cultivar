@@ -1,4 +1,4 @@
-import type { CardSession, CardTerpene } from '@/components/shelf-card';
+import type { CardCannabinoid, CardSession, CardTerpene } from '@/components/shelf-card';
 
 // The row shapes the card inputs are built from, exactly the columns the
 // surfaces select. Two surfaces now build card inputs -- the shelf (D99) and
@@ -36,6 +36,32 @@ export function groupSessionsByCoa(sessions: SummarySession[]): Map<string, Card
 // on name for a stable order across refetches.
 export function groupTopTerpenesByCoa(rows: SummaryTerpene[]): Map<string, CardTerpene[]> {
   const byCoa = new Map<string, CardTerpene[]>();
+  for (const row of rows) {
+    if (row.pct === null) continue;
+    const entry = { name: row.name, pct: row.pct };
+    const existing = byCoa.get(row.coa_id);
+    if (existing === undefined) byCoa.set(row.coa_id, [entry]);
+    else existing.push(entry);
+  }
+  for (const [coaId, entries] of byCoa) {
+    entries.sort((a, b) => (b.pct !== a.pct ? b.pct - a.pct : a.name.localeCompare(b.name)));
+    byCoa.set(coaId, entries.slice(0, 3));
+  }
+  return byCoa;
+}
+
+export type SummaryCannabinoid = { coa_id: string; name: string; pct: number | null };
+
+// Per-COA top-3 reported cannabinoids for the card's D132 line, the
+// groupTopTerpenesByCoa convention exactly: a null pct is an unreported
+// analyte and is excluded outright, so absence can never rank as a zero;
+// ties break on name for a stable order across refetches. Deliberately a
+// sibling, not a shared generic -- generalization is banked until a third
+// analyte family needs it.
+export function groupTopCannabinoidsByCoa(
+  rows: SummaryCannabinoid[]
+): Map<string, CardCannabinoid[]> {
+  const byCoa = new Map<string, CardCannabinoid[]>();
   for (const row of rows) {
     if (row.pct === null) continue;
     const entry = { name: row.name, pct: row.pct };
