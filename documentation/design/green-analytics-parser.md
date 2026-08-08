@@ -140,3 +140,41 @@ Not in scope, each for its own reason:
 Pure-logic slice: the gate is the test suite passing, pasted raw.
 Unit tests are evidence here precisely because nothing in this arc
 is UI-visible.
+
+## D136 -- The Full Compliance Test form: labeled-field fallbacks
+
+Ratified 2026-08-08. GA prints at least two form variants. D122-D125
+were generalized from the Adult-Use Product form (METRC 1A4-prefixed
+tracking tags; batch recovered positionally between them; brand and
+report date recovered from the "Sample Result" run). A third GA
+document (batch WF00350, fixtured this slice) is the Full Compliance
+Test form: no 1A4 tag anywhere in its extraction, and the same three
+fields printed with adjacent labels instead:
+
+    Batch Lot ID: WF00350 Batch Size:
+    Date Reported: 12/11/2024 Client Name: NYHO LABS LLC Sampling Location:
+
+Observed via the repo's own extractText on the document bytes,
+2026-08-08. Chemistry, totals, sampledDate, and safety already parse
+on this form; only batch, brand, and testedDate return null.
+
+The rule: each of the three fields tries its D123 positional pattern
+first, then a labeled fallback anchored on both sides, then null.
+
+- batch: label "Batch Lot ID:", right-bounded by "Batch Size:".
+- brand: label "Client Name:", right-bounded by "Sampling Location:".
+  Client-of-record doctrine unchanged from D123.
+- testedDate: label "Date Reported:", right-bounded by "Client Name:".
+  Report-date-is-tested-date doctrine unchanged from D123.
+
+Fail-closed posture unchanged: a form matching neither pattern set
+stores null, never a neighbouring field. The two pattern sets are
+believed disjoint (the labels do not occur on the Adult-Use form and
+the 1A4 tags do not occur on this one) -- verified at build by a
+control grep of both fixtures' extractions, not assumed.
+
+Corpus note, not a claim about cause: the Orangutang Cookies row
+stores batch and tested_on null with brand captured. No fixture
+exists for that document; whether it is a third variant or an
+unpopulated slot on a known form is unobserved. The banked
+Orangutang fixture item stands.
