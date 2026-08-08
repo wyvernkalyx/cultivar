@@ -95,7 +95,7 @@ export function OffShelfList({ visible, onClose }: { visible: boolean; onClose: 
           // favorite all survived; this is the surface that shows them.
           .eq('on_shelf_count', 0)
           .order('created_at', { ascending: false }),
-        supabase.from('session_current').select('overall_word, coa_id, created_at'),
+        supabase.from('session_current').select('overall_word, coa_id, created_at, effects'),
         supabase.from('coa_terpenes').select('coa_id, name, pct'),
         // D132's line reads from the same parallel-select family (the
         // shelf's pattern); same card language on both surfaces per D101.

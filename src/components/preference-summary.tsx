@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Dash, terpeneHue } from '@/constants/theme';
+import type { EffectCount } from '@/lib/card-data';
 import { RUNGS } from '@/lib/lexicon';
 
 // Font families registered app-wide in the root layout (D83 Decision 1),
@@ -39,6 +40,10 @@ export type PreferenceSummaryProps = {
   distribution: Record<RungWord, number>;
   buyAgainCount: number;
   loved: LovedConcentrations;
+  // Session-derived, frequency-ranked (D133): the user's own recorded tags,
+  // never a chemistry inference. Empty means no tagged sessions in scope,
+  // and the line does not render -- never a placeholder.
+  topEffects: EffectCount[];
 };
 
 // Two decimals, truncated (D102: truncation never rounds into a false
@@ -147,6 +152,7 @@ export function PreferenceSummary({
   distribution,
   buyAgainCount,
   loved,
+  topEffects,
 }: PreferenceSummaryProps) {
   // Zero sessions renders the frame, not fake content (D98): no bars, no
   // zeros, no placeholder stats -- an honest empty state and nothing else.
@@ -193,6 +199,14 @@ export function PreferenceSummary({
           <Text style={styles.label}>BUY AGAIN</Text>
         </View>
       </View>
+      {/* The D133 summary line, register ratified b-2: the qualifier plus the
+          top tags, exact stored strings, separator per the D132 line. Absent
+          entirely when no session in scope carries tags. */}
+      {topEffects.length > 0 && (
+        <Text style={styles.effectsLine}>
+          {`Often ${topEffects.map((effect) => effect.name).join(' \u00b7 ')}`}
+        </Text>
+      )}
       <LovedModule loved={loved} />
     </View>
   );
@@ -215,6 +229,11 @@ const styles = StyleSheet.create({
   empty: {
     fontFamily: SERIF_ITALIC,
     fontSize: 14.5,
+    color: Dash.textBody,
+  },
+  effectsLine: {
+    fontFamily: SERIF_ITALIC,
+    fontSize: 13,
     color: Dash.textBody,
   },
   headerRow: {

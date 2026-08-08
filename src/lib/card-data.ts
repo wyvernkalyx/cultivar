@@ -9,7 +9,12 @@ import type { CardCannabinoid, CardSession, CardTerpene } from '@/components/she
 // session is one row of session_current (D59: latest-then-filter, soft
 // deletes already excluded), so the row count IS the all-time session count.
 // One fetch serves both the summary's distribution and the per-card dots.
-export type SummarySession = { overall_word: string | null; coa_id: string; created_at: string };
+export type SummarySession = {
+  overall_word: string | null;
+  coa_id: string;
+  created_at: string;
+  effects: string[] | null;
+};
 
 export type SummaryTerpene = { coa_id: string; name: string; pct: number | null };
 
@@ -74,4 +79,25 @@ export function groupTopCannabinoidsByCoa(
     byCoa.set(coaId, entries.slice(0, 3));
   }
   return byCoa;
+}
+
+export type EffectCount = { name: string; count: number };
+
+// Frequency-ranked effects over live sessions (D133): each stored tag counts
+// once per session row; a null or empty array contributes nothing, so absence
+// never ranks (ND != 0 family). Count descending, name ascending tiebreak,
+// top 3 -- the groupTop convention, fourth reuse. Ranks stored strings
+// verbatim: cross-version splits are D133's accepted consequence.
+export function rankTopEffects(sessions: SummarySession[]): EffectCount[] {
+  const counts = new Map<string, number>();
+  for (const session of sessions) {
+    if (session.effects === null) continue;
+    for (const tag of session.effects) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => (b.count !== a.count ? b.count - a.count : a.name.localeCompare(b.name)))
+    .slice(0, 3);
 }

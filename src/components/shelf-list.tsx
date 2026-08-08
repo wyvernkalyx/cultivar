@@ -24,6 +24,7 @@ import {
   groupSessionsByCoa,
   groupTopCannabinoidsByCoa,
   groupTopTerpenesByCoa,
+  rankTopEffects,
   type SummaryCannabinoid,
   type SummarySession,
   type SummaryTerpene,
@@ -120,6 +121,7 @@ function buildSummary(
       cbd: analyteRange(lovedCoas.map((coa) => coa.total_cbd)),
       lovedSessionCount: lovedSessions.length,
     },
+    topEffects: rankTopEffects(sessions),
   };
 }
 
@@ -209,7 +211,7 @@ export function ShelfList({ onSummary }: ShelfListProps) {
         // select is deliberately NOT filtered by on_shelf_count, because the
         // summary is all-time including off-shelf history, and RLS scopes
         // the rows.
-        supabase.from('session_current').select('overall_word, coa_id, created_at'),
+        supabase.from('session_current').select('overall_word, coa_id, created_at, effects'),
         supabase.from('coas').select('id, favorite, total_thc, total_cbd, on_shelf_count'),
         supabase.from('coa_terpenes').select('coa_id, name, pct'),
         // D132's line reads from the same parallel-select family; the merge
