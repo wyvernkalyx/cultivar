@@ -475,3 +475,130 @@ pass; (3) cross-user COA sharing -- future; ruling sketch: share
 chemistry never verdicts, copy never reference. A design pass on
 any starts the D-number machinery. Parser flags (ACT, CTND, Green
 Analytics second documents) stand behind all of it.
+
+## Amendment -- 2026-08-08 night (D134 manual entry shipped, both routes)
+
+Work continued past the evening amendment, same day. Its Phase A
+holds except as follows; the repo wins over both.
+
+### Start here (Phase A, read-only)
+
+- The parent of this amendment commit is
+  9e415065a4ea2238054714f97c45b8d334a0f420 (feat: manual COA entry,
+  both routes (D134)). Predicted subject of the amendment commit
+  itself: "docs: amend session handoff -- D134 shipped both routes,
+  GA second document imported". Sync 0 0 after the operator's push.
+  If HEAD is neither, work continued past this amendment --
+  reconcile first.
+- git status --porcelain: the seven standing ?? lines, unchanged.
+- Migrations 17 by name-form count, fixtures 7 PDFs -- unchanged;
+  no migration, no fixture this slice.
+- Suites at the D134 gate values, observed on the shipped bytes in
+  both environments: npm test -> 121 passed; npx tsc --noEmit -> 0
+  operator environment (fresh checkout still fails the
+  generated-typings side-effect import, banked item unchanged);
+  npx expo lint -> 1 error 0 warnings, template file only, exit 1
+  read from a redirected output file, never a pipe tail (see
+  refutation 2).
+- DB via MCP, observed at write time: coas 17, per-lab act:1
+  ctnd:1 drs-confident:4 green-analytics:2 kaycha:7 manual:2.
+  session_entries 85 raw, session_current 1 -- sessions unchanged
+  all day; today's four new coas rows are two imports and two
+  manual entries, no sessions.
+
+### What shipped since the evening amendment (newest first)
+
+- 9e41506 feat: manual COA entry, both routes (D134)
+- e75b261 docs: manual COA entry design (D134) + follow-ups
+  routing decision
+
+### The arc, one paragraph
+
+Manual COA entry shipped end to end in one day: operator-specified
+form (full canonical panel, everything defaulting to Not
+Available), architect pairing ratified as D134's core -- ND is a
+transcribed lab attestation (stored, null pct), Not Available is
+form scaffolding (never stored; emit drops untouched and unnamed
+rows, failing closed to omission). Blank commits revert in manual
+mode rather than landing on ND. Mid-slice the operator, holding no
+copy of the document on the phone, unbanked the direct no-file
+route at its first lived case: third button on the add flow's
+opening screen, pdf columns NULL, retention notice suppressed
+because nothing existed to retain. Both routes device-gated in one
+pass; the MCP read-back matched the entered rows digit for digit
+with no row stored for any of the 38 untouched names. The
+architect-side construction rhythm held -- every prompt carried
+executed bytes and pre-computed hashes -- and the blob-hash channel
+caught the one divergence (refutation 1).
+
+### Refuted hypotheses / corrections (calibration)
+
+1. Architect: transcribing build-prompt EDIT 2.5 re-scoped the
+   anchor and dropped a lone comment-spacer line -- prompt bytes
+   diverged from the tested artifact by one line (624 vs 625).
+   Caught by the blob-hash channel; converged on the implementer's
+   bytes after a single-line delete reproduced its hash exactly.
+   Second instance of the 2026-08-05 edited-the-excerpt class.
+2. Architect: a lint gate authored as "npx expo lint 2>&1 | tail
+   -3" observes tail's exit code, not lint's -- an unobservable
+   criterion. Implementer-caught. Standing form now: redirect lint
+   to a file (capturing lint's own exit), then read the file.
+3. Architect: the session's first DB probe guessed a
+   coas.retired_at column; the live schema has none (retirement
+   lives in coa_retirements). Same family as the prior session's
+   column guess; caught by the DB before any claim shipped.
+4. Implementer's Prettier hypothesis for the hash mismatch was
+   refuted by construction: no formatter ran anywhere, and the
+   single-line reconstruction settled the cause. Its discipline
+   (apply authored bytes exactly, adjust nothing, stop) was
+   correct throughout.
+5. Implementer mid-run byte correction (part-2 EDIT 1.6: a
+   blank-line anchor boundary consumed one blank line) accepted
+   narrowly -- convergence to the pinned architect hash with a
+   full cat -A account is the only correction an implementer may
+   make. Prompt-form note promoted: edit blocks end on a non-blank
+   line, or state the trailing blank explicitly.
+6. Architect expectation refuted at this write: coas predicted 15,
+   observed 17. A second Green Analytics document (Orangutang
+   Cookies / High Peaks, thc 22.27, terps 1.87) imported cleanly
+   2026-08-08 18:32 -- resolving GA's one-document parser flag
+   with live promotion evidence -- and the Mule Fuel jar (Florist
+   Farms label) was entered manually before the gate row.
+
+### Ratified decisions
+
+- D134 as documented in manual-entry.md (status line flipped by
+  the implementing commit), including the operator ruling that
+  pulled the direct route into the slice.
+- Two gate observations accepted as non-blocking, operator saw
+  both: the explicit-ND analyte storage path went unexercised on
+  device (zero null-pct child rows in the gate save; the emission
+  path is code-identical to parsed mode, and the manual-specific
+  NA/ND commit risk was covered by the blank-revert device step
+  and an 11-case architect-side probe of the extracted bytes); and
+  the compliance-test row carries the lab name in its brand field
+  (the seam stored what was typed, which is the gated property).
+
+### Open items
+
+**Banked (new this slice):** the detail view's "Original COA PDF
+wasn't retained." reads off-register for a never-had-a-file manual
+entry -- one string, same family as the guard heading/body pairing.
+The Mule Fuel row stores "Florist  Farms" with an interior double
+space (D97 trims ends only) -- canonicalize-at-read family.
+Exercise the explicit-ND analyte row live on the next real manual
+entry (type nd on one row; read back a null-pct child).
+
+**Banked, carried:** the standing list, unchanged.
+
+### Entry point
+
+The forward queue stands, minus what today satisfied: manual entry
+(queue rank 1) shipped both routes, and Green Analytics left the
+one-document flag set by live import -- the flags now name ACT and
+CTND only. Next per the operator-ranked queue: (2) search, the
+client-side filter, smallest slice. No prompt is owed until the
+operator picks it up or a document arrives. The 4.7 ratio for the
+slice: one feat commit, one docs commit, and the product result is
+a working manual-entry path exercised twice with real jars on the
+same day it shipped.
