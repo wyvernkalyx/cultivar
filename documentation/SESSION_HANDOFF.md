@@ -602,3 +602,139 @@ operator picks it up or a document arrives. The 4.7 ratio for the
 slice: one feat commit, one docs commit, and the product result is
 a working manual-entry path exercised twice with real jars on the
 same day it shipped.
+
+## Amendment -- 2026-08-08, late night (D135 attach + D136 compliance form, design to device in one session)
+
+Work continued past the D134 amendment (handoff-specs 4.5). Its
+Phase A is superseded; the repo wins over both.
+
+### Start here (Phase A, read-only)
+
+- The parent of this amendment commit is
+  8b32d2f94f93ec78947d3bbc3e5f0a23b7bc1304 (feat: attach flow --
+  COA document onto a manual shelf item (D135)). Predicted subject
+  of the amendment commit: "docs: amend session handoff -- D135
+  attach and D136 compliance form shipped end to end". Sync 0 0
+  after the operator's push. If HEAD is neither, work continued
+  past this amendment -- reconcile first.
+- git status --porcelain: the seven standing ?? lines, unchanged.
+- Migrations: 18 on disk by name-form count (attach_coa joined,
+  applied by the operator, "Finished supabase db push" observed).
+  Fixtures: 8 PDFs (wf00350.pdf joined).
+- npm test -> 136 passed (was 121; +13 wf00350 case, +2 D136
+  form-safety controls), observed in the operator environment and
+  on the architect's fresh clone at the same content. npx tsc
+  --noEmit -> 0 operator-side; the fresh-checkout generated-typings
+  failure stands banked. npx expo lint -> 1 error 0 warnings,
+  template only, exit 1.
+- DB via MCP, observed at write time: coas 17, per-lab act:1
+  ctnd:1 drs-confident:4 green-analytics:3 kaycha:7 manual:1 --
+  Mule Fuel's flip is the day's product result stated as a bucket
+  move. session_entries 85 raw / 1 current, unchanged all session.
+- The deployed ingest-coa bundle was pushed once by the operator
+  (asset list observed, parseGreenAnalytics.ts included) and
+  carries the D136 fallbacks: live promotion evidence exists,
+  because the attach import captured batch WF00350, brand, and
+  tested date server-side. No EAS build owed; the device gate ran
+  over Metro reload.
+If any of these do not match, the repo wins -- re-baseline.
+
+### What shipped since the D134 amendment (newest first)
+
+- 8b32d2f feat: attach flow -- COA document onto a manual shelf
+  item (D135)
+- d8a2098 feat: attach_coa RPC -- update-in-place attach (D135)
+- 85da9e4 feat: Green Analytics labeled-field fallbacks (D136)
+- 9bb06bc data: Green Analytics compliance-test fixture
+  (wf00350.pdf)
+- 3adb7bc docs: amend D136 -- disjointness claim refuted at build
+- a1839c7 docs: attach COA to manual shelf item -- design (D135)
+- 008bdaa docs: Green Analytics compliance-test form fallbacks
+  (D136)
+
+### The arc, one paragraph
+
+The operator asked to attach a COA to a manually entered shelf
+item, then produced the document: Green Analytics' Full Compliance
+Test form, a GA variant no parser rule had seen. The session ran
+it through the repo's own pipeline before designing anything,
+which split the work into D136 (labeled-field fallbacks,
+positional-first, fail-closed; fixture in hand) and D135 (attach
+as update-in-place under the row's own id -- sessions never
+repointed, identity fields prefilled from the row, chemistry
+replaced wholesale by a new transactional attach_coa RPC, cross-
+row dedup match a STOP). Parser first by operator ruling, so the
+attach stored full data in one pass. The RPC was behaviorally
+probed rolled-back against the live schema before it shipped; the
+device gate closed on the lived case, and the MCP read-back
+matched the executed parse digit for digit -- 32/13/10 children,
+7/3 non-null, batch WF00350, sha dd37bf8b, same id throughout.
+
+### Refuted hypotheses / corrections (calibration)
+
+1. Architect: D136's disjointness claim ("the labels do not occur
+   on the Adult-Use form") was false -- the Adult-Use form prints
+   them as an empty transposed label run. Killed by the control
+   the doc itself demanded; the corrected safety ground (value-
+   shaped tokens between two-sided anchors, positional-first) is
+   pinned by test and the doc amended by name (3adb7bc).
+2. Architect: shipped an unexecuted gate criterion -- an ASCII
+   gate on a source blob carrying 12 ratified non-ASCII analyte
+   bytes at HEAD. Implementer STOPped correctly; the corrected
+   commit prompt dropped the gate as redundant beneath blob-hash
+   identity. Standing lesson restated: hash-gated blobs need no
+   byte-property gates; the ASCII gate belongs to commit messages.
+3. Architect: "the four unpushed commits" -- a hand-count, wrong
+   (three). Caught before the push prediction shipped wrong.
+4. Environment, architect-side: bare npx jest lacks the
+   --experimental-vm-modules flag the npm test script carries; 108
+   spurious failures until the script was read. No repo change.
+5. The draft-placement tool rewrote two ratified emphasis spans
+   (asterisk to underscore) in green-analytics-parser.md; caught
+   by diff review, reverted in the D136 doc commit rather than
+   ratified by accident.
+6. Architect: this amendment's own heading was authored without
+   reading the rolling file's existing date labels -- two
+   same-date amendments already stood; implementer caught the
+   collision, plus a chat-wrapped heading and an unresolved
+   placeholder, all before commit.
+
+### Ratified decisions
+
+- D135 as documented in attach-coa.md, including: identity-field
+  prefill (row wins where present), cross-row dedup STOP with the
+  string "This document already lives on another shelf item
+  (<strain>). Nothing was changed.", attach is pick-only, guard's
+  manual affordance suppressed in attach context, re-attach legal.
+- D136 as documented in green-analytics-parser.md plus its named
+  amendment; parser-before-attach ordering, operator ruling
+  2026-08-08.
+- Two Tier 1 doc placements arrived outside the ratified-bytes
+  channel (operator-placed worktree files); accepted after diff
+  review against ratified text caught the one divergence (item 5).
+
+### Open items
+
+**Banked (new this session):** the attach-context confirm footer
+still reads "Add to shelf" (device-gate screenshot; one string,
+same family as the guard heading pairing). The step-1 device
+control (no attach entry on an imported card's overflow):
+observed pass, per operator. The
+compliance-test manual row could attach its real ACS document if
+one ever parses -- blocked on the image-PDF class, not on attach.
+CLI drift: supabase 2.113.0.
+
+**Banked, carried:** the standing list, unchanged, Orangutang
+fixture included.
+
+### Entry point
+
+Search (the client-side filter) resumes as queue rank 2, next per
+the standing operator-ranked queue -- today's arc was an operator-
+initiated insertion, satisfied in full. No prompt is owed until
+the operator picks it up. The 4.7 ratio for the session: three
+feat commits, one data commit, four docs commits counting this
+amendment, and the product result is a manually entered shelf item
+holding its real lab document's chemistry -- verified against the
+document by test, against the database digit for digit, and
+visible on the card the same day the feature was designed.
