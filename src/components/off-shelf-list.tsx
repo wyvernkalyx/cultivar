@@ -6,6 +6,7 @@ import { CoaDetail } from '@/components/coa-detail';
 import {
   ShelfCard,
   type CardCannabinoid,
+  type CardEffect,
   type CardRetirement,
   type CardSession,
   type CardTerpene,
@@ -15,6 +16,7 @@ import { Dash } from '@/constants/theme';
 import {
   groupSessionsByCoa,
   groupTopCannabinoidsByCoa,
+  groupTopEffectsByCoa,
   groupTopTerpenesByCoa,
   type SummaryCannabinoid,
   type SummarySession,
@@ -70,6 +72,7 @@ export function OffShelfList({ visible, onClose }: { visible: boolean; onClose: 
   const [cannabinoidsByCoa, setCannabinoidsByCoa] = useState<Map<string, CardCannabinoid[]>>(
     new Map()
   );
+  const [effectsByCoa, setEffectsByCoa] = useState<Map<string, CardEffect[]>>(new Map());
   const [retirementByCoa, setRetirementByCoa] = useState<Map<string, CardRetirement>>(new Map());
   const [error, setError] = useState<string | null>(null);
   const [detailCoaId, setDetailCoaId] = useState<string | null>(null);
@@ -120,6 +123,7 @@ export function OffShelfList({ visible, onClose }: { visible: boolean; onClose: 
         // accepted debt.
         setRows(coasResult.data as ShelfCoa[]);
         setSessionsByCoa(groupSessionsByCoa(sessionsResult.data as SummarySession[]));
+        setEffectsByCoa(groupTopEffectsByCoa(sessionsResult.data as SummarySession[]));
         setTerpenesByCoa(groupTopTerpenesByCoa(terpenesResult.data as SummaryTerpene[]));
         setCannabinoidsByCoa(
           groupTopCannabinoidsByCoa(cannabinoidsResult.data as SummaryCannabinoid[])
@@ -190,6 +194,7 @@ export function OffShelfList({ visible, onClose }: { visible: boolean; onClose: 
                 sessions={sessionsByCoa.get(item.id) ?? []}
                 topTerpenes={terpenesByCoa.get(item.id) ?? []}
                 topCannabinoids={cannabinoidsByCoa.get(item.id) ?? []}
+                effects={effectsByCoa.get(item.id) ?? []}
                 onOpen={() => setDetailCoaId(item.id)}
                 // No onLog, by ruling (D101). The archive marker instead:
                 // absent when a COA reached count 0 by some path that left no

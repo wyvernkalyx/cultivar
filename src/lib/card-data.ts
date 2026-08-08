@@ -1,4 +1,9 @@
-import type { CardCannabinoid, CardSession, CardTerpene } from '@/components/shelf-card';
+import type {
+  CardCannabinoid,
+  CardEffect,
+  CardSession,
+  CardTerpene,
+} from '@/components/shelf-card';
 
 // The row shapes the card inputs are built from, exactly the columns the
 // surfaces select. Two surfaces now build card inputs -- the shelf (D99) and
@@ -100,4 +105,23 @@ export function rankTopEffects(sessions: SummarySession[]): EffectCount[] {
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => (b.count !== a.count ? b.count - a.count : a.name.localeCompare(b.name)))
     .slice(0, 3);
+}
+
+// Per-COA top-3 effects for the card line (D133b): group the live rows by
+// COA, then rank each group through rankTopEffects -- the one counting core,
+// never a second tally. A COA whose sessions carry no tags gets no entry,
+// so the card's conditional render sees an empty array and shows nothing.
+export function groupTopEffectsByCoa(sessions: SummarySession[]): Map<string, CardEffect[]> {
+  const rowsByCoa = new Map<string, SummarySession[]>();
+  for (const session of sessions) {
+    const existing = rowsByCoa.get(session.coa_id);
+    if (existing === undefined) rowsByCoa.set(session.coa_id, [session]);
+    else existing.push(session);
+  }
+  const byCoa = new Map<string, CardEffect[]>();
+  for (const [coaId, rows] of rowsByCoa) {
+    const ranked = rankTopEffects(rows);
+    if (ranked.length > 0) byCoa.set(coaId, ranked);
+  }
+  return byCoa;
 }

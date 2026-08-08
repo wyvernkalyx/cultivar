@@ -49,11 +49,19 @@ export type CardCannabinoid = { name: string; pct: number };
 // never paraphrased, never mapped through a second vocabulary.
 export type CardRetirement = { reason: string; at: string };
 
+// Session-derived top effects for this COA (D133b): the user's own recorded
+// tags, ranked upstream by the one counting core -- never chemistry. The
+// count rides along for future surfaces; the card renders names only. An
+// empty array renders nothing at all: unlike the lab-absence lines, no
+// stated absence -- an untagged history is not a fact about the product.
+export type CardEffect = { name: string; count: number };
+
 export type ShelfCardProps = {
   coa: ShelfCoa;
   sessions: CardSession[];
   topTerpenes: CardTerpene[];
   topCannabinoids: CardCannabinoid[];
+  effects: CardEffect[];
   onOpen: () => void;
   // Absent on the off-shelf archive (D101): a surface with no logging path
   // renders no Log button at all. Not a disabled one -- an affordance that
@@ -193,6 +201,7 @@ export function ShelfCard({
   sessions,
   topTerpenes,
   topCannabinoids,
+  effects,
   onOpen,
   onLog,
   onFavorite,
@@ -330,6 +339,17 @@ export function ShelfCard({
           </Text>
         ) : (
           <Text style={styles.ndTerpenes}>Cannabinoids not reported by lab.</Text>
+        )}
+
+        {/* The D133b line, register per D133a's dashboard line: the ratified
+            qualifier plus this COA's top tags, exact stored strings, serif
+            italic -- a register the chemistry lines never wear, so outcome
+            and lab data cannot be misread as one family. Absent entirely
+            when no live session of this COA carries tags. */}
+        {effects.length > 0 && (
+          <Text style={styles.effectsLine}>
+            {`Often ${effects.map((effect) => effect.name).join(' \u00b7 ')}`}
+          </Text>
         )}
 
         <View style={styles.footerRow}>
@@ -548,6 +568,11 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontVariant: ['tabular-nums'],
     color: Dash.textFaint,
+  },
+  effectsLine: {
+    fontFamily: SERIF_ITALIC,
+    fontSize: 13,
+    color: Dash.textBody,
   },
   // D132: the cannabinoid line wears the legend's clothes -- same size,
   // same muted name token; its values reuse legendPct above.

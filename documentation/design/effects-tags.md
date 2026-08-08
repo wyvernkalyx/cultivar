@@ -2,8 +2,11 @@
 
 Status: design ratified D119-D121, 2026-08-04; vocabulary v6
 ratified D126, 2026-08-06. D121 migration and the slice (c)
-closing-screen UI applied and gated 2026-08-04; LEXICON_VERSION is 5
-until the D126 UI slice ships. This line is amended by the commit
+closing-screen UI applied and gated 2026-08-04. The D126 UI slice
+shipped (the constant reads 6 at HEAD; the shipping commit predates
+this repo's root and failed to amend this line -- recorded at the
+D133b commit). D133/D133a made the dashboard the first effects read
+surface; D133b adds the cards. This line is amended by the commit
 that changes its truth.
 
 ## Purpose
@@ -103,9 +106,11 @@ valid across the version boundary.
 D92-D96 cut six fact classes; the two grounds that bear on this design
 are answered here rather than assumed away.
 
-"Nothing reads them" (D93 ground 1): nothing reads `effects` today
-either, and this document does not pretend otherwise -- Non-goals
-excludes scoring and stats changes. The distinction is the direction of
+"Nothing reads them" (D93 ground 1): nothing read `effects` at this
+document's ratification, and it did not pretend otherwise -- Non-goals
+excludes scoring and stats changes. (Since amended at the D133b
+commit: D133/D133a-b made the dashboard and cards session-derived
+read surfaces, display only; scoring and stats remain untouched.) The distinction is the direction of
 demand. The retired axes were architect-authored ahead of any usage and
 never acquired a reader. Effects capture is operator-demanded after
 first real usage (2026-08-03), which is D95's own mechanism working as

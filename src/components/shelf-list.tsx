@@ -14,6 +14,7 @@ import { SessionLadder, type CloseOutcome } from '@/components/session-ladder';
 import {
   ShelfCard,
   type CardCannabinoid,
+  type CardEffect,
   type CardSession,
   type CardTerpene,
   type ShelfCoa,
@@ -23,6 +24,7 @@ import { Dash, Spacing } from '@/constants/theme';
 import {
   groupSessionsByCoa,
   groupTopCannabinoidsByCoa,
+  groupTopEffectsByCoa,
   groupTopTerpenesByCoa,
   rankTopEffects,
   type SummaryCannabinoid,
@@ -149,6 +151,7 @@ export function ShelfList({ onSummary }: ShelfListProps) {
   const [cannabinoidsByCoa, setCannabinoidsByCoa] = useState<Map<string, CardCannabinoid[]>>(
     new Map()
   );
+  const [effectsByCoa, setEffectsByCoa] = useState<Map<string, CardEffect[]>>(new Map());
   // How many COAs sit at count 0 (D101), computed in load() from the summary's
   // unfiltered catalog select — the footer link needs a count, not the rows,
   // and the archive fetches its own when it opens.
@@ -242,6 +245,7 @@ export function ShelfList({ onSummary }: ShelfListProps) {
         setSummary(built);
         onSummary?.(built);
         setSessionsByCoa(groupSessionsByCoa(sessions));
+        setEffectsByCoa(groupTopEffectsByCoa(sessions));
         setTerpenesByCoa(groupTopTerpenesByCoa(terpenes));
         setCannabinoidsByCoa(
           groupTopCannabinoidsByCoa(cannabinoidsResult.data as SummaryCannabinoid[])
@@ -335,6 +339,7 @@ export function ShelfList({ onSummary }: ShelfListProps) {
             sessions={sessionsByCoa.get(item.id) ?? []}
             topTerpenes={terpenesByCoa.get(item.id) ?? []}
             topCannabinoids={cannabinoidsByCoa.get(item.id) ?? []}
+            effects={effectsByCoa.get(item.id) ?? []}
             onOpen={() => setDetailCoaId(item.id)}
             // One tap straight to the verdict screen (D99). The direct path,
             // not the pending chain: that chain exists only because the
