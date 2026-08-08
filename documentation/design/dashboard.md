@@ -463,3 +463,78 @@ refuted or under-specified, recorded rather than silently repaired:
 Untested, not passed: the "Cannabinoids not reported by lab."
 absence state has no live instance (observed minimum is 2 reported
 rows per COA in the catalog at ship time).
+
+## Amendments -- 2026-08-07 (D133: session-derived effects summary line)
+
+Ratified by the operator 2026-08-07 in chat, per-decision. Grounds:
+operator request for a blend-level "result" line, prompted by external
+COA-reading prose whose per-terpene effect claims are the exact class
+the personal-empirical invariant forbids. The ratified inversion: the
+line derives from this user's recorded session effects, never from
+chemistry. First read surface for the effects fact class -- capture
+has been live since D121 with no render anywhere (observed at HEAD
+2026-08-07, capture-only confirmed).
+
+- **D133 -- the line.** An effects summary line renders on two
+  surfaces: the dashboard preference-summary card (all-history
+  scope) and the per-COA cards, shelf and archive alike per D101's
+  same-card-language rule (named at design time this round: the
+  archive is in scope from the start, the D132 correction 1
+  lesson). The COA detail is out of scope, rejected with the
+  grounds that its Sessions section already itemizes; a summary
+  above the itemization is banked on lived demand.
+- **Derivation, ratified.** Source is session_current.effects only
+  -- never chemistry, never a terpene lookup (effects-tags.md
+  discipline restated). Frequency across in-scope sessions: count
+  descending, name ascending tiebreak, top 3 -- the groupTop
+  convention exactly, third consecutive reuse. A session with null
+  or empty effects contributes nothing; absence never counts as
+  "no effects" (ND != 0 family). All 14 v6 tags rank equally,
+  Off-Key included -- pure frequency, no valence weighting, no
+  presentation filter (operator ruling 2026-08-07: the score
+  carries valence; tags record what happened, and a per-COA
+  "Often Dry Mouth / Eyes" is the engine reporting a result).
+  Tags rank by stored string, verbatim: a future vocabulary
+  revision that renames a tag splits its history at the version
+  boundary, two strings ranking separately -- accepted, same
+  no-rewrite family as scores-never-recompute; canonicalize-at-
+  read stays the banked remedy. No live case exists at
+  ratification: session_current holds 0 rows (MCP, 2026-08-07,
+  post-reset), so the counting scope contains no mixed-version
+  history.
+- **Absence states.** Zero tagged sessions in scope: no line, no
+  placeholder -- the card renders exactly as it does today.
+  Untried COA: nothing (compendium discipline). The line renders
+  from a single tagged session if that is all there is; the
+  session counts already on every surface carry the sample size.
+- **Register.** "Often" plus the top tags (operator ruling b-2,
+  2026-08-07): Often Focused - Mellow / Chill (exact v6 strings,
+  spaces around the slash per D126). Rendered separator matches
+  the D132 cannabinoid line's interpunct; the escape-normalization
+  caution in the D131-D132 post-implementation record applies.
+  Final string operator-owned at the device gate.
+- **Data.** Widen the two existing session_current selects
+  (shelf-list.tsx, off-shelf-list.tsx) with the effects column --
+  no new query, no schema, no view, no migration. A
+  groupTopEffectsByCoa helper joins its siblings in card-data.ts;
+  the dashboard aggregation reuses the same counting core over the
+  all-history rows already feeding the D98 summary. Files:
+  src/lib/card-data.ts, src/components/shelf-list.tsx,
+  src/components/off-shelf-list.tsx, src/components/shelf-card.tsx,
+  src/components/preference-summary.tsx; src/app/index.tsx if
+  summary prop threading requires it.
+- **Fences.** Display-only. The survey, the closing screen, the
+  vocabulary, LEXICON_VERSION, scores, and band placement are
+  untouched. The line never participates in scoring or ranking of
+  COAs.
+
+Slice plan: this amendment (Tier 1); D133a dashboard line as one
+feat (Tier 2, device gate); D133b card line, both list surfaces, as
+one feat (Tier 2, device gate, with a read-back comparing one
+card's rendered tags against a direct session_current query for
+that COA). The D133b commit also amends the effects-tags.md
+"nothing reads effects today" sentence, whose truth it changes
+(status-truth rule; implementer flag 2026-08-07). Non-goals: COA
+detail surface; any Off-Key styling distinction (banked -- one hue
+decision if it ever grates); any schema change;
+canonicalize-at-read.
