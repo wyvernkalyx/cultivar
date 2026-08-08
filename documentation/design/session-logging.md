@@ -9,7 +9,7 @@ the shape. North stars:
 `documentation/design/scoring-lexicon.md` (the skeleton this mechanic
 serves), `documentation/design/product-metaphor.md`, and
 `documentation/design/session-entries-schema.md` (the table the wiring
-slice writes). Amended by D80 and D81 (blocks at end of file, 2026-07-20), implemented and device-gated at `5318afd`; amended by D82 and D82.1 (blocks at end of file, 2026-07-20), design-only, implementation pending.
+slice writes). Amended by D80 and D81 (blocks at end of file, 2026-07-20), implemented and device-gated at `5318afd`; amended by D82 and D82.1 (blocks at end of file, 2026-07-20), design-only; D82.1's checkbox applied to the confound panels, which D92-D93 retired before it shipped -- mooted, never implemented (recorded 2026-08-08).
 
 ## Purpose
 

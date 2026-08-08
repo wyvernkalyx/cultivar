@@ -212,7 +212,11 @@ Corrections recorded after implementation, each ratified in chat:
    on 2026-08-02; slice 5 removed the flow. `removeCoaPdf` remains
    in the retention module as the documented deletion path with no
    client caller. `onDeleted` is a vestigial prop pending a
-   two-line retirement in both callers.
+   two-line retirement in both callers. [Corrected 2026-08-08:
+   stale at birth -- the pickaxe finds no commit in this repo's
+   history ever touching the token in src/, so the claim described
+   pre-root state that no longer existed when written. Nothing is
+   owed.]
 4. Reference 04's "Skip below" is a reference defect: D92 ratified
    the survey with no Skip, and D103's fence forbids adding one.
    Not added; ratified mechanics govern the reference here.
