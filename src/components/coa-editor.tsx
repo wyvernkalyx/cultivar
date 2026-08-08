@@ -45,6 +45,10 @@ interface DraftAnalyte {
   name: string;
   pct: number | null;
   detectedAtInit: boolean;
+  // Manual mode only (D134): true while the user has not touched the row.
+  // An na row is form scaffolding, not data -- emit drops it. Distinct from
+  // pct null, which is an explicit ND (a transcribed lab attestation).
+  na: boolean;
 }
 
 interface Draft {
@@ -68,13 +72,17 @@ interface Draft {
   sourceLab: string;
 }
 
-function initDraft(coa: CoaParseResult): Draft {
+function initDraft(coa: CoaParseResult, manual: boolean): Draft {
   const toRows = (prefix: string, analytes: CoaAnalyte[]): DraftAnalyte[] =>
     analytes.map((a, i) => ({
       id: `${prefix}${i}`,
       name: a.name,
       pct: a.pct,
-      detectedAtInit: a.pct !== null,
+      // Manual mode has no detected/ND grouping (D134): every row inits into
+      // the detected branch, so the section renders one flat list and the
+      // "Not detected" toggle never appears (nd.length is 0 by construction).
+      detectedAtInit: manual ? true : a.pct !== null,
+      na: manual,
     }));
   return {
     strain: coa.strain,
@@ -106,7 +114,12 @@ function normalizeMeta(value: string | null): string | null {
 // stripped by constructing the mapped object; deleted rows are absent because
 // they are no longer in the draft. A null pct emits as JSON null — never 0,
 // never dropped.
-function emitDraft(draft: Draft): CoaParseResult {
+function emitDraft(draft: Draft, manual: boolean): CoaParseResult {
+  // Manual mode (D134): a row still on Not Available was never touched and a
+  // row without a name cannot be a record; both are dropped, failing closed
+  // to omission. Parsed mode emits every surviving row, as before.
+  const rows = (panel: DraftAnalyte[]): DraftAnalyte[] =>
+    manual ? panel.filter((r) => !r.na && r.name.trim() !== '') : panel;
   return {
     lab: normalizeMeta(draft.lab),
     brand: normalizeMeta(draft.brand),
@@ -117,8 +130,8 @@ function emitDraft(draft: Draft): CoaParseResult {
     totalThcPct: draft.totalThcPct,
     totalCbdPct: draft.totalCbdPct,
     totalTerpenesPct: draft.totalTerpenesPct,
-    terpenes: draft.terpenes.map(({ name, pct }) => ({ name, pct })),
-    cannabinoids: draft.cannabinoids.map(({ name, pct }) => ({ name, pct })),
+    terpenes: rows(draft.terpenes).map(({ name, pct }) => ({ name, pct })),
+    cannabinoids: rows(draft.cannabinoids).map(({ name, pct }) => ({ name, pct })),
     safety: draft.safety,
     sourceLab: draft.sourceLab,
   };
@@ -134,20 +147,33 @@ function pctLabel(pct: number | null): string {
 // parseable number → that number (an explicitly typed 0 is legal — the
 // invariant bans fabricated zeros, not deliberate ones); anything else
 // reverts silently. No error UI this slice.
-function commitValueText(text: string, prior: number | null): number | null {
+// Manual divergence (D134): a blank commit REVERTS instead of landing on ND.
+// In parsed mode the row provably existed in the document, so blank-to-ND is
+// sound; in manual mode it would convert "didn't finish typing" into "lab
+// says not detected". ND requires the explicit act (typed nd).
+function commitValueText(
+  text: string,
+  prior: { pct: number | null; na: boolean },
+  manual: boolean,
+): { pct: number | null; na: boolean } {
   const trimmed = text.trim();
-  if (trimmed === '' || trimmed.toLowerCase() === 'nd') return null;
+  if (trimmed === '') return manual ? prior : { pct: null, na: false };
+  if (trimmed.toLowerCase() === 'nd') return { pct: null, na: false };
   const parsed = Number(trimmed);
-  return Number.isFinite(parsed) ? parsed : prior;
+  return Number.isFinite(parsed) ? { pct: parsed, na: false } : prior;
 }
 
 function ValueCell({
   value,
+  na = false,
+  manual = false,
   onCommit,
   secondary = false,
 }: {
   value: number | null;
-  onCommit: (next: number | null) => void;
+  na?: boolean;
+  manual?: boolean;
+  onCommit: (next: { pct: number | null; na: boolean }) => void;
   secondary?: boolean;
 }) {
   const theme = useTheme();
@@ -157,13 +183,13 @@ function ValueCell({
   if (text === null) {
     return (
       <Pressable
-        onPress={() => setText(value === null ? '' : String(value))}
+        onPress={() => setText(na || value === null ? '' : String(value))}
         hitSlop={Spacing.two}>
         <ThemedText
           type="small"
-          themeColor={secondary ? 'textSecondary' : undefined}
+          themeColor={secondary || na ? 'textSecondary' : undefined}
           style={styles.cellValue}>
-          {pctLabel(value)}
+          {na ? 'Not Available' : pctLabel(value)}
         </ThemedText>
       </Pressable>
     );
@@ -180,7 +206,7 @@ function ValueCell({
       keyboardType="decimal-pad"
       autoFocus
       onBlur={() => {
-        onCommit(commitValueText(text, value));
+        onCommit(commitValueText(text, { pct: value, na }, manual));
         setText(null);
       }}
     />
@@ -202,8 +228,10 @@ function NameCell({
   if (text === null) {
     return (
       <Pressable onPress={() => setText(name)} style={styles.nameCell} hitSlop={Spacing.two}>
-        <ThemedText type="small" themeColor={secondary ? 'textSecondary' : undefined}>
-          {name}
+        <ThemedText type="small" themeColor={secondary || name === '' ? 'textSecondary' : undefined}>
+          {/* A fresh manual add-row arrives unnamed; an invisible empty label
+              would be untappable. Display-only -- emit drops unnamed rows. */}
+          {name === '' ? 'Tap to name' : name}
         </ThemedText>
       </Pressable>
     );
@@ -235,11 +263,13 @@ function AnalyteRow({
   onEdit,
   onDelete,
   secondary = false,
+  manual = false,
 }: {
   row: DraftAnalyte;
-  onEdit: (patch: Partial<Pick<DraftAnalyte, 'name' | 'pct'>>) => void;
+  onEdit: (patch: Partial<Pick<DraftAnalyte, 'name' | 'pct' | 'na'>>) => void;
   onDelete: () => void;
   secondary?: boolean;
+  manual?: boolean;
 }) {
   const confirmDelete = () =>
     // With no add-row, a mistaken delete is unrecoverable short of a full
@@ -252,7 +282,13 @@ function AnalyteRow({
   return (
     <View style={styles.row}>
       <NameCell name={row.name} secondary={secondary} onCommit={(name) => onEdit({ name })} />
-      <ValueCell value={row.pct} secondary={secondary} onCommit={(pct) => onEdit({ pct })} />
+      <ValueCell
+        value={row.pct}
+        na={row.na}
+        manual={manual}
+        secondary={secondary}
+        onCommit={(next) => onEdit({ pct: next.pct, na: next.na })}
+      />
       <Pressable onPress={confirmDelete} hitSlop={Spacing.two}>
         <ThemedText type="small" themeColor="textSecondary">
           ✕
@@ -270,11 +306,15 @@ function AnalyteSection({
   rows,
   onEdit,
   onDelete,
+  manual = false,
+  onAdd,
 }: {
   title: string;
   rows: DraftAnalyte[];
-  onEdit: (id: string, patch: Partial<Pick<DraftAnalyte, 'name' | 'pct'>>) => void;
+  onEdit: (id: string, patch: Partial<Pick<DraftAnalyte, 'name' | 'pct' | 'na'>>) => void;
   onDelete: (id: string) => void;
+  manual?: boolean;
+  onAdd?: () => void;
 }) {
   const [showNd, setShowNd] = useState(false);
   const detected = rows.filter((r) => r.detectedAtInit);
@@ -287,10 +327,18 @@ function AnalyteSection({
         <AnalyteRow
           key={r.id}
           row={r}
+          manual={manual}
           onEdit={(patch) => onEdit(r.id, patch)}
           onDelete={() => onDelete(r.id)}
         />
       ))}
+      {manual && onAdd && (
+        <Pressable onPress={onAdd} style={styles.ndToggle} hitSlop={Spacing.two}>
+          <ThemedText type="small" themeColor="textSecondary">
+            + Add analyte
+          </ThemedText>
+        </Pressable>
+      )}
       {nd.length > 0 && (
         <>
           <Pressable onPress={() => setShowNd((s) => !s)} style={styles.ndToggle}>
@@ -304,6 +352,7 @@ function AnalyteSection({
                 key={r.id}
                 row={r}
                 secondary
+                manual={manual}
                 onEdit={(patch) => onEdit(r.id, patch)}
                 onDelete={() => onDelete(r.id)}
               />
@@ -347,16 +396,26 @@ function MetadataField({
 function TotalRow({
   label,
   value,
+  manual = false,
   onCommit,
 }: {
   label: string;
   value: number | null;
+  manual?: boolean;
   onCommit: (next: number | null) => void;
 }) {
   return (
     <View style={styles.row}>
       <ThemedText type="small">{label}</ThemedText>
-      <ValueCell value={value} onCommit={onCommit} />
+      {/* Totals are single columns, not rows: there is no row to drop, so a
+          manual total left untouched and an explicit ND both store NULL. The
+          Not Available label here is editor display only (D134, stated). */}
+      <ValueCell
+        value={value}
+        na={manual && value === null}
+        manual={manual}
+        onCommit={(next) => onCommit(next.pct)}
+      />
     </View>
   );
 }
@@ -384,13 +443,20 @@ export function CoaEditor({
   coa,
   onConfirm,
   busy = false,
+  manual = false,
 }: {
   coa: CoaParseResult;
   onConfirm: (coa: CoaParseResult) => void;
   busy?: boolean;
+  // D134 manual mode: the coa prop is the pre-populated seed, every analyte
+  // row inits Not Available, blank commits revert instead of landing on ND,
+  // add-row is available, and emit drops untouched and unnamed rows.
+  manual?: boolean;
 }) {
   const theme = useTheme();
-  const [draft, setDraft] = useState<Draft>(() => initDraft(coa));
+  const [draft, setDraft] = useState<Draft>(() => initDraft(coa, manual));
+  // Ids for manual add-rows; the m prefix cannot collide with init's t/c.
+  const [nextAddId, setNextAddId] = useState(0);
 
   const setMeta = (key: 'strain' | 'brand' | 'batch' | 'lab') => (text: string) =>
     setDraft((d) => ({ ...d, [key]: text }));
@@ -399,13 +465,26 @@ export function CoaEditor({
       setDraft((d) => ({ ...d, [key]: pct }));
   const editAnalyte =
     (panel: 'terpenes' | 'cannabinoids') =>
-    (id: string, patch: Partial<Pick<DraftAnalyte, 'name' | 'pct'>>) =>
+    (id: string, patch: Partial<Pick<DraftAnalyte, 'name' | 'pct' | 'na'>>) =>
       setDraft((d) => ({
         ...d,
         [panel]: d[panel].map((r) => (r.id === id ? { ...r, ...patch } : r)),
       }));
   const deleteAnalyte = (panel: 'terpenes' | 'cannabinoids') => (id: string) =>
     setDraft((d) => ({ ...d, [panel]: d[panel].filter((r) => r.id !== id) }));
+  const addAnalyte = (panel: 'terpenes' | 'cannabinoids') => () => {
+    const id = `m${nextAddId}`;
+    setNextAddId((n) => n + 1);
+    setDraft((d) => ({
+      ...d,
+      [panel]: [
+        ...d[panel],
+        // Unnamed and Not Available until the user says otherwise; emit
+        // drops it in either state, so an abandoned add-row stores nothing.
+        { id, name: '', pct: null, detectedAtInit: true, na: true },
+      ],
+    }));
+  };
 
   return (
     // Fixed-footer column (D43): the sections scroll; the confirm control is
@@ -426,11 +505,22 @@ export function CoaEditor({
 
         <View style={styles.section}>
           <ThemedText type="smallBold">Totals</ThemedText>
-          <TotalRow label="THC" value={draft.totalThcPct} onCommit={setTotal('totalThcPct')} />
-          <TotalRow label="CBD" value={draft.totalCbdPct} onCommit={setTotal('totalCbdPct')} />
+          <TotalRow
+            label="THC"
+            value={draft.totalThcPct}
+            manual={manual}
+            onCommit={setTotal('totalThcPct')}
+          />
+          <TotalRow
+            label="CBD"
+            value={draft.totalCbdPct}
+            manual={manual}
+            onCommit={setTotal('totalCbdPct')}
+          />
           <TotalRow
             label="Total terpenes"
             value={draft.totalTerpenesPct}
+            manual={manual}
             onCommit={setTotal('totalTerpenesPct')}
           />
         </View>
@@ -438,12 +528,16 @@ export function CoaEditor({
         <AnalyteSection
           title="Terpenes"
           rows={draft.terpenes}
+          manual={manual}
+          onAdd={addAnalyte('terpenes')}
           onEdit={editAnalyte('terpenes')}
           onDelete={deleteAnalyte('terpenes')}
         />
         <AnalyteSection
           title="Cannabinoids"
           rows={draft.cannabinoids}
+          manual={manual}
+          onAdd={addAnalyte('cannabinoids')}
           onEdit={editAnalyte('cannabinoids')}
           onDelete={deleteAnalyte('cannabinoids')}
         />
@@ -457,7 +551,7 @@ export function CoaEditor({
       </ScrollView>
 
       <Pressable
-        onPress={() => onConfirm(emitDraft(draft))}
+        onPress={() => onConfirm(emitDraft(draft, manual))}
         disabled={busy}
         style={[
           styles.confirmButton,

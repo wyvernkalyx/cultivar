@@ -1,7 +1,7 @@
 # Manual COA Entry -- design (D134)
 
-Status: RATIFIED 2026-08-08. Not implemented. The implementing
-commit amends this line or the line is wrong.
+Status: RATIFIED 2026-08-08. Implemented and device-gated
+2026-08-08, both routes; read-back matched the entered rows exactly.
 
 ## D134 -- the pre-populated form, and the Not Available / ND pairing
 
@@ -37,9 +37,15 @@ the user to manual entry may be correct, but it was never decided."
 Decided: it routes, via this affordance. The doc commit amends that
 entry.
 
-Banked: a direct enter-manually route in the add flow, for a
-paper-only COA with no file to pick. No lived case yet; one button
-once the screen exists.
+A direct route also ships this slice -- operator ruling 2026-08-08,
+unbanking the prior paragraph at its first lived case (the operator,
+gating this slice, holding no copy of the document on the phone):
+"Enter a COA manually" on the add flow's opening screen. No file
+exists on this path: pdfSha256 null, no retention upload, and no
+retention notice -- the "not retained" warning is reserved for a
+file that existed and failed to store, and would be false here.
+Manual state lives in the modal so both routes render one arm; the
+guard affordance reports the choice upward.
 
 ## Value states
 
@@ -97,7 +103,7 @@ a real number, an explicit ND, or Not Available (default).
   free. Believed, verify at build: the empty-parse response
   carries pdfSha256 (the server hashes bytes before parsing);
   if it does not, the hash is null and the upload still runs from
-  pickedUri. pdfSha256 is null only on the banked no-file path.
+  pickedUri. pdfSha256 is null only on the no-file direct route.
 - **safety: [].** No manual safety transcription in v1. Observed
   2026-08-08: jsonb_array_elements over an empty jsonb array
   yields zero rows -- the construct insert_coa uses -- so an empty
@@ -149,12 +155,15 @@ a real number, an explicit ND, or Not Available (default).
      any untouched name (the pairing, live at the DB seam).
   6. Control: the parsed path (any known-lab fixture) still renders
      the grouped editor unchanged.
+  7. Direct route: from the opening screen, "Enter a COA manually"
+     renders the same pre-populated form with no pick; a small
+     transcription confirms with no retention notice; read-back
+     shows pdf_sha256 and pdf_object_path both NULL on the new row.
 
 ## Non-goals
 
 - OCR for image PDFs (ACS) and despaced extraction (Nova) --
   parser-arc classes, banked, unblocked from this work.
-- The direct no-file entry route (banked above).
 - Manual safety rows; type; post-insert editing (exists for no
   path); parsed-mode add-row.
 - Any parser or Edge Function change; any migration.

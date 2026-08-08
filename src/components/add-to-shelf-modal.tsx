@@ -15,6 +15,7 @@ import {
   type DuplicateMatch,
 } from '@/lib/coa-dedupe';
 import { uploadCoaPdf, type UploadStage } from '@/lib/coa-pdf-storage';
+import { MANUAL_CANNABINOID_NAMES, MANUAL_TERPENE_NAMES } from '@/lib/manual-coa';
 import { ingestCoaPdf, type IngestResult } from '@/lib/ingest-coa';
 import { supabase } from '@/lib/supabase';
 
@@ -74,6 +75,10 @@ export default function AddToShelfModal({
   const [pdfSha256, setPdfSha256] = useState<string | null>(null);
   // Non-blocking: the COA is saved whether or not this is set.
   const [retentionNotice, setRetentionNotice] = useState<string | null>(null);
+  // D134 manual entry, both routes: set by the idle-screen button (no file
+  // exists) and by the guard affordance (a picked file exists and pickedUri /
+  // pdfSha256 stay live, so retention and the dedup hash ride as usual).
+  const [manualEntry, setManualEntry] = useState(false);
   // The matched row's new count, shown on the 'incremented' arm.
   const [shelfCount, setShelfCount] = useState<number | null>(null);
 
@@ -96,6 +101,7 @@ export default function AddToShelfModal({
     setPdfSha256(null);
     setRetentionNotice(null);
     setShelfCount(null);
+    setManualEntry(false);
   };
 
   const pickAnother = reset;
@@ -294,7 +300,10 @@ export default function AddToShelfModal({
     // missing URI, which can only mean the picked file was never readable —
     // lands on 'saved' with a notice rather than an error arm.
     if (pickedUri === null) {
-      setRetentionNotice(retentionMessage('read'));
+      // Direct manual entry has no source document: nothing existed to
+      // retain, so the "not retained" warning would be false (D134). The
+      // notice is reserved for a file that existed and failed to store.
+      if (!manualEntry) setRetentionNotice(retentionMessage('read'));
     } else {
       const stored = await uploadCoaPdf(pickedUri, id);
       if (!stored.ok) {
@@ -368,6 +377,27 @@ export default function AddToShelfModal({
                 <ThemedText type="smallBold">Pick another</ThemedText>
               </Pressable>
             </>
+          ) : manualEntry ? (
+            <>
+              <View style={styles.resultBody}>
+                <CoaEditor
+                  coa={manualSeed()}
+                  manual
+                  onConfirm={confirm}
+                  busy={phase === 'confirming'}
+                />
+              </View>
+              {confirmError && (
+                <ThemedText type="small" style={[styles.centered, styles.confirmError]}>
+                  {confirmError}
+                </ThemedText>
+              )}
+              <Pressable
+                onPress={pickAnother}
+                style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+                <ThemedText type="smallBold">Start over</ThemedText>
+              </Pressable>
+            </>
           ) : (phase === 'done' || phase === 'confirming') && result ? (
             <>
               {result.ok ? (
@@ -385,6 +415,7 @@ export default function AddToShelfModal({
                     key={pickId}
                     coa={(result.json as { data: CoaParseResult }).data}
                     onConfirm={confirm}
+                    onManual={() => setManualEntry(true)}
                     busy={phase === 'confirming'}
                   />
                 </View>
@@ -445,6 +476,21 @@ export default function AddToShelfModal({
                 ]}>
                 <ThemedText type="smallBold">Scan package QR</ThemedText>
               </Pressable>
+              {/* The no-file route (D134, operator ruling 2026-08-08): no
+                  pick, no pdfSha256, no retention -- the seed is the form. */}
+              <Pressable
+                onPress={() => {
+                  setConfirmError(null);
+                  setManualEntry(true);
+                }}
+                disabled={busy}
+                style={[
+                  styles.button,
+                  { backgroundColor: theme.backgroundElement },
+                  busy && styles.buttonDisabled,
+                ]}>
+                <ThemedText type="smallBold">Enter a COA manually</ThemedText>
+              </Pressable>
             </>
           )}
 
@@ -459,15 +505,46 @@ export default function AddToShelfModal({
   );
 }
 
+// The manual seed (D134): a synthetic parse whose analyte rows are the
+// pre-populated form names. The editor's manual mode inits every row Not
+// Available, so none of these names is data until the user gives it a value.
+// sourceLab 'manual' is the provenance marker and rides the emission into
+// insert_coa unchanged; safety is empty by design (no manual transcription).
+function manualSeed(): CoaParseResult {
+  const rows = (names: readonly string[]): { name: string; pct: null }[] =>
+    names.map((name) => ({ name, pct: null }));
+  return {
+    lab: null,
+    brand: null,
+    strain: null,
+    batch: null,
+    sampledDate: null,
+    testedDate: null,
+    totalThcPct: null,
+    totalCbdPct: null,
+    totalTerpenesPct: null,
+    terpenes: rows(MANUAL_TERPENE_NAMES),
+    cannabinoids: rows(MANUAL_CANNABINOID_NAMES),
+    safety: [],
+    sourceLab: 'manual',
+  };
+}
+
 function ReviewOrGuard({
   coa,
   onConfirm,
+  onManual,
   busy,
 }: {
   coa: CoaParseResult;
   onConfirm: (coa: CoaParseResult) => void;
+  // D134: manual state lives in the modal (both routes render one arm there);
+  // the guard affordance only reports the choice upward.
+  onManual: () => void;
   busy: boolean;
 }) {
+  const theme = useTheme();
+
   // Slice 5a guard. An unreadable or non-COA PDF comes back as HTTP 200 with
   // an all-empty parse -- and a known lab tag is no evidence against that
   // (lab identification is presence-of-string). The guarded class is the
@@ -482,6 +559,11 @@ function ReviewOrGuard({
         <ThemedText style={styles.centered}>
           {"Cultivar doesn't support this lab's reports yet."}
         </ThemedText>
+        <Pressable
+          onPress={onManual}
+          style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+          <ThemedText type="smallBold">Enter this COA manually</ThemedText>
+        </Pressable>
       </ThemedView>
     );
   }
