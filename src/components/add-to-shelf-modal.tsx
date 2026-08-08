@@ -45,13 +45,24 @@ function retentionMessage(stage: UploadStage, detail?: string): string {
     .join('\n');
 }
 
+// D135: the row an attach targets. Identity fields ride here so the prefill
+// rule can apply them; the id is what attach_coa updates in place.
+export type AttachTarget = { id: string; strain: string | null; brand: string | null };
+
 export default function AddToShelfModal({
   visible,
   onClose,
+  attachTarget,
 }: {
   visible: boolean;
   onClose: () => void;
+  // D135: when set, this flow attaches to an existing row instead of
+  // inserting a new one. Same pipeline; the fork points are the idle
+  // buttons, the guard affordance, the prefill, the dedup outcome, and
+  // which RPC commits.
+  attachTarget?: AttachTarget | null;
 }) {
+  const attaching = attachTarget != null;
   const theme = useTheme();
   const [phase, setPhase] = useState<Phase>('idle');
   const [result, setResult] = useState<IngestResult | null>(null);
@@ -215,11 +226,28 @@ export default function AddToShelfModal({
       setPhase('done');
       return;
     }
-    if (found.rows.length > 0) {
+    // D135: a match on the target row itself is not a conflict -- re-attach
+    // is legal. Only rows OTHER than the target count.
+    const matches =
+      attachTarget != null
+        ? found.rows.filter((r) => r.id !== attachTarget.id)
+        : found.rows;
+    if (matches.length > 0) {
+      if (attachTarget != null) {
+        // D135: a cross-row match is a STOP, never the three-outcome prompt.
+        // Attach must never touch a row other than its target, and every one
+        // of D88's outcomes would.
+        const name = pickDedupeTarget(matches).strain?.trim();
+        setConfirmError(
+          `This document already lives on another shelf item${name ? ` (${name})` : ''}. Nothing was changed.`,
+        );
+        setPhase('done');
+        return;
+      }
       // Never a silent merge (D88): every match is the user's call. The phase
       // stays 'confirming' while the dialog is up, which keeps the editor's
       // button disabled until an outcome is chosen.
-      promptDuplicate(found.rows, payload);
+      promptDuplicate(matches, payload);
       return;
     }
     await save(payload);
@@ -285,9 +313,18 @@ export default function AddToShelfModal({
     // pdfSha256 rides the payload (D88.5). insert_coa itself is unchanged: it
     // reads payload->>'pdfSha256', and both a JSON null and a missing key
     // arrive as SQL NULL, so an undeployed hasher needs no special case here.
-    const { data, error } = await supabase.rpc('insert_coa', {
-      payload: { ...payload, pdfSha256 },
-    });
+    // D135: attach commits through attach_coa against the target's own id --
+    // update-in-place, children replaced transactionally, sessions untouched.
+    // Both RPCs return the row's uuid, so the arms converge immediately.
+    const { data, error } =
+      attachTarget != null
+        ? await supabase.rpc('attach_coa', {
+            p_coa_id: attachTarget.id,
+            payload: { ...payload, pdfSha256 },
+          })
+        : await supabase.rpc('insert_coa', {
+            payload: { ...payload, pdfSha256 },
+          });
     if (error) {
       setConfirmError(error.message);
       setPhase('done');
@@ -331,7 +368,7 @@ export default function AddToShelfModal({
       <ThemedView style={styles.container}>
         <ThemedView style={styles.content}>
           <ThemedText type="subtitle" style={styles.centered}>
-            Add to shelf
+            {attaching ? 'Attach COA document' : 'Add to shelf'}
           </ThemedText>
 
           {phase === 'incremented' ? (
@@ -356,7 +393,7 @@ export default function AddToShelfModal({
             <>
               <ScrollView style={styles.resultScroll}>
                 <ThemedText type="smallBold" style={styles.centered}>
-                  Added to your shelf
+                  {attaching ? 'Attached to your shelf item' : 'Added to your shelf'}
                 </ThemedText>
                 {savedId && (
                   <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
@@ -413,9 +450,15 @@ export default function AddToShelfModal({
                 <View style={styles.resultBody}>
                   <ReviewOrGuard
                     key={pickId}
-                    coa={(result.json as { data: CoaParseResult }).data}
+                    coa={attachPrefill(
+                      (result.json as { data: CoaParseResult }).data,
+                      attachTarget,
+                    )}
                     onConfirm={confirm}
-                    onManual={() => setManualEntry(true)}
+                    // D135: suppressed in attach context -- the guard's
+                    // manual route creates a new row, the one thing attach
+                    // must never do. The guard shows its error only.
+                    onManual={attaching ? undefined : () => setManualEntry(true)}
                     busy={phase === 'confirming'}
                   />
                 </View>
@@ -465,7 +508,10 @@ export default function AddToShelfModal({
               </Pressable>
               {/* The second entry point sits inside the Add flow beside the
                   picker, not on the shelf header: both produce the same
-                  cache-local URI, so they belong at the same fork. */}
+                  cache-local URI, so they belong at the same fork.
+                  D135: attach is pick-only, per the ratified flow -- the QR
+                  and direct-manual entries render on the add flow alone. */}
+              {!attaching && (
               <Pressable
                 onPress={() => setPhase('scanning')}
                 disabled={busy}
@@ -476,8 +522,10 @@ export default function AddToShelfModal({
                 ]}>
                 <ThemedText type="smallBold">Scan package QR</ThemedText>
               </Pressable>
+              )}
               {/* The no-file route (D134, operator ruling 2026-08-08): no
                   pick, no pdfSha256, no retention -- the seed is the form. */}
+              {!attaching && (
               <Pressable
                 onPress={() => {
                   setConfirmError(null);
@@ -491,6 +539,7 @@ export default function AddToShelfModal({
                 ]}>
                 <ThemedText type="smallBold">Enter a COA manually</ThemedText>
               </Pressable>
+              )}
             </>
           )}
 
@@ -503,6 +552,22 @@ export default function AddToShelfModal({
       </ThemedView>
     </Modal>
   );
+}
+
+// D135 prefill rule: identity fields -- strain, brand -- keep the target
+// row's values when the row has them; the parse fills blanks only. Document
+// fields are the parse's own. A compliance form's "Whole Flower" must not
+// overwrite the name the shelf item already carries.
+function attachPrefill(
+  parsed: CoaParseResult,
+  target: AttachTarget | null | undefined,
+): CoaParseResult {
+  if (target == null) return parsed;
+  return {
+    ...parsed,
+    strain: target.strain?.trim() ? target.strain : parsed.strain,
+    brand: target.brand?.trim() ? target.brand : parsed.brand,
+  };
 }
 
 // The manual seed (D134): a synthetic parse whose analyte rows are the
@@ -539,8 +604,9 @@ function ReviewOrGuard({
   coa: CoaParseResult;
   onConfirm: (coa: CoaParseResult) => void;
   // D134: manual state lives in the modal (both routes render one arm there);
-  // the guard affordance only reports the choice upward.
-  onManual: () => void;
+  // the guard affordance only reports the choice upward. Optional since
+  // D135: an absent handler suppresses the affordance entirely.
+  onManual?: () => void;
   busy: boolean;
 }) {
   const theme = useTheme();
@@ -559,11 +625,13 @@ function ReviewOrGuard({
         <ThemedText style={styles.centered}>
           {"Cultivar doesn't support this lab's reports yet."}
         </ThemedText>
-        <Pressable
-          onPress={onManual}
-          style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
-          <ThemedText type="smallBold">Enter this COA manually</ThemedText>
-        </Pressable>
+        {onManual !== undefined && (
+          <Pressable
+            onPress={onManual}
+            style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+            <ThemedText type="smallBold">Enter this COA manually</ThemedText>
+          </Pressable>
+        )}
       </ThemedView>
     );
   }

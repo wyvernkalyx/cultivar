@@ -21,6 +21,7 @@ export type ShelfCoa = {
   strain: string | null;
   brand: string | null;
   lab: string | null;
+  source_lab: string | null;
   type: string | null;
   favorite: boolean | null;
   total_thc: number | null;
@@ -78,6 +79,10 @@ export type ShelfCardProps = {
   // the mechanism -- an archive row is count 0 anyway, but a surface that
   // never wants the control should not be relying on its data to hide it.
   onRetire?: (coa: ShelfCoa) => void;
+  // D135: attach a lab document to a manually entered row. Rendered in the
+  // overflow only when the handler is supplied AND the row's provenance is
+  // manual -- a parsed row has its document already.
+  onAttach?: (coa: ShelfCoa) => void;
   // Present only off the shelf, where it is the archive marker.
   retirement?: CardRetirement;
 };
@@ -206,6 +211,7 @@ export function ShelfCard({
   onLog,
   onFavorite,
   onRetire,
+  onAttach,
   retirement,
 }: ShelfCardProps) {
   // Reported AND non-zero: a zero total has no share to divide, so there is
@@ -248,8 +254,15 @@ export function ShelfCard({
                     coa.strain?.trim() ? coa.strain.trim() : 'this COA',
                     undefined,
                     [
+                      // D135: the attach entry precedes retire when it
+                      // renders at all; the condition is provenance, not
+                      // the absence of a document column the card never
+                      // fetched.
+                      ...(onAttach !== undefined && coa.source_lab === 'manual'
+                        ? [{ text: 'Attach COA document', onPress: () => onAttach(coa) }]
+                        : []),
                       { text: 'Retire a package', onPress: () => onRetire(coa) },
-                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Cancel', style: 'cancel' as const },
                     ]
                   )
                 }

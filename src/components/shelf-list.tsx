@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Modal, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import AddToShelfModal from '@/components/add-to-shelf-modal';
 import { CoaDetail } from '@/components/coa-detail';
 import { CompletionBloomOverlay } from '@/components/completion-bloom';
 import { OffShelfList } from '@/components/off-shelf-list';
@@ -160,6 +161,10 @@ export function ShelfList({ onSummary }: ShelfListProps) {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [detailCoaId, setDetailCoaId] = useState<string | null>(null);
+  // D135: the manual row being attached to, or null. The modal below renders
+  // while this is set; close nulls it and refetches through load(), the D63
+  // path, so the flipped source_lab and new chemistry land on the card.
+  const [attachTarget, setAttachTarget] = useState<ShelfCoa | null>(null);
   // Session-logging spike (D49): the ladder is a second modal, chained
   // through the pageSheet's onDismiss — presenting it while the sheet is
   // mid-dismissal is the known iOS failure, and onDismiss fires only after
@@ -198,7 +203,7 @@ export function ShelfList({ onSummary }: ShelfListProps) {
         supabase
           .from('coas')
           .select(
-            'id, strain, brand, lab, type, favorite, total_thc, total_cbd, total_terpenes, sampled_on, tested_on, created_at, on_shelf_count'
+            'id, strain, brand, lab, source_lab, type, favorite, total_thc, total_cbd, total_terpenes, sampled_on, tested_on, created_at, on_shelf_count'
           )
           // Off-shelf COAs are filtered DB-side (D89). A count of 0 is a
           // display state, never an erasure: the row, its sessions, its
@@ -358,6 +363,9 @@ export function ShelfList({ onSummary }: ShelfListProps) {
             // a retirement changes the count, and a card that reached zero
             // has to stop being rendered here.
             onRetire={(coa) => promptRetire(coa, load)}
+            // D135: attach reached from the same overflow retire lives in.
+            // The card itself gates on source_lab === 'manual'.
+            onAttach={(coa) => setAttachTarget(coa)}
           />
         )}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
@@ -402,6 +410,18 @@ export function ShelfList({ onSummary }: ShelfListProps) {
           takes no touches, so the list underneath stays scrollable and every
           card stays tappable while it plays. */}
       {bloomVisible && <CompletionBloomOverlay onDone={() => setBloomVisible(false)} />}
+      {/* D135: the attach flow is the add flow with a target -- one modal,
+          one pipeline, the attachTarget prop the only fork. Owned here, like
+          the detail, because the list owns load(): a completed attach closes
+          and refetches. */}
+      <AddToShelfModal
+        visible={attachTarget !== null}
+        attachTarget={attachTarget}
+        onClose={() => {
+          setAttachTarget(null);
+          void load();
+        }}
+      />
       {/* Card detail (D45): same presentation family as AddToShelfModal.
           Owning the modal here dissolves the post-delete refresh problem —
           the list owns load(), so a detail-context delete closes and
