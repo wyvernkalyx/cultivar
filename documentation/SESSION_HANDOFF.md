@@ -318,3 +318,103 @@ are already multi-document. No prompt owed until a document
 arrives. The 4.7 ratio for the afternoon: two feat commits, two
 docs commits, and the product result is visible chemistry on every
 card, gated against the database digit for digit.
+
+## Amendment -- 2026-08-08 (D133 ratified, dashboard line shipped, two labs triaged)
+
+Work continued past the 2026-08-07 amendment. Its Phase A is
+superseded by the following; the repo wins over both.
+
+### Start here (Phase A, read-only)
+
+- The parent of this amendment commit is
+  fdad39c4c90e37f382a2f7d2c5c8379cf7af0e1f (feat: session-derived
+  effects summary line on the dashboard (D133a)). Predicted subject
+  of the amendment commit itself: "docs: amend session handoff --
+  D133 ratified, dashboard line shipped, two labs triaged". Sync
+  0 0 after the operator's push. If HEAD is neither, work continued
+  past this amendment -- reconcile first.
+- git status --porcelain: the seven standing ?? lines, unchanged.
+- Migrations 17 by name-form count, fixtures 7 PDFs -- unchanged;
+  no migration, no fixture this session.
+- npm test -> 121 passed, observed on the D133a bytes in both the
+  operator's environment and the architect's container. npx tsc
+  --noEmit -> 0 operator environment; fresh checkout still fails on
+  the generated-typings side-effect import (re-observed 2026-08-08,
+  banked item unchanged). npx expo lint -> 1 error 0 warnings,
+  template file only, exit 1.
+- DB via MCP, observed at write time: coas 14, on-shelf 1 (Fuel
+  Pump). session_entries 85 raw, session_current 1 -- one live
+  session (Loved, Fuel Pump, lexicon 6, effects Focused and
+  Pain Relief / Soothed), two chain rows for it per the score-then-
+  closing append (session-ladder.tsx inserts on both steps).
+- Dev-client binary unchanged (2026-08-03 EAS build); D133a is
+  JS-only and gated over Metro. No build owed.
+
+### What shipped since the 2026-08-07 amendment (newest first)
+
+- fdad39c feat: session-derived effects summary line on the
+  dashboard (D133a)
+- 86d829b docs: D133 -- session-derived effects summary line
+  (dashboard.md amendment)
+
+### The arc, one paragraph
+
+Operator shared external COA-reading prose and asked for its
+"result" language; comparison ratified the inversion (D133,
+dashboard.md): a blend-level line derived from the user's recorded
+session effects, never chemistry -- the external prose's per-terpene
+pharmacology is the exact banned class, its "personal biology"
+closer is our whole product. D133 landed in two passes: the first
+append carried two architect defects (a Cyrillic token; v5 example
+strings under a v6 claim), implementer-flagged, corrected by
+restore-to-HEAD and re-append of re-ratified bytes. D133a shipped
+the dashboard line and both select widenings; device gate matched a
+pinned prediction derived from the live session row, character for
+character, including the v6 compound-tag tie-break. Mid-session the
+operator triaged two prospective labs: ACS extracts zero characters
+(image PDF -- an OCR capability class, not a parser arc; banked)
+and Nova Analytic extracts 19k letter-spaced characters with kerned
+digraphs glued (a new extraction-artifact class; the sample is
+Nova's own PT specimen, a fixture candidate never shelf data;
+banked). Both fail closed today through the unsupported-lab guard,
+for different reasons the one guard message does not distinguish --
+the banked heading/body split gained its first real evidence.
+
+### Baseline corrections (supersede the 2026-08-07 amendment)
+
+1. The operator logged a real session after the reset:
+   session_current 0 -> 1, session_entries 83 -> 85. The prior
+   amendment's "no live mixed-version case" clause now works for
+   its living: the one current row is v6; v5 history stays behind
+   the reset tombstones.
+2. effects-tags.md's "nothing reads effects today" went stale at
+   fdad39c, one slice earlier than the ratified plan anticipated
+   (the flag that assigned its amendment to D133b framed the card
+   line as the falsifier; the dashboard line was). D133b still owns
+   the fix per ratified slice plan -- do not trust that sentence
+   meanwhile.
+3. Architect refutations this session, for calibration: a Cyrillic
+   token generated into ratified doc text; v5 tag strings quoted
+   under an "all 14 v6 tags" claim (the D126 section was cited
+   without being read); a commit body authored without the
+   mandatory trailer despite the convention being read that
+   morning; a DB column guessed (retired_on; live schema
+   created_at), caught by the DB; a first extraction probe that
+   logged the dispatcher's output but not the extractor's, making
+   its "unknown lab" answer vacuous for the file with no text; a
+   tsc exit code captured from the tail of a pipe rather than tsc.
+4. Gate-form pins, applied in-session, handbook candidates: (a)
+   line-ending gates count bytes (tr -dc CR form) -- the CR-anchor
+   grep returns a false 0 on this box's GNU grep; (b) commit-message
+   gates pin the git log -1 --format=%B | cat -A | sha256sum value
+   directly -- %B's trailing newline makes body-file hashes
+   non-comparable without arithmetic.
+
+### Entry point
+
+D133b: the per-COA card line, both list surfaces, one feat,
+device-gated with an MCP read-back -- and its commit amends the
+stale effects-tags.md sentence (correction 2). The parser flags are
+unchanged behind it: a second document from ACT, CTND, or Green
+Analytics. ACS needs OCR and Nova needs despacing before either is
+a parser arc; neither is owed until a real jar demands it.
