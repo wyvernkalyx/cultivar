@@ -144,17 +144,25 @@ export function parseGreenAnalytics(text: string): CoaResult {
   // not populated as expected the pattern matches nothing and batch is null,
   // rather than capturing a neighbouring field and storing it as a batch
   // number the document never stated (D123).
-  const batch = firstMatch(
-    text,
-    /1A4[A-Z0-9]+ ([A-Za-z0-9][A-Za-z0-9\-]*) \d+ \d+ 1A4[A-Z0-9]+/,
-  );
+  const batch =
+    firstMatch(
+      text,
+      /1A4[A-Z0-9]+ ([A-Za-z0-9][A-Za-z0-9\-]*) \d+ \d+ 1A4[A-Z0-9]+/,
+    ) ??
+    // D136: the Full Compliance Test form prints the same field with an
+    // adjacent label instead of the tracking-tag slot. Anchored on both
+    // sides; a form matching neither pattern set stores null.
+    firstMatch(text, /Batch Lot ID: (\S+) Batch Size:/);
 
   // Brand is the client of record, bounded by the report date on the left and
   // the sampling location plus contact address on the right (D123).
-  const brand = firstMatch(
-    text,
-    /Sample Result: (?:PASS|FAIL) \d{1,2}\/\d{1,2}\/\d{4} (.+?) [A-Z][a-z]+, [A-Z]{2} \S+@/,
-  );
+  const brand =
+    firstMatch(
+      text,
+      /Sample Result: (?:PASS|FAIL) \d{1,2}\/\d{1,2}\/\d{4} (.+?) [A-Z][a-z]+, [A-Z]{2} \S+@/,
+    ) ??
+    // D136 labeled fallback. Client-of-record doctrine unchanged from D123.
+    firstMatch(text, /Client Name: (.+?) Sampling Location:/);
 
   // Sampling is the only date printed with a time beside it; the date-shaped
   // capture ignores the trailing time. The report date is the tested date.
@@ -162,7 +170,10 @@ export function parseGreenAnalytics(text: string): CoaResult {
     firstMatch(text, /(\d{1,2}\/\d{1,2}\/\d{4}) \d{1,2}:\d{2}:\d{2} [AP]M/),
   );
   const testedDate = normalizeUsDate(
-    firstMatch(text, /Sample Result: (?:PASS|FAIL) (\d{1,2}\/\d{1,2}\/\d{4})/),
+    firstMatch(text, /Sample Result: (?:PASS|FAIL) (\d{1,2}\/\d{1,2}\/\d{4})/) ??
+      // D136 labeled fallback. Report-date-is-tested-date doctrine
+      // unchanged from D123.
+      firstMatch(text, /Date Reported: (\d{1,2}\/\d{1,2}\/\d{4}) Client Name:/),
   );
 
   return {

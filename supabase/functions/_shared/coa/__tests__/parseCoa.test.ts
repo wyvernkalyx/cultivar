@@ -143,6 +143,21 @@ const CASES: FixtureCase[] = [
     sampledDate: '2026-05-08',
     testedDate: '2026-05-15',
   },
+  {
+    strain: 'WF00350 compliance form',
+    parsedStrain: 'Whole Flower',
+    file: 'wf00350.pdf',
+    sourceLab: 'green-analytics',
+    totalThc: 22.677,
+    totalTerp: 1.38,
+    dominant: 'Myrcene',
+    myrcene: 0.36,
+    limonene: 0.3,
+    batch: 'WF00350',
+    brand: 'NYHO LABS LLC',
+    sampledDate: '2024-12-03',
+    testedDate: '2024-12-11',
+  },
 ];
 
 describe('parseCoa on real COA fixtures', () => {
@@ -234,6 +249,30 @@ describe('parseAct name fidelity', () => {
     for (const n of ['(6aR,9S)-d10-THC', '(6aR,9R)-d10-THC']) {
       expect(coa.cannabinoids.find((c) => c.name === n)?.pct).toBeNull();
     }
+  });
+});
+
+describe('parseGreenAnalytics form safety (D136)', () => {
+  // Refuted at build, recorded in the design doc: the D136 labels are NOT
+  // absent from the Adult-Use form -- its transposed header prints them as
+  // a contiguous empty label run. Fallback safety rests on each pattern
+  // requiring a value-shaped token between two-sided anchors, so the empty
+  // run matches nothing. These pin that property directly.
+  it('no labeled fallback matches the Adult-Use transposed label run', async () => {
+    const buf = readFileSync(join(FIXTURES, 'gelato-33.pdf'));
+    const text = await extractText(new Uint8Array(buf));
+    // The labels are present -- the premise the refuted control assumed away.
+    expect(text.includes('Batch Lot ID:')).toBe(true);
+    // The fallback patterns still match nothing on this form.
+    expect(/Batch Lot ID: (\S+) Batch Size:/.test(text)).toBe(false);
+    expect(/Client Name: (.+?) Sampling Location:/.test(text)).toBe(false);
+    expect(/Date Reported: (\d{1,2}\/\d{1,2}\/\d{4}) Client Name:/.test(text)).toBe(false);
+  });
+
+  it('the compliance-form fixture prints no tracking tags', async () => {
+    const buf = readFileSync(join(FIXTURES, 'wf00350.pdf'));
+    const text = await extractText(new Uint8Array(buf));
+    expect(/1A4[A-Z0-9]+/.test(text)).toBe(false);
   });
 });
 
