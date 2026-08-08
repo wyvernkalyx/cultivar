@@ -418,3 +418,60 @@ stale effects-tags.md sentence (correction 2). The parser flags are
 unchanged behind it: a second document from ACT, CTND, or Green
 Analytics. ACS needs OCR and Nova needs despacing before either is
 a parser arc; neither is owed until a real jar demands it.
+
+## Amendment -- 2026-08-08 evening (D133 complete on every surface)
+
+Work continued past the morning amendment, same day. Its Phase A
+holds except as follows; the repo wins over both.
+
+### Start here (Phase A, read-only)
+
+- The parent of this amendment commit is the chore commit, subject
+  "chore: correct two stale status sentences (D82.1 mooted;
+  onDeleted never existed)", whose own parent is
+  38cd4e16dc065373a16f53e61d00c65c769633b0 (feat: D133b). Predicted
+  subject here: "docs: amend session handoff -- D133 complete, card
+  line live, stale-sentence sweep clean". Sync 0 0 after the
+  operator's push.
+- Suites unchanged at the D133b gate values: 121 / tsc 0 operator
+  env / lint 1-0 template. The fresh-checkout tsc failure stands.
+- DB: unchanged from the morning amendment unless the operator
+  logged again; the one live session (Loved, Fuel Pump, two v6
+  tags) drove both device gates.
+
+### What shipped since the morning amendment (newest first)
+
+- (this commit's parent) chore: two stale status sentences
+- 38cd4e1 feat: session-derived effects line on the per-COA cards
+  (D133b) -- includes the two effects-tags.md truth amendments
+
+### The arc, one paragraph
+
+D133b shipped the card line to shelf and archive in the dashboard
+line's register, device-gated against the one tagged session
+(positive render, exact string) and thirteen untagged archive COAs
+-- the strong absence state's first live instances. The operator
+asked whether anything open or staged had been skipped; a
+repo-wide sweep answered no ratified item, but surfaced three
+stale sentences (two fixed in the D133b commit per the ratified
+fold, two more in the chore -- one of them, onDeleted, false at
+birth against the pickaxe). Refutation seven: an architect edit
+anchor placed a style between a comment and the style it
+described; implementer-flagged, re-ratified, re-pinned. The
+operator double-ran the final push; the anomalous
+"Everything up-to-date" was resolved by fetch plus the GitHub
+event log (all pushes wyvernkalyx) -- run the conditional push
+paste exactly once, since a re-run destroys its own evidence.
+
+### Entry point
+
+Nothing is owed. The forward queue, vetted and ranked 2026-08-08,
+operator-agreed: (4) manual entry -- strongest lived demand, ACS
+and Nova both fail closed on real documents, ND-vs-blank form
+discipline is the design crux; (2) search -- client-side filter,
+smallest slice; (1) COA photos -- expo-camera is in package.json,
+binary presence unverified, card design is a visual-authority
+pass; (3) cross-user COA sharing -- future; ruling sketch: share
+chemistry never verdicts, copy never reference. A design pass on
+any starts the D-number machinery. Parser flags (ACT, CTND, Green
+Analytics second documents) stand behind all of it.
