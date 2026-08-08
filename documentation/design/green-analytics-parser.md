@@ -168,10 +168,19 @@ first, then a labeled fallback anchored on both sides, then null.
   Report-date-is-tested-date doctrine unchanged from D123.
 
 Fail-closed posture unchanged: a form matching neither pattern set
-stores null, never a neighbouring field. The two pattern sets are
-believed disjoint (the labels do not occur on the Adult-Use form and
-the 1A4 tags do not occur on this one) -- verified at build by a
-control grep of both fixtures' extractions, not assumed.
+stores null, never a neighbouring field.
+
+Amendment, 2026-08-08, build refutation: the disjointness this
+section originally claimed ("the labels do not occur on the
+Adult-Use form") is false. The Adult-Use form's transposed header
+prints the same labels as a contiguous empty run ("Batch Lot ID:
+Batch Size: Serving Size (g): ..."), observed on the gelato-33
+fixture's extraction. Fallback safety therefore rests on two facts,
+both pinned by test: the positional capture is tried first, and
+each labeled fallback requires a value-shaped token between
+two-sided anchors, which the empty label run cannot satisfy. The
+1A4 half of the claim held: no tracking tag occurs on the
+compliance form's extraction.
 
 Corpus note, not a claim about cause: the Orangutang Cookies row
 stores batch and tested_on null with brand captured. No fixture
