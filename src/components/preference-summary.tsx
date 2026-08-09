@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Dash, terpeneHue } from '@/constants/theme';
+import { Dash, Type, terpeneHue } from '@/constants/theme';
 import type { EffectCount } from '@/lib/card-data';
 import { RUNGS } from '@/lib/lexicon';
 
@@ -10,11 +10,11 @@ import { RUNGS } from '@/lib/lexicon';
 // the reference's display role -- was deferred out of slice 1 and registered
 // in D99 for the shelf card's strain line; D109's header totals are this
 // file's first consumer of it.
-const SORA_REGULAR = 'Sora_400Regular';
-const SORA_SEMIBOLD = 'Sora_600SemiBold';
-const SORA_BOLD = 'Sora_700Bold';
-const SORA_DISPLAY = 'Sora_800ExtraBold';
-const SERIF_ITALIC = 'Newsreader_400Regular_Italic';
+const SORA_REGULAR = Type.family.regular;
+const SORA_SEMIBOLD = Type.family.semibold;
+const SORA_BOLD = Type.family.bold;
+const SORA_DISPLAY = Type.family.display;
+const SERIF_ITALIC = Type.family.serifItalic;
 
 // The five rung words, one source (RUNGS in src/lib/lexicon.ts), never a
 // second string table -- D62's rule, unchanged by D99's display supersession.

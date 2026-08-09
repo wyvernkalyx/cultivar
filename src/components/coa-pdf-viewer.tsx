@@ -3,11 +3,11 @@ import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'rea
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
-import { Dash } from '@/constants/theme';
+import { Dash, Type } from '@/constants/theme';
 
 // Registered app-wide in the root layout (D83 Decision 1); an unloaded family
 // falls back to the system font rather than blocking the render.
-const SORA_SEMIBOLD = 'Sora_600SemiBold';
+const SORA_SEMIBOLD = Type.family.semibold;
 
 /**
  * In-app COA PDF viewer (D106). iOS WKWebView renders the PDF natively, so

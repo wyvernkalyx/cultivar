@@ -30,7 +30,8 @@ Stated so this doc can be falsified rather than believed.
   current `Dash.terpene` carries alpha-pinene and camphene the reference
   omits (kept -- identity hues are additive).
 - No type-role token exists. Font family names are re-declared as local
-  consts in 10 files; every size/weight/tracking is a literal inside 17
+  consts in 9 files (corrected from the inventory's 10 at slice 2's
+  residual scan); every size/weight/tracking is a literal inside 17
   per-component StyleSheet blocks (319/303/239/139/119 lines for the five
   largest). `Spacing` (2/4/8/16/24/32/64) is referenced by only 3 files;
   the reference's scale is 4/8/12/16/18/24.
@@ -60,16 +61,17 @@ the app-wide system, landed in `src/constants/theme.ts` and consumed
 everywhere:
 
 - `Dash` gains `humulene: '#C79BB8'`. Existing extra hues stay.
-- A `Type` token set is created carrying the reference's roles: display
-  (Sora_800ExtraBold 26/1.1), title (Sora_700Bold 13), label
-  (Sora_700Bold 10, letterSpacing 1.2, uppercase), body (Sora_400Regular
-  11.5, tabular numerals for lab values), serif explainer
-  (Newsreader_400Regular_Italic 14.5), plus the intermediate weights the
-  components already use (Sora_500Medium, Sora_600SemiBold). The 10 files'
-  local font consts collapse onto it.
-- `Spacing` is re-based to the reference's 4pt scale (4/8/12/16/18/24) with
-  the existing keys mapped or retired; product screens migrate off
-  hard-coded numbers as their restyle slices touch them, not in one sweep.
+- A `Type` token set is created carrying the loaded family names as its
+  first layer; the 9 files' local font consts collapse onto it, so a
+  font swap edits theme.ts alone. The reference's sized roles (display
+  26/1.1, title 13, label 10 tracked uppercase, body 11.5 tabular
+  numerals for lab values, serif explainer 14.5) join the token set as
+  each surface's restyle slice adopts them, not in slice 2.
+- A `Space` export lands the reference's 4pt scale (4/8/12/16/18/24)
+  beside the legacy `Spacing`, whose three consumers keep rendering
+  unchanged until their own slices retire them (app-tabs.web in slice 3,
+  the ladder in slice 5); product screens migrate off hard-coded numbers
+  as their restyle slices touch them, not in one sweep.
 - `Dash.radius` gains `pill: 999`.
 
 Grounds: the hex identity between shipped `Dash` and the reference proves
@@ -226,9 +228,9 @@ Each slice is its own prompt and its own commit; gates typed per CLAUDE.md.
    `07-tokens.png`, `design-brief.md`) remain committed as the
    historical record prior design docs cite (e.g. D131's ratified
    mock). Only `cultivar-reference.{md,html}` are superseded in place.
-2. `refactor:` -- D137 tokens: Type roles, Spacing re-base, humulene, pill
-   radius; the 10 files' font consts collapse. Behavior-preserving; gate
-   is suites green + device smoke (no visual change intended).
+2. `refactor:` -- D137 tokens: Type.family and Space exports, humulene,
+   pill radius; the 9 files' font consts collapse. Behavior-preserving;
+   gate is suites green + device smoke (no visual change intended).
 3. `feat:` -- D138 nav: three tabs, + FAB, selector sheet, starter chrome
    removed. Device gate.
 4. `feat:` -- Stash screen: consolidated header, Active/History segments

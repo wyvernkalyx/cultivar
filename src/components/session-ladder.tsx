@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Dash, MaxContentWidth, Spacing, verdictHue } from '@/constants/theme';
+import { Dash, MaxContentWidth, Spacing, Type, verdictHue } from '@/constants/theme';
 import {
   EFFECTS,
   type EffectGroup,
@@ -111,11 +111,11 @@ type Phase = 'ladder' | 'closing';
 // Font families registered app-wide in the root layout (D83 Decision 1).
 // Referenced by name; when a family is not yet loaded RN falls back to the
 // system font — the ratified fallback, so the survey never blocks on a font.
-const SORA_MEDIUM = 'Sora_500Medium';
-const SORA_SEMIBOLD = 'Sora_600SemiBold';
-const SORA_BOLD = 'Sora_700Bold';
-const SORA_DISPLAY = 'Sora_800ExtraBold';
-const SERIF_ITALIC = 'Newsreader_400Regular_Italic';
+const SORA_MEDIUM = Type.family.medium;
+const SORA_SEMIBOLD = Type.family.semibold;
+const SORA_BOLD = Type.family.bold;
+const SORA_DISPLAY = Type.family.display;
+const SERIF_ITALIC = Type.family.serifItalic;
 
 // The inline save-error banner's two hues (D54's error state). The reference
 // token set carries no error color: its verdict band is a band identity, and

@@ -3,7 +3,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import CoaPdfViewer from '@/components/coa-pdf-viewer';
-import { Dash, verdictHue } from '@/constants/theme';
+import { Dash, Type, verdictHue } from '@/constants/theme';
 import { setFavorite } from '@/lib/coa-favorite';
 import { promptRetire } from '@/lib/coa-retire';
 import { supabase } from '@/lib/supabase';
@@ -11,11 +11,11 @@ import { supabase } from '@/lib/supabase';
 // Font families registered app-wide in the root layout (D83 Decision 1),
 // referenced by name exactly as the shelf card and the archive do; an unloaded
 // family falls back to the system font rather than blocking the render.
-const SORA_REGULAR = 'Sora_400Regular';
-const SORA_SEMIBOLD = 'Sora_600SemiBold';
-const SORA_BOLD = 'Sora_700Bold';
-const SORA_DISPLAY = 'Sora_800ExtraBold';
-const SERIF_ITALIC = 'Newsreader_400Regular_Italic';
+const SORA_REGULAR = Type.family.regular;
+const SORA_SEMIBOLD = Type.family.semibold;
+const SORA_BOLD = Type.family.bold;
+const SORA_DISPLAY = Type.family.display;
+const SERIF_ITALIC = Type.family.serifItalic;
 
 // How long a signed COA-PDF link lives, in seconds. The URL's whole job is a
 // single load in the in-app viewer, so it expires almost immediately after

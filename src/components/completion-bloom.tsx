@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Dash, Spacing } from '@/constants/theme';
+import { Dash, Spacing, Type } from '@/constants/theme';
 
 // Font families registered app-wide in the root layout (D83 Decision 1),
 // referenced by name exactly as the survey screens reference them.
-const SORA_DISPLAY = 'Sora_800ExtraBold';
-const SERIF_ITALIC = 'Newsreader_400Regular_Italic';
+const SORA_DISPLAY = Type.family.display;
+const SERIF_ITALIC = Type.family.serifItalic;
 
 // The transient's envelope, in ms. The fade-in is delayed so the bloom is not
 // still arriving underneath a dismissing modal: on iOS the ladder's fullScreen

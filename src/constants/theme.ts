@@ -61,6 +61,38 @@ export const Spacing = {
   six: 64,
 } as const;
 
+/**
+ * Font-family token roles (D137). One source for the loaded family names:
+ * a font swap edits this object, never a component. Sizes, weights-as-
+ * numbers, and tracking stay in the consuming styles until each surface's
+ * restyle slice adopts the reference's type roles.
+ */
+export const Type = {
+  family: {
+    regular: 'Sora_400Regular',
+    medium: 'Sora_500Medium',
+    semibold: 'Sora_600SemiBold',
+    bold: 'Sora_700Bold',
+    display: 'Sora_800ExtraBold',
+    serifItalic: 'Newsreader_400Regular_Italic',
+  },
+} as const;
+
+/**
+ * The v2 reference's 4pt spacing scale (D137). Additive beside the legacy
+ * Spacing export: the three Spacing consumers keep rendering unchanged
+ * until their own slices retire them (app-tabs.web dies in slice 3, the
+ * ladder restyles in slice 5). New and restyled surfaces use Space.
+ */
+export const Space = {
+  inline: 4,
+  chip: 8,
+  row: 12,
+  card: 16,
+  gutter: 18,
+  section: 24,
+} as const;
+
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
 
@@ -105,10 +137,11 @@ export const Dash = {
     ocimene: '#D68FA8',
     linalool: '#C7A8D6',
     myrcene: '#9BCF8E',
+    humulene: '#C79BB8',
     'alpha-pinene': '#7AB8A0',
     camphene: '#B8C78F',
   },
-  radius: { badge: 8, row: 12, card: 16 },
+  radius: { badge: 8, row: 12, card: 16, pill: 999 },
 } as const;
 
 // Identity only, consistent per terpene, no meaning (D99). An unlisted lab

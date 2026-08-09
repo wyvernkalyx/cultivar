@@ -12,7 +12,7 @@ import {
   type CardTerpene,
   type ShelfCoa,
 } from '@/components/shelf-card';
-import { Dash } from '@/constants/theme';
+import { Dash, Type } from '@/constants/theme';
 import {
   groupSessionsByCoa,
   groupTopCannabinoidsByCoa,
@@ -28,10 +28,10 @@ import { supabase } from '@/lib/supabase';
 // Font families registered app-wide in the root layout (D83 Decision 1),
 // referenced by name exactly as the shelf card does; an unloaded family falls
 // back to the system font rather than blocking the render.
-const SORA_REGULAR = 'Sora_400Regular';
-const SORA_BOLD = 'Sora_700Bold';
-const SORA_DISPLAY = 'Sora_800ExtraBold';
-const SERIF_ITALIC = 'Newsreader_400Regular_Italic';
+const SORA_REGULAR = Type.family.regular;
+const SORA_BOLD = Type.family.bold;
+const SORA_DISPLAY = Type.family.display;
+const SERIF_ITALIC = Type.family.serifItalic;
 
 // The retirement events (D90), exactly the columns selected. This is the
 // first client read of coa_retirements; its SELECT policy already scopes the

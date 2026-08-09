@@ -21,7 +21,7 @@ import {
   type ShelfCoa,
 } from '@/components/shelf-card';
 import { ThemedText } from '@/components/themed-text';
-import { Dash, Spacing } from '@/constants/theme';
+import { Dash, Spacing, Type } from '@/constants/theme';
 import {
   groupSessionsByCoa,
   groupTopCannabinoidsByCoa,
@@ -44,8 +44,8 @@ import { supabase } from '@/lib/supabase';
 
 // Font families for the section row, registered app-wide in the root layout
 // (D83 Decision 1) and referenced by name as the card does.
-const SORA_REGULAR = 'Sora_400Regular';
-const SORA_BOLD = 'Sora_700Bold';
+const SORA_REGULAR = Type.family.regular;
+const SORA_BOLD = Type.family.bold;
 
 // Deliberately UNFILTERED by on_shelf_count: the summary is all-time,
 // including off-shelf history (D98). RLS scopes the rows. on_shelf_count

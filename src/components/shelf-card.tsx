@@ -1,16 +1,16 @@
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Dash, terpeneHue, verdictHue } from '@/constants/theme';
+import { Dash, Type, terpeneHue, verdictHue } from '@/constants/theme';
 
 // Font families registered app-wide in the root layout (D83 Decision 1),
 // referenced by name; an unloaded family falls back to the system font rather
 // than blocking the render. Sora 800 is the reference's display role and is
 // loaded from this slice on (src/app/_layout.tsx).
-const SORA_REGULAR = 'Sora_400Regular';
-const SORA_SEMIBOLD = 'Sora_600SemiBold';
-const SORA_BOLD = 'Sora_700Bold';
-const SORA_DISPLAY = 'Sora_800ExtraBold';
-const SERIF_ITALIC = 'Newsreader_400Regular_Italic';
+const SORA_REGULAR = Type.family.regular;
+const SORA_SEMIBOLD = Type.family.semibold;
+const SORA_BOLD = Type.family.bold;
+const SORA_DISPLAY = Type.family.display;
+const SERIF_ITALIC = Type.family.serifItalic;
 
 // DB shape (D41): exactly the selected columns, snake_case, as the coas
 // table stores them — not the parser shape. `type` and `favorite` join the

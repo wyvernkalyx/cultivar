@@ -8,7 +8,7 @@ import type { PreferenceSummaryProps } from '@/components/preference-summary';
 import { ShelfList } from '@/components/shelf-list';
 import { ThemedText } from '@/components/themed-text';
 import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, Dash, MaxContentWidth, Spacing } from '@/constants/theme';
+import { BottomTabInset, Dash, MaxContentWidth, Spacing, Type } from '@/constants/theme';
 import { exportProfile } from '@/lib/export';
 import { resetProfile } from '@/lib/profile-reset';
 import { supabase } from '@/lib/supabase';
@@ -16,10 +16,10 @@ import { supabase } from '@/lib/supabase';
 // Font families registered app-wide in the root layout (D83 Decision 1),
 // referenced by name exactly as the dashboard's other surfaces do; an unloaded
 // family falls back to the system font rather than blocking the render.
-const SORA_REGULAR = 'Sora_400Regular';
-const SORA_BOLD = 'Sora_700Bold';
-const SORA_DISPLAY = 'Sora_800ExtraBold';
-const SERIF_ITALIC = 'Newsreader_400Regular_Italic';
+const SORA_REGULAR = Type.family.regular;
+const SORA_BOLD = Type.family.bold;
+const SORA_DISPLAY = Type.family.display;
+const SERIF_ITALIC = Type.family.serifItalic;
 
 export default function HomeScreen() {
   const [email, setEmail] = useState<string | null>(null);
