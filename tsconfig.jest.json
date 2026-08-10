@@ -11,5 +11,9 @@
     "noEmit": true,
     "types": ["jest", "node"]
   },
-  "include": ["supabase/functions/_shared/coa/**/*.ts"]
+  "include": [
+    "supabase/functions/_shared/coa/**/*.ts",
+    "src/lib/insights/**/*.ts",
+    "src/lib/lexicon.ts"
+  ]
 }
