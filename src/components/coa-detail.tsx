@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View,
+  Modal,
+  TextInput,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import CoaPdfViewer from '@/components/coa-pdf-viewer';
+import { SymbolView } from 'expo-symbols';
 import { Dash, Type, verdictHue } from '@/constants/theme';
-import { setFavorite } from '@/lib/coa-favorite';
 import { promptRetire } from '@/lib/coa-retire';
 import { supabase } from '@/lib/supabase';
 
@@ -242,10 +245,14 @@ function SafetySection({ rows }: { rows: SafetyRow[] }) {
  * Fetches its own consistent snapshot: the list row is never passed down,
  * because the detail shows columns the list never selected.
  *
- * No delete affordance ships (D104). `coas` carries an ALL policy so a client
- * delete is possible, and D53's cascade makes it destructive — it takes logged
- * session history with it, which is the product. Retirement (D87–D91) is the
- * designed path off the shelf; a bad ingest is operator-SQL.
+ * Delete ships from the gear menu (operator ruling 2026-08-10, superseding
+ * D104): the cascade D104 guarded against is now NAMED in the confirm --
+ * the dialog states the session count it destroys -- so the choice is
+ * informed rather than forbidden. D104's ground (the cascade takes logged
+ * history, which is the product) survives as the confirm's wording and as
+ * Retire remaining the celebrated path. Rename (strain and brand only)
+ * ships beside it as a dedicated two-field sheet, deliberately NOT the
+ * parse editor: no path from this surface may touch stored analytes.
  */
 export function CoaDetail({
   coaId,
@@ -270,6 +277,13 @@ export function CoaDetail({
   // The signed URL currently being viewed, and the viewer's open state in one
   // value (D106.2): null is closed, so clearing it is how the viewer closes.
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  // The rename sheet (slice 6, operator B1): two fields, two columns, no
+  // analyte path. Draft state lives here; empty commits store null, never ''
+  // (the null-not-empty-string invariant).
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameStrain, setRenameStrain] = useState('');
+  const [renameBrand, setRenameBrand] = useState('');
+  const [renameBusy, setRenameBusy] = useState(false);
 
   // Read off the record so the narrowing survives into the press handler: a
   // property access on state is re-widened inside a closure, a const local is
@@ -348,23 +362,80 @@ export function CoaDetail({
     setPdfInFlight(false);
   };
 
-  /**
-   * Repurchase intent (D91), recorded through the shared writer (D113).
-   * The row update itself no longer lives here: the shelf and archive
-   * cards raise the same question now, and one writer is what keeps the
-   * three surfaces from drifting. What stays is this surface's own
-   * reporting and refetch, which the card surfaces do differently.
-   *
-   * Reloads on both arms. On success the row moved; on failure it did not,
-   * and the control renders from the stored value, so a refetch is what puts
-   * the surface back in agreement with the database either way.
-   */
-  const answerFavorite = async (next: boolean | null) => {
-    const result = await setFavorite(coaId, next);
-    if (!result.ok) {
-      Alert.alert('Could not save', result.message);
-    }
-    await load();
+  // The gear menu (slice 6, reference screen 03): Edit opens the rename
+  // sheet; Delete runs the cascade-naming confirm (the D104 supersession's
+  // condition). Re-parse stays banked (design doc non-goal).
+  const openGear = () => {
+    if (coa === null) return;
+    Alert.alert(coa.strain?.trim() || 'This item', undefined, [
+      {
+        text: 'Edit name / brand',
+        onPress: () => {
+          setRenameStrain(coa.strain ?? '');
+          setRenameBrand(coa.brand ?? '');
+          setRenameOpen(true);
+        },
+      },
+      { text: 'Delete from stash\u2026', style: 'destructive', onPress: confirmDelete },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  // The confirm names exactly what the cascade destroys -- the informed
+  // choice that answers D104's ground. Retire stays the celebrated path and
+  // the copy says so.
+  const confirmDelete = () => {
+    if (coa === null) return;
+    const n = sessions.length;
+    const sessionsClause =
+      n === 0 ? '' : ` and its ${n} logged ${n === 1 ? 'session' : 'sessions'}`;
+    const identity =
+      (coa.strain?.trim() || 'this COA') +
+      (coa.brand?.trim() ? ` (${coa.brand.trim()})` : '');
+    Alert.alert(
+      'Delete from stash?',
+      `This permanently deletes ${identity}${sessionsClause}. It cannot be undone. Retire keeps history instead.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void supabase
+              .from('coas')
+              .delete()
+              .eq('id', coaId)
+              .then(({ error: deleteError }) => {
+                if (deleteError) {
+                  Alert.alert('Could not delete', deleteError.message);
+                  return;
+                }
+                onClose();
+              });
+          },
+        },
+      ]
+    );
+  };
+
+  // The rename write: two columns, trimmed, empty stored as null (never '').
+  const saveRename = () => {
+    const strain = renameStrain.trim();
+    const brand = renameBrand.trim();
+    setRenameBusy(true);
+    void supabase
+      .from('coas')
+      .update({ strain: strain === '' ? null : strain, brand: brand === '' ? null : brand })
+      .eq('id', coaId)
+      .then(({ error: renameError }) => {
+        setRenameBusy(false);
+        if (renameError) {
+          Alert.alert('Could not save', renameError.message);
+          return;
+        }
+        setRenameOpen(false);
+        void load();
+      });
   };
 
   // The whole retirement sequence -- confirm, reason, and the repurchase
@@ -422,9 +493,14 @@ export function CoaDetail({
         <Pressable onPress={onClose} hitSlop={8} accessibilityRole="button">
           <Text style={styles.close}>Close</Text>
         </Pressable>
-        {/* Quantity badge (D89): rendered only above a single package -- at one
-            package there is no badge at all, because absence says it and a
-            stated count of one is noise. */}
+        {/* The gear (slice 6, reference screen 03): Edit / Delete / Cancel. */}
+        <Pressable
+          onPress={openGear}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="More actions">
+          <SymbolView name="gearshape" tintColor={Dash.textMuted} size={22} />
+        </Pressable>
       </View>
 
       <ScrollView
@@ -444,23 +520,6 @@ export function CoaDetail({
           {/* Null brand is stated, not left as an empty-looking gap (D97). */}
           <Text style={coa.brand === null ? styles.brandAbsent : styles.brand}>
             {coa.brand ?? 'Brand not reported'}
-          </Text>
-          {labLine !== '' && <Text style={styles.meta}>{labLine}</Text>}
-          {coa.source_lab?.trim() ? (
-            // Subordinate secondary text (D45): a system identifier, not
-            // user-facing vocabulary.
-            <Text style={styles.sourceLab}>{coa.source_lab.trim()}</Text>
-          ) : null}
-          {/* Whichever lab dates exist (D84.4), honestly labeled; Added stays
-              as provenance, never relabeled. */}
-          {coa.sampled_on ? (
-            <Text style={styles.meta}>{`Sampled ${formatIsoDate(coa.sampled_on)}`}</Text>
-          ) : null}
-          {coa.tested_on ? (
-            <Text style={styles.meta}>{`Tested ${formatIsoDate(coa.tested_on)}`}</Text>
-          ) : null}
-          <Text style={styles.meta}>
-            {`Added ${new Date(coa.created_at).toLocaleDateString()}`}
           </Text>
         </View>
 
@@ -546,34 +605,33 @@ export function CoaDetail({
           </Pressable>
         )}
 
-        {/* 6. Repurchase intent (D91), settable any time and not only at
-            retirement: it is a verdict about the chemistry, and it has to
-            outlive every package. Three states -- tapping the active choice
-            clears it back to null, because "never asked" and "no" are
-            different answers (D48), and an unanswered control says so in
-            words rather than resting on "No". This is not Never Again, which
-            is a display override and remains unimplemented. */}
+        {/* 6. Repurchase intent, read-only since D140: the ask lives in the
+            retirement prompt alone; this surface STATES the stored answer.
+            Null stays "Not answered yet" -- never-asked and "No" remain
+            different answers (D48), now as display truth rather than
+            control affordance. */}
         <View style={styles.card}>
-          <Text style={styles.label}>Would buy again</Text>
-          <View style={styles.choiceRow}>
-            <Pressable
-              onPress={() => void answerFavorite(coa.favorite === true ? null : true)}
-              accessibilityRole="button"
-              style={[styles.choice, coa.favorite === true && styles.choiceYes]}>
-              <Text style={[styles.choiceText, coa.favorite === true && styles.choiceYesText]}>
-                Yes
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => void answerFavorite(coa.favorite === false ? null : false)}
-              accessibilityRole="button"
-              style={[styles.choice, coa.favorite === false && styles.choiceNo]}>
-              <Text style={[styles.choiceText, coa.favorite === false && styles.choiceNoText]}>
-                No
-              </Text>
-            </Pressable>
-          </View>
-          {coa.favorite === null && <Text style={styles.absent}>Not answered yet</Text>}
+          <Text style={styles.label}>Buy again</Text>
+          <Text style={coa.favorite === null ? styles.absent : styles.summaryLine}>
+            {coa.favorite === null
+              ? 'Not answered yet'
+              : coa.favorite
+                ? 'Would buy again'
+                : "Wouldn't buy again"}
+          </Text>
+        </View>
+
+        {/* 6b. Lab info (slice 6, reference screen 03): provenance relocated
+            from the header to the reference's bottom block. Every line
+            renders only when it exists; Added stays provenance, never
+            relabeled (D84.4). */}
+        <View style={styles.card}>
+          <Text style={styles.label}>Lab info</Text>
+          {labLine !== '' && <Row label="Lab" value={labLine} />}
+          {coa.source_lab?.trim() ? <Row label="Parser" value={coa.source_lab.trim()} muted /> : null}
+          {coa.sampled_on ? <Row label="Sampled" value={formatIsoDate(coa.sampled_on)} /> : null}
+          {coa.tested_on ? <Row label="Tested" value={formatIsoDate(coa.tested_on)} /> : null}
+          <Row label="Added" value={new Date(coa.created_at).toLocaleDateString()} />
         </View>
 
         {/* 7. Retire (D90): a package leaves the shelf, the COA does not. At
@@ -603,6 +661,53 @@ export function CoaDetail({
           </Pressable>
         </View>
       )}
+
+      {/* 8b. The rename sheet (slice 6, operator B1): two fields, two
+          columns, no analyte path. pageSheet per the app's overlay grammar. */}
+      <Modal
+        visible={renameOpen}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setRenameOpen(false)}>
+        <View style={styles.renameSheet}>
+          <View style={styles.renameHeader}>
+            <Text style={styles.renameTitle}>Edit name / brand</Text>
+            <Pressable
+              onPress={() => setRenameOpen(false)}
+              hitSlop={8}
+              accessibilityRole="button">
+              <Text style={styles.close}>Cancel</Text>
+            </Pressable>
+          </View>
+          <Text style={styles.renameFieldLabel}>Strain</Text>
+          <TextInput
+            style={styles.renameInput}
+            value={renameStrain}
+            onChangeText={setRenameStrain}
+            editable={!renameBusy}
+            placeholder="Strain not reported"
+            placeholderTextColor={Dash.textFaint}
+            autoCorrect={false}
+          />
+          <Text style={styles.renameFieldLabel}>Brand</Text>
+          <TextInput
+            style={styles.renameInput}
+            value={renameBrand}
+            onChangeText={setRenameBrand}
+            editable={!renameBusy}
+            placeholder="Brand not reported"
+            placeholderTextColor={Dash.textFaint}
+            autoCorrect={false}
+          />
+          <Pressable
+            onPress={saveRename}
+            disabled={renameBusy}
+            accessibilityRole="button"
+            style={[styles.renameSave, renameBusy && styles.actionRowDisabled]}>
+            <Text style={styles.renameSaveLabel}>{renameBusy ? 'Saving\u2026' : 'Save'}</Text>
+          </Pressable>
+        </View>
+      </Modal>
 
       {/* 9. The in-app viewer (D106), last so its Modal sits over everything
           this surface draws. It renders nothing until a signed URL exists. */}
@@ -865,32 +970,52 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: Dash.verdict.Hated,
   },
-  choiceRow: {
-    flexDirection: 'row',
+  renameSheet: {
+    flex: 1,
+    backgroundColor: Dash.bg,
+    paddingHorizontal: 18,
+    paddingTop: 16,
     gap: 8,
   },
-  choice: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: Dash.surface2,
+  renameHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  choiceYes: {
-    backgroundColor: 'rgba(126, 217, 155, 0.14)',
+  renameTitle: {
+    fontFamily: SORA_BOLD,
+    fontSize: 18,
+    color: Dash.text,
   },
-  choiceNo: {
-    backgroundColor: 'rgba(224, 104, 94, 0.14)',
-  },
-  choiceText: {
-    fontFamily: SORA_SEMIBOLD,
-    fontSize: 11.5,
+  renameFieldLabel: {
+    fontFamily: SORA_BOLD,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
     color: Dash.textMuted,
+    marginTop: 8,
   },
-  choiceYesText: {
-    color: Dash.accent,
+  renameInput: {
+    fontFamily: SORA_REGULAR,
+    fontSize: 15,
+    color: Dash.text,
+    backgroundColor: Dash.surface,
+    borderRadius: Dash.radius.row,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
-  choiceNoText: {
-    color: Dash.verdict.Hated,
+  renameSave: {
+    marginTop: 16,
+    alignItems: 'center',
+    borderRadius: Dash.radius.pill,
+    paddingVertical: 14,
+    backgroundColor: Dash.accent,
+  },
+  renameSaveLabel: {
+    fontFamily: SORA_SEMIBOLD,
+    fontSize: 16,
+    color: Dash.bg,
   },
   logBar: {
     position: 'absolute',

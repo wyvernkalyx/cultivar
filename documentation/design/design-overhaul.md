@@ -239,9 +239,16 @@ Each slice is its own prompt and its own commit; gates typed per CLAUDE.md.
    changes, D140 chip display-only. Device gate with MCP read-back. May
    split at prompt time if the diff argues for it.
 5. `feat:` -- D141 survey restyle. Device gate.
-6. `feat:` -- COA detail restyle + gear menu (Edit name/brand via the
-   shipped editor; Delete with confirm; D140 read-only answer). Device
-   gate.
+6. `feat:` -- COA detail restyle + gear menu (Edit name/brand via a
+   dedicated two-field rename sheet -- deliberately NOT the parse
+   editor, so no path from the detail can touch stored analytes
+   [operator B1, 2026-08-10]; Delete with a cascade-naming confirm
+   naming the row (strain, brand when present; ratified 2026-08-10
+   after two accidental deletions under generic copy) and stating the
+   session count it destroys [operator A2, 2026-08-10,
+   superseding D104 -- D104's ground survives as the confirm's wording
+   and Retire remains the celebrated path]; D140 read-only answer).
+   Device gate.
 7. `feat:` -- D142 Insights: (7a) aggregation library, Jest gate; (7b) tab
    UI + Counter view sans brightness, device gate.
 8. `chore:` + `feat:` -- D143: manifests, operator EAS build, then haptics
