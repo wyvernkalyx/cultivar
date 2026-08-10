@@ -31,6 +31,17 @@ import { supabase } from '@/lib/supabase';
 // Words and scores resolve through the one source.
 const RUNG_WORDS = RUNGS.map((rung) => rung.word);
 
+// The reference's fixed emoji pair per rung (D141): display-only identity
+// beside the word, keyed by the word through the one source. Never stored --
+// the row carries the word and the hidden score exactly as before.
+const RUNG_EMOJI: Record<string, string> = {
+  Loved: '\u{1F929}',
+  Liked: '\u{1F44D}',
+  Neutral: '\u{1F610}',
+  Disliked: '\u{1F44E}',
+  Hated: '\u{1F6AB}',
+};
+
 // ~10s client abort (D54): a hung insert fails visibly instead of holding
 // the surface's dismissal guard forever.
 const INSERT_TIMEOUT_MS = 10000;
@@ -111,6 +122,7 @@ type Phase = 'ladder' | 'closing';
 // Font families registered app-wide in the root layout (D83 Decision 1).
 // Referenced by name; when a family is not yet loaded RN falls back to the
 // system font — the ratified fallback, so the survey never blocks on a font.
+const SORA_REGULAR = Type.family.regular;
 const SORA_MEDIUM = Type.family.medium;
 const SORA_SEMIBOLD = Type.family.semibold;
 const SORA_BOLD = Type.family.bold;
@@ -193,6 +205,9 @@ function SequenceHeader({
   title,
   saving = false,
   onInfo,
+  statusText,
+  trailingLabel,
+  onTrailing,
 }: {
   leadingLabel: string;
   onLeading: () => void;
@@ -208,6 +223,13 @@ function SequenceHeader({
   // by D96). Opens the read-only definition sheet; it never touches survey
   // state.
   onInfo?: () => void;
+  // The reference's saved indicator (D141): closing states the standing
+  // verdict beside a green dot. Display of already-confirmed state only.
+  statusText?: string;
+  // The reference's plain-text trailing action (D141): closing's Done, which
+  // runs the same commit the CTA runs. Presentation of an existing path.
+  trailingLabel?: string;
+  onTrailing?: () => void;
 }) {
   // The dominant line is the strain when present, the brand otherwise, so a
   // single-named COA reads as one strong line rather than a lonely label over
@@ -227,14 +249,27 @@ function SequenceHeader({
             {(leadingLabel === 'Close' ? '✕ ' : '‹ ') + leadingLabel}
           </ThemedText>
         </Pressable>
-        {onInfo !== undefined && (
-          <Pressable disabled={disabled} onPress={onInfo} style={styles.controlChip}>
-            {/* An ASCII label, not a glyph: Sora's cmap is not guaranteed to
-                carry an info codepoint (cf. the U+2713 checkbox fix), and a
-                word is unambiguously discoverable at the gate. */}
-            <ThemedText style={styles.controlChipLabel}>Info</ThemedText>
-          </Pressable>
-        )}
+        <View style={styles.headerTrailing}>
+          {statusText !== undefined && (
+            <View style={styles.statusRow}>
+              <View style={styles.statusDot} />
+              <ThemedText style={styles.statusText}>{statusText}</ThemedText>
+            </View>
+          )}
+          {onInfo !== undefined && (
+            <Pressable disabled={disabled} onPress={onInfo} style={styles.controlChip}>
+              {/* An ASCII label, not a glyph: Sora's cmap is not guaranteed to
+                  carry an info codepoint (cf. the U+2713 checkbox fix), and a
+                  word is unambiguously discoverable at the gate. */}
+              <ThemedText style={styles.controlChipLabel}>Info</ThemedText>
+            </Pressable>
+          )}
+          {onTrailing !== undefined && trailingLabel !== undefined && (
+            <Pressable disabled={disabled} onPress={onTrailing} hitSlop={8}>
+              <ThemedText style={styles.trailingLabel}>{trailingLabel}</ThemedText>
+            </Pressable>
+          )}
+        </View>
       </View>
       <View style={styles.headerBlock}>
         {brandLabel !== null && (
@@ -344,7 +379,7 @@ function PillScreen({
               // Disabled while any insert is on the wire (D54).
               disabled={disabled}
               onPress={() => onSelect(value)}
-              style={[
+              style={({ pressed }) => [
                 styles.pill,
                 // Selection inverts (the unchanged D57/D80 chip grammar,
                 // restyled): a rung card is a surface until it is the answer.
@@ -356,6 +391,10 @@ function PillScreen({
                 // Saving state (D83 Layer 1): siblings of the tapped pill dim to
                 // 32%; the tapped pill stays lit and shows the spinner below.
                 saving && !isPending && styles.chipDim,
+                // The reference's press acknowledgment (D141): a 0.98 scale
+                // while pressed. The haptic half belongs to D143's rebuild
+                // slice; this half is pure presentation.
+                pressed && !disabled && styles.pillPressed,
               ]}>
               {/* The rung's leading band (D83's stripe, retuned by D103 to the
                   reference's verdict hues): only the band is colored, the body
@@ -377,7 +416,11 @@ function PillScreen({
                   </ThemedText>
                 </View>
               ) : (
-                <ThemedText style={[styles.pillLabel, { color: labelColor }]}>{value}</ThemedText>
+                <View style={styles.rungRow}>
+                  {/* Display-only (D141): the emoji never reaches the row. */}
+                  <ThemedText style={styles.rungEmoji}>{RUNG_EMOJI[value] ?? ''}</ThemedText>
+                  <ThemedText style={[styles.pillLabel, { color: labelColor }]}>{value}</ThemedText>
+                </View>
               )}
             </Pressable>
           );
@@ -393,6 +436,11 @@ function PillScreen({
           </View>
         )}
       </View>
+      {/* The reference's footer microcopy (D141): it states the shipped
+          save-on-tap behavior in words, changing nothing about it. */}
+      <ThemedText style={styles.rungFootnote}>
+        {'Tapping a verdict saves it instantly \u2014 everything after is optional.'}
+      </ThemedText>
     </View>
     {/* The glossary sheet (D86): a pageSheet Modal matching the app's overlay
         grammar (D86.7). Read-only — it lists this phase's ratified definitions
@@ -468,11 +516,21 @@ function EffectsPicker({
                   onPress={() => onToggle(tag)}
                   style={[
                     styles.effectChip,
-                    { backgroundColor: isSelected ? Dash.text : Dash.surface2 },
+                    // The reference's selected state (D141): solid accent with
+                    // a check. Fixed-width grid cells, so the prefix cannot
+                    // reflow a neighbor.
+                    { backgroundColor: isSelected ? Dash.accent : Dash.surface2 },
                   ]}>
                   <ThemedText
+                    numberOfLines={1}
+                    // One line is the rule; the longest labels shrink to keep
+                    // it rather than truncating -- a lexicon tag the user
+                    // cannot read is worse than a smaller one (operator gate,
+                    // second finding).
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.7}
                     style={[styles.effectChipLabel, { color: isSelected ? Dash.bg : Dash.text }]}>
-                    {tag}
+                    {isSelected ? `\u2713 ${tag}` : tag}
                   </ThemedText>
                 </Pressable>
               );
@@ -939,6 +997,14 @@ export function SessionLadder({
               onLeading={goBack}
               disabled={inFlight}
               title="Anything else? (optional)"
+              // The saved indicator (D141): the standing verdict, which is
+              // exactly lastConfirmed -- closing is only reachable confirmed.
+              statusText={
+                lastConfirmed === null ? undefined : `${lastConfirmed.word} \u00B7 saved`
+              }
+              // Done and the CTA run the same one commit (D95's single write).
+              trailingLabel="Done"
+              onTrailing={closeWithClosingState}
             />
             {/* Closing's middle renders NOTHING as of the 2026-08-04 ruling.
                 The bloom that used to hold it is now a post-close transient
@@ -993,7 +1059,9 @@ export function SessionLadder({
                 disabled={inFlight}
                 onPress={closeWithClosingState}
                 style={styles.closeButton}>
-                <ThemedText style={styles.closeLabel}>Close</ThemedText>
+                {/* The reference's CTA label (D141); the handler is the same
+                    single closing write it always was. */}
+                <ThemedText style={styles.closeLabel}>Save Session</ThemedText>
               </Pressable>
             </View>
           </ScrollView>
@@ -1130,6 +1198,33 @@ const styles = StyleSheet.create({
   // A rung card (reference 04): 56pt tall, radius 15, surface. Fixed height
   // rather than vertical padding, so the five cards are one rhythm regardless
   // of what a label does.
+  // The header's right cluster (D141): status, Info, or Done, in a row.
+  headerTrailing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+  },
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: Dash.accent,
+  },
+  statusText: {
+    fontFamily: SORA_MEDIUM,
+    fontSize: 13,
+    color: Dash.accent,
+  },
+  trailingLabel: {
+    fontFamily: SORA_SEMIBOLD,
+    fontSize: 15,
+    color: Dash.text,
+  },
   pill: {
     alignSelf: 'stretch',
     height: 56,
@@ -1142,6 +1237,28 @@ const styles = StyleSheet.create({
   pillLabel: {
     fontFamily: SORA_SEMIBOLD,
     fontSize: 16,
+  },
+  // The press acknowledgment (D141): scale only, no color change.
+  pillPressed: {
+    transform: [{ scale: 0.98 }],
+  },
+  rungRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  rungEmoji: {
+    fontSize: 18,
+    lineHeight: 22,
+  },
+  // The footer microcopy (D141): quiet, centered, below the stack.
+  rungFootnote: {
+    fontFamily: SORA_REGULAR,
+    fontSize: 11.5,
+    lineHeight: 15,
+    color: Dash.textFaint,
+    textAlign: 'center',
+    paddingTop: Spacing.two,
   },
   // The tapped pill's saving row (D83 Layer 1): spinner beside "Saving…".
   savingRow: {
@@ -1231,25 +1348,33 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: Dash.accent,
   },
+  // The reference's strict two-column grid (D141): fixed-width cells so a
+  // selection's check prefix can never reflow a neighboring chip.
   effectRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.one,
+    justifyContent: 'space-between',
+    rowGap: Spacing.two,
   },
   // A tag chip: the control chip's pill geometry at a size that wraps into
   // rows, sized to its label. Selection inverts (the D57/D80 chip grammar the
   // rung cards use), and only the colors change on toggle — the font and the
   // metrics hold, so tapping never reflows the row under the thumb.
+  // Uniform cells (D141, operator gate fix): fixed height so no label can
+  // grow its cell, tight padding and 13pt so the two-phrase labels hold one
+  // line, centered both axes.
   effectChip: {
-    height: 40,
-    borderRadius: 999,
-    paddingHorizontal: Spacing.three,
+    width: '48.5%',
+    height: 44,
+    borderRadius: 12,
+    paddingHorizontal: Spacing.one,
     alignItems: 'center',
     justifyContent: 'center',
   },
   effectChipLabel: {
     fontFamily: SORA_MEDIUM,
-    fontSize: 15,
+    fontSize: 13,
+    textAlign: 'center',
   },
   // The note field (D95, restyled only): the reference's nested-row surface and
   // radius, and the serif italic the explainer voice already uses — what the
