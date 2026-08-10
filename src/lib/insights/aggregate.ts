@@ -1,7 +1,9 @@
 import { RUNGS } from '../lexicon';
 
 /**
- * D142 Insights aggregation -- pure library, wired to nothing (slice 7a).
+ * D142 Insights aggregation -- pure library (slice 7a, extended in 7b-i for
+ * the tab UI and Counter view: display facts on buy-again rows, the
+ * total-terpenes range, and the share text composer).
  *
  * Personal-empirical discipline, restated where it is most at risk: every
  * number here is a description of reported lab values on batches THIS user
@@ -22,9 +24,12 @@ import { RUNGS } from '../lexicon';
 export type InsightSession = { coa_id: string; overall_word: string | null };
 export type InsightCoa = {
   id: string;
+  strain: string | null;
+  brand: string | null;
   favorite: boolean | null;
   total_thc: number | null;
   total_cbd: number | null;
+  total_terpenes: number | null;
   on_shelf_count: number;
 };
 export type InsightTerpene = { coa_id: string; name: string; pct: number | null };
@@ -48,8 +53,19 @@ export type ChemistryProfile = {
   terpenes: TerpeneRange[];
   thc: AnalyteRange | null;
   cbd: AnalyteRange | null;
+  totalTerpenes: AnalyteRange | null;
 };
-export type BuyAgainRow = { coaId: string; inStash: boolean };
+export type BuyAgainRow = {
+  coaId: string;
+  strain: string | null;
+  brand: string | null;
+  inStash: boolean;
+  totalThc: number | null;
+  totalTerpenes: number | null;
+  /** Highest reported terpene on this COA; null when nothing is reported.
+   *  Reported values only -- a null pct row can never top this ranking. */
+  topTerpene: { name: string; pct: number } | null;
+};
 export type Insights = {
   sessionCount: number;
   /** Distinct COAs carrying at least one session -- the subtitle's "strains". */
@@ -109,6 +125,24 @@ function terpeneRanges(rows: InsightTerpene[], coaIds: Set<string>): TerpeneRang
     .sort((a, b) => (b.max !== a.max ? b.max - a.max : a.name.localeCompare(b.name)));
 }
 
+// The COA's own loudest reported terpene. Null pct rows are unreported and
+// can never rank; a COA with no reported rows has no top terpene, stated as
+// null rather than invented. Ties break on name for a stable order.
+function topReportedTerpene(rows: InsightTerpene[], coaId: string): BuyAgainRow['topTerpene'] {
+  let best: { name: string; pct: number } | null = null;
+  for (const row of rows) {
+    if (row.coa_id !== coaId || row.pct === null) continue;
+    if (
+      best === null ||
+      row.pct > best.pct ||
+      (row.pct === best.pct && row.name.localeCompare(best.name) < 0)
+    ) {
+      best = { name: row.name, pct: row.pct };
+    }
+  }
+  return best;
+}
+
 function buildProfile(
   words: Set<string>,
   sessions: InsightSession[],
@@ -126,6 +160,7 @@ function buildProfile(
     terpenes: terpeneRanges(terpenes, coaIds),
     thc: analyteRange(setCoas.map((coa) => coa.total_thc)),
     cbd: analyteRange(setCoas.map((coa) => coa.total_cbd)),
+    totalTerpenes: analyteRange(setCoas.map((coa) => coa.total_terpenes)),
   };
 }
 
@@ -141,9 +176,75 @@ export function buildInsights(
     avoid: buildProfile(AVOID_WORDS, sessions, coas, terpenes),
     // favorite === true only: false and null are different answers (D48) and
     // neither belongs on this list. inStash is D139's binary read of the count.
+    // Sorted by strain (absent last), then id, for a stable render order.
     buyAgain: coas
       .filter((coa) => coa.favorite === true)
-      .map((coa) => ({ coaId: coa.id, inStash: coa.on_shelf_count > 0 }))
-      .sort((a, b) => a.coaId.localeCompare(b.coaId)),
+      .map((coa) => ({
+        coaId: coa.id,
+        strain: coa.strain,
+        brand: coa.brand,
+        inStash: coa.on_shelf_count > 0,
+        totalThc: coa.total_thc,
+        totalTerpenes: coa.total_terpenes,
+        topTerpene: topReportedTerpene(terpenes, coa.id),
+      }))
+      .sort((a, b) => {
+        if (a.strain === null && b.strain !== null) return 1;
+        if (a.strain !== null && b.strain === null) return -1;
+        const byStrain = (a.strain ?? '').localeCompare(b.strain ?? '');
+        return byStrain !== 0 ? byStrain : a.coaId.localeCompare(b.coaId);
+      }),
   };
+}
+
+/**
+ * Display formatting -- pure and tested here so the UI never re-derives it.
+ * Up to two decimals, trailing zeros trimmed; ranges collapse to the single
+ * value when min === max; the en dash (–) is the reference's range form.
+ */
+export function formatPct(value: number): string {
+  return `${Number(value.toFixed(2))}%`;
+}
+
+export function formatRangePct(range: AnalyteRange | null): string | null {
+  if (range === null) return null;
+  if (range.min === range.max) return formatPct(range.min);
+  return `${Number(range.min.toFixed(2))}–${formatPct(range.max)}`;
+}
+
+/**
+ * The Counter/Share text (D142): the user's own list as plain text --
+ * chemistry facts about batches they rated, never claims about anyone or
+ * anything else. Deterministic, ASCII except the en dash, no trailing
+ * whitespace. Sections render only when they have content; an empty log
+ * yields the honest one-liner.
+ */
+export function buildShareText(insights: Insights): string {
+  const lines: string[] = [];
+  const { target, buyAgain } = insights;
+  const hasProfile = target.coaCount > 0;
+  if (hasProfile) {
+    lines.push('My target profile');
+    if (target.terpenes.length > 0) {
+      lines.push(`Terpenes: ${target.terpenes.slice(0, 3).map((row) => row.name).join(', ')}`);
+    }
+    const thc = formatRangePct(target.thc);
+    const terps = formatRangePct(target.totalTerpenes);
+    const facts = [thc === null ? null : `THC ${thc}`, terps === null ? null : `terps ${terps}`]
+      .filter((fact): fact is string => fact !== null)
+      .join(' · ');
+    if (facts !== '') lines.push(facts);
+    lines.push('Ranges are the reported values of batches I rated Loved. No effect claims.');
+  }
+  if (buyAgain.length > 0) {
+    if (lines.length > 0) lines.push('');
+    lines.push('Would buy again:');
+    for (const row of buyAgain) {
+      const name = row.strain?.trim() || 'Unnamed COA';
+      const brand = row.brand?.trim() ? ` (${row.brand.trim()})` : '';
+      lines.push(`- ${name}${brand}`);
+    }
+  }
+  if (lines.length === 0) return 'No Loved sessions or buy-again picks logged yet.';
+  return lines.join('\n');
 }

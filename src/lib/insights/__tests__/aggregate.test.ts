@@ -1,5 +1,8 @@
 import {
   buildInsights,
+  buildShareText,
+  formatPct,
+  formatRangePct,
   type InsightCoa,
   type InsightSession,
   type InsightTerpene,
@@ -7,9 +10,12 @@ import {
 
 const coa = (id: string, over: Partial<InsightCoa> = {}): InsightCoa => ({
   id,
+  strain: null,
+  brand: null,
   favorite: null,
   total_thc: null,
   total_cbd: null,
+  total_terpenes: null,
   on_shelf_count: 0,
   ...over,
 });
@@ -71,15 +77,18 @@ describe('a COA rated at both extremes appears in both profiles', () => {
 
 describe('analyte ranges: reported values only, ND counted beside', () => {
   const coas = [
-    coa('a', { total_thc: 22.5, total_cbd: null }),
-    coa('b', { total_thc: 18.1, total_cbd: null }),
-    coa('c', { total_thc: null, total_cbd: null }),
+    coa('a', { total_thc: 22.5, total_cbd: null, total_terpenes: 1.5 }),
+    coa('b', { total_thc: 18.1, total_cbd: null, total_terpenes: 3.3 }),
+    coa('c', { total_thc: null, total_cbd: null, total_terpenes: null }),
   ];
   const sessions = [s('a', 'Loved'), s('b', 'Loved'), s('c', 'Loved')];
   const out = buildInsights(sessions, coas, []);
 
   it('THC range spans reported values with nulls in ndCount', () => {
     expect(out.target.thc).toEqual({ min: 18.1, max: 22.5, ndCount: 1 });
+  });
+  it('total terpenes gets the same reported-only range', () => {
+    expect(out.target.totalTerpenes).toEqual({ min: 1.5, max: 3.3, ndCount: 1 });
   });
   it('an analyte with zero reported values is null, never a zero range', () => {
     expect(out.target.cbd).toBeNull();
@@ -127,21 +136,96 @@ describe('terpene ranges', () => {
 
 describe('buy again', () => {
   const coas = [
-    coa('b', { favorite: true, on_shelf_count: 1 }),
-    coa('a', { favorite: true, on_shelf_count: 0 }),
-    coa('c', { favorite: false, on_shelf_count: 1 }),
-    coa('d', { favorite: null, on_shelf_count: 1 }),
+    coa('b', { strain: 'Zeta', brand: 'BrandB', favorite: true, on_shelf_count: 1, total_thc: 27.05, total_terpenes: 3.3375 }),
+    coa('a', { strain: 'Alpha', favorite: true, on_shelf_count: 0 }),
+    coa('n', { strain: null, favorite: true, on_shelf_count: 1 }),
+    coa('c', { strain: 'Gamma', favorite: false, on_shelf_count: 1 }),
+    coa('d', { strain: 'Delta', favorite: null, on_shelf_count: 1 }),
   ];
-  const out = buildInsights([], coas, []);
+  const rows = [
+    t('b', 'Caryophyllene', 2.0),
+    t('b', 'Humulene', 0.64),
+    t('b', 'Linalool', null), // unreported: can never top the ranking
+    t('a', 'Myrcene', null), // only null rows -> no top terpene
+  ];
+  const out = buildInsights([], coas, rows);
 
   it('includes favorite === true only; false and null are different answers', () => {
-    expect(out.buyAgain.map((row) => row.coaId)).toEqual(['a', 'b']);
+    expect(out.buyAgain.map((row) => row.coaId)).toEqual(['a', 'b', 'n']);
   });
-  it('inStash is the binary read of on_shelf_count', () => {
-    expect(out.buyAgain).toEqual([
-      { coaId: 'a', inStash: false },
-      { coaId: 'b', inStash: true },
-    ]);
+  it('sorts by strain with absent strain last, then id', () => {
+    expect(out.buyAgain.map((row) => row.strain)).toEqual(['Alpha', 'Zeta', null]);
+  });
+  it('carries display facts and the binary in-stash read', () => {
+    expect(out.buyAgain[1]).toEqual({
+      coaId: 'b',
+      strain: 'Zeta',
+      brand: 'BrandB',
+      inStash: true,
+      totalThc: 27.05,
+      totalTerpenes: 3.3375,
+      topTerpene: { name: 'Caryophyllene', pct: 2.0 },
+    });
+  });
+  it('a COA with no reported terpene rows has null topTerpene, never invented', () => {
+    expect(out.buyAgain[0].topTerpene).toBeNull();
+  });
+});
+
+describe('top terpene tie', () => {
+  const out = buildInsights([], [coa('b', { favorite: true })], [
+    t('b', 'Limonene', 0.9),
+    t('b', 'Caryophyllene', 0.9),
+  ]);
+  it('breaks on name asc for a stable order', () => {
+    expect(out.buyAgain[0].topTerpene).toEqual({ name: 'Caryophyllene', pct: 0.9 });
+  });
+});
+
+describe('formatting', () => {
+  it('formatPct trims to at most two decimals', () => {
+    expect(formatPct(22.5)).toBe('22.5%');
+    expect(formatPct(29.5444)).toBe('29.54%');
+    expect(formatPct(2)).toBe('2%');
+  });
+  it('formatRangePct renders min-max with an en dash, collapsing equal ends', () => {
+    expect(formatRangePct({ min: 18.1, max: 22.5, ndCount: 0 })).toBe('18.1–22.5%');
+    expect(formatRangePct({ min: 20, max: 20, ndCount: 1 })).toBe('20%');
+    expect(formatRangePct(null)).toBeNull();
+  });
+});
+
+describe('share text', () => {
+  it('composes the profile facts and the buy-again list, nothing invented', () => {
+    const out = buildInsights(
+      [s('b', 'Loved')],
+      [
+        coa('b', { strain: 'Zeta', brand: 'BrandB', favorite: true, on_shelf_count: 1, total_thc: 27.05, total_terpenes: 3.34 }),
+        coa('a', { strain: 'Alpha', favorite: true, on_shelf_count: 0 }),
+      ],
+      [t('b', 'Caryophyllene', 2.0)]
+    );
+    expect(buildShareText(out)).toBe(
+      [
+        'My target profile',
+        'Terpenes: Caryophyllene',
+        'THC 27.05% · terps 3.34%',
+        'Ranges are the reported values of batches I rated Loved. No effect claims.',
+        '',
+        'Would buy again:',
+        '- Alpha',
+        '- Zeta (BrandB)',
+      ].join('\n')
+    );
+  });
+  it('an empty log yields the honest one-liner', () => {
+    expect(buildShareText(buildInsights([], [], []))).toBe(
+      'No Loved sessions or buy-again picks logged yet.'
+    );
+  });
+  it('buy-again alone renders without a phantom profile section', () => {
+    const out = buildInsights([], [coa('a', { strain: 'Alpha', favorite: true })], []);
+    expect(buildShareText(out)).toBe(['Would buy again:', '- Alpha'].join('\n'));
   });
 });
 
@@ -150,8 +234,22 @@ describe('empty log', () => {
   it('yields zero counts, null ranges, empty lists -- no invention', () => {
     expect(out.sessionCount).toBe(0);
     expect(out.strainCount).toBe(0);
-    expect(out.target).toEqual({ coaCount: 0, sessionCount: 0, terpenes: [], thc: null, cbd: null });
-    expect(out.avoid).toEqual({ coaCount: 0, sessionCount: 0, terpenes: [], thc: null, cbd: null });
+    expect(out.target).toEqual({
+      coaCount: 0,
+      sessionCount: 0,
+      terpenes: [],
+      thc: null,
+      cbd: null,
+      totalTerpenes: null,
+    });
+    expect(out.avoid).toEqual({
+      coaCount: 0,
+      sessionCount: 0,
+      terpenes: [],
+      thc: null,
+      cbd: null,
+      totalTerpenes: null,
+    });
     expect(out.buyAgain).toEqual([]);
   });
 });
