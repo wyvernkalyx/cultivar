@@ -5,22 +5,19 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AddToShelfModal from '@/components/add-to-shelf-modal';
 import { CoaDetail } from '@/components/coa-detail';
 import { CompletionBloomOverlay } from '@/components/completion-bloom';
-import { OffShelfList } from '@/components/off-shelf-list';
-import {
-  PreferenceSummary,
-  type PreferenceSummaryProps,
-} from '@/components/preference-summary';
+import type { PreferenceSummaryProps } from '@/components/preference-summary';
 import { SessionLadder, type CloseOutcome } from '@/components/session-ladder';
 import {
   ShelfCard,
   type CardCannabinoid,
   type CardEffect,
+  type CardRetirement,
   type CardSession,
   type CardTerpene,
   type ShelfCoa,
 } from '@/components/shelf-card';
 import { ThemedText } from '@/components/themed-text';
-import { Dash, Spacing, Type } from '@/constants/theme';
+import { Dash, Space, Spacing, Type } from '@/constants/theme';
 import {
   groupSessionsByCoa,
   groupTopCannabinoidsByCoa,
@@ -31,6 +28,7 @@ import {
   type SummaryTerpene,
 } from '@/lib/card-data';
 import { promptFavorite } from '@/lib/coa-favorite';
+import { RUNGS } from '@/lib/lexicon';
 import { subscribeDataChanged } from '@/lib/refresh';
 import { buildSummary, type SummaryCoa } from '@/lib/summary';
 import { promptRetire } from '@/lib/coa-retire';
@@ -45,6 +43,42 @@ import { supabase } from '@/lib/supabase';
 // (D83 Decision 1) and referenced by name as the card does.
 const SORA_REGULAR = Type.family.regular;
 const SORA_BOLD = Type.family.bold;
+
+// The retirement events (D90), exactly the columns selected; ported here
+// from the archive component slice 4a absorbs. The LATEST event per COA is
+// the one whose reason describes the card's current state; earlier events
+// are not overwritten anywhere -- they are simply not what the line reports.
+type RetirementRow = { coa_id: string; reason: string; created_at: string };
+
+function latestRetirementByCoa(rows: RetirementRow[]): Map<string, CardRetirement> {
+  const byCoa = new Map<string, CardRetirement>();
+  for (const row of rows) {
+    const current = byCoa.get(row.coa_id);
+    if (current === undefined || row.created_at > current.at) {
+      byCoa.set(row.coa_id, { reason: row.reason, at: row.created_at });
+    }
+  }
+  return byCoa;
+}
+
+// The Stash's two segments (D138): Active is possession, History is the
+// absorbed archive (D101's substance unchanged -- off-stash is a display
+// state, never an erasure).
+type Segment = 'active' | 'history';
+
+// Sort pills (reference screen 01). 'rated' orders by the mean hidden score
+// of the user's own logged sessions -- personal-empirical: the user's
+// verdicts, never chemistry, decide "top". Unscored items sort last.
+type SortKey = 'recent' | 'thc' | 'terps' | 'rated';
+
+const SORT_LABELS: { key: SortKey; label: string }[] = [
+  { key: 'recent', label: 'Recent' },
+  { key: 'thc', label: 'Highest THC' },
+  { key: 'terps', label: 'Highest terps' },
+  { key: 'rated', label: 'Top rated' },
+];
+
+const SCORE_BY_WORD = new Map<string, number>(RUNGS.map((rung) => [rung.word, rung.score]));
 
 // The summary computation (SummaryCoa, the range and ranking helpers, and
 // buildSummary) moved to src/lib/summary.ts in slice 3: the Insights route
@@ -61,14 +95,16 @@ const SORA_BOLD = Type.family.bold;
 // setState is a no-op.
 export type ShelfListProps = {
   onSummary?: (summary: PreferenceSummaryProps) => void;
+  // The header's search bar (slice 4a; the standing queue's search item).
+  // Client-side, strain and brand, case-insensitive; empty means everything.
+  filterQuery?: string;
 };
 
-export function ShelfList({ onSummary }: ShelfListProps) {
+export function ShelfList({ onSummary, filterQuery }: ShelfListProps) {
   const [rows, setRows] = useState<ShelfCoa[] | null>(null);
   // The preference summary's props (D98), computed in load() from the same
   // fetch as the shelf so it has no lifecycle of its own — it refetches
   // through every existing D63 path and no other.
-  const [summary, setSummary] = useState<PreferenceSummaryProps | null>(null);
   // The cards' per-COA inputs (D99), derived in load() from the SAME fetch
   // that feeds the summary — no second query for either.
   const [sessionsByCoa, setSessionsByCoa] = useState<Map<string, CardSession[]>>(new Map());
@@ -80,8 +116,9 @@ export function ShelfList({ onSummary }: ShelfListProps) {
   // How many COAs sit at count 0 (D101), computed in load() from the summary's
   // unfiltered catalog select — the footer link needs a count, not the rows,
   // and the archive fetches its own when it opens.
-  const [offShelfCount, setOffShelfCount] = useState(0);
-  const [offShelfVisible, setOffShelfVisible] = useState(false);
+  const [retirementByCoa, setRetirementByCoa] = useState<Map<string, CardRetirement>>(new Map());
+  const [segment, setSegment] = useState<Segment>('active');
+  const [sort, setSort] = useState<SortKey>('recent');
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [detailCoaId, setDetailCoaId] = useState<string | null>(null);
@@ -129,12 +166,13 @@ export function ShelfList({ onSummary }: ShelfListProps) {
           .select(
             'id, strain, brand, lab, source_lab, type, favorite, total_thc, total_cbd, total_terpenes, sampled_on, tested_on, created_at, on_shelf_count'
           )
-          // Off-shelf COAs are filtered DB-side (D89). A count of 0 is a
+          // Whole catalog since slice 4a: the Active/History segments split
+          // client-side on on_shelf_count, so the old DB-side complement
+          // pair collapsed into one fetch. A count of 0 is still only a
           // display state, never an erasure: the row, its sessions, its
-          // band, and its favorite all survive, and the query is the only
-          // thing that stops asking for them. No client-side filtering --
-          // RLS scopes the rows, the DB orders and bounds them.
-          .gt('on_shelf_count', 0)
+          // band, and its favorite all survive. RLS scopes the rows; the DB
+          // orders them; the segments, the pills, and the search partition
+          // and reorder what it returned, without a second fetch.
           .order('created_at', { ascending: false }),
         // The summary's three (D98), two of which the cards also read (D99).
         // session_current is the one source of per-session grain (D59), and
@@ -149,7 +187,8 @@ export function ShelfList({ onSummary }: ShelfListProps) {
         // D132's line reads from the same parallel-select family; the merge
         // stays a client-side coa_id Map like every other card input.
         supabase.from('coa_cannabinoids').select('coa_id, name, pct'),
-      ]).then(([coasResult, sessionsResult, allCoasResult, terpenesResult, cannabinoidsResult]) => {
+        supabase.from('coa_retirements').select('coa_id, reason, created_at'),
+      ]).then(([coasResult, sessionsResult, allCoasResult, terpenesResult, cannabinoidsResult, retirementsResult]) => {
         // One error state: any query's failure surfaces through the
         // existing path, no second banner.
         const queryError =
@@ -157,7 +196,8 @@ export function ShelfList({ onSummary }: ShelfListProps) {
           sessionsResult.error ??
           allCoasResult.error ??
           terpenesResult.error ??
-          cannabinoidsResult.error;
+          cannabinoidsResult.error ??
+          retirementsResult.error;
         if (queryError) {
           setError(queryError.message);
           return;
@@ -170,16 +210,16 @@ export function ShelfList({ onSummary }: ShelfListProps) {
         const sessions = sessionsResult.data as SummarySession[];
         const terpenes = terpenesResult.data as SummaryTerpene[];
         const allCoas = allCoasResult.data as SummaryCoa[];
-        const built = buildSummary(sessions, allCoas, terpenes);
-        setSummary(built);
-        onSummary?.(built);
+        // Built for the header's subtitle count alone since slice 4a --
+        // the card itself renders on Insights (D142).
+        onSummary?.(buildSummary(sessions, allCoas, terpenes));
         setSessionsByCoa(groupSessionsByCoa(sessions));
         setEffectsByCoa(groupTopEffectsByCoa(sessions));
         setTerpenesByCoa(groupTopTerpenesByCoa(terpenes));
         setCannabinoidsByCoa(
           groupTopCannabinoidsByCoa(cannabinoidsResult.data as SummaryCannabinoid[])
         );
-        setOffShelfCount(allCoas.filter((coa) => coa.on_shelf_count === 0).length);
+        setRetirementByCoa(latestRetirementByCoa(retirementsResult.data as RetirementRow[]));
       }),
     // onSummary is in the closure, so it is in the deps. The caller passes a
     // stable (useCallback) handler; an unstable one would re-identify load()
@@ -231,6 +271,48 @@ export function ShelfList({ onSummary }: ShelfListProps) {
     setRefreshing(false);
   };
 
+  // The segment split, the search, and the sort, in that order -- all over
+  // the one fetched catalog. Search filters within the current segment so
+  // an Active search never silently surfaces History rows.
+  const query = (filterQuery ?? '').trim().toLowerCase();
+  const matchesQuery = (coa: ShelfCoa) =>
+    query.length === 0 ||
+    (coa.strain ?? '').toLowerCase().includes(query) ||
+    (coa.brand ?? '').toLowerCase().includes(query);
+  // Mean of the hidden scores of this COA's scored sessions; null when none
+  // are scored. Absent words stay unscored rather than being coerced (the
+  // D62 family: the tags and words never invent numbers).
+  const meanScore = (coaId: string): number | null => {
+    const scores = (sessionsByCoa.get(coaId) ?? [])
+      .map((session) => SCORE_BY_WORD.get(session.word))
+      .filter((score): score is number => score !== undefined);
+    if (scores.length === 0) return null;
+    return scores.reduce((total, score) => total + score, 0) / scores.length;
+  };
+  const sortRows = (list: ShelfCoa[]): ShelfCoa[] => {
+    if (sort === 'recent') return list;
+    const value = (coa: ShelfCoa): number | null =>
+      sort === 'thc' ? coa.total_thc : sort === 'terps' ? coa.total_terpenes : meanScore(coa.id);
+    // Stable partition: valued rows descending, unvalued rows after them in
+    // fetched order. ND and unscored sort last, never as zero (the standing
+    // absence rule).
+    const valued = list.filter((coa) => value(coa) !== null);
+    const unvalued = list.filter((coa) => value(coa) === null);
+    valued.sort((a, b) => (value(b) as number) - (value(a) as number));
+    return [...valued, ...unvalued];
+  };
+  const displayRows =
+    rows === null
+      ? []
+      : sortRows(
+          rows.filter(
+            (coa) => (segment === 'active' ? coa.on_shelf_count > 0 : coa.on_shelf_count === 0) &&
+              matchesQuery(coa)
+          )
+        );
+  const activeCount = rows === null ? 0 : rows.filter((coa) => coa.on_shelf_count > 0).length;
+  const historyCount = rows === null ? 0 : rows.filter((coa) => coa.on_shelf_count === 0).length;
+
   if (error) {
     return (
       <View style={styles.messageContainer}>
@@ -258,12 +340,10 @@ export function ShelfList({ onSummary }: ShelfListProps) {
 
   return (
     <>
-      {/* created_at desc comes from the query ONLY — no client-side sorting
-          or filtering; RLS scopes the rows, the DB orders them. */}
       <FlatList
         style={styles.list}
         contentContainerStyle={styles.listContent}
-        data={rows}
+        data={displayRows}
         keyExtractor={(coa) => coa.id}
         renderItem={({ item }) => (
           <ShelfCard
@@ -273,11 +353,16 @@ export function ShelfList({ onSummary }: ShelfListProps) {
             topCannabinoids={cannabinoidsByCoa.get(item.id) ?? []}
             effects={effectsByCoa.get(item.id) ?? []}
             onOpen={() => setDetailCoaId(item.id)}
+            // History rows carry the retirement line instead of the Log
+            // path (D101's exclusion, unchanged by the absorption): a
+            // session against a finished package is more often a data-entry
+            // error than an event.
+            retirement={item.on_shelf_count === 0 ? retirementByCoa.get(item.id) : undefined}
             // One tap straight to the verdict screen (D99). The direct path,
             // not the pending chain: that chain exists only because the
             // detail pageSheet must finish dismissing before a second modal
             // can present (D49), and there is no sheet open here.
-            onLog={() => setLoggingCoa(item)}
+            onLog={item.on_shelf_count > 0 ? () => setLoggingCoa(item) : undefined}
             // D113: the same question the detail asks, raised from the card
             // through the one shared ritual. A confirmed write refetches
             // through load(), the existing D63 path -- the chip renders from
@@ -289,10 +374,10 @@ export function ShelfList({ onSummary }: ShelfListProps) {
             // exclusion, on the onLog form. Refetch is load(), the D63 path:
             // a retirement changes the count, and a card that reached zero
             // has to stop being rendered here.
-            onRetire={(coa) => promptRetire(coa, load)}
+            onRetire={item.on_shelf_count > 0 ? (coa) => promptRetire(coa, load) : undefined}
             // D135: attach reached from the same overflow retire lives in.
             // The card itself gates on source_lab === 'manual'.
-            onAttach={(coa) => setAttachTarget(coa)}
+            onAttach={item.on_shelf_count > 0 ? (coa) => setAttachTarget(coa) : undefined}
           />
         )}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
@@ -303,30 +388,67 @@ export function ShelfList({ onSummary }: ShelfListProps) {
         // summary: it labels the cards below it, which render whether or not
         // the summary has computed yet. Named, accepted cost -- a zero
         // on-shelf count can flash for the width of the first load.
+        // The summary card left this surface in slice 4a: Insights owns it
+        // (D142); the fetch stays because the subtitle count reads it. In
+        // its place, the reference's segment toggle and sort pills (screen
+        // 01), which absorb the archive modal and its entry link (D108
+        // superseded; D101's substance unchanged).
+        // Pinned (4a gate finding 2): the pills stay reachable while the
+        // cards scroll under them. The wrapper carries the screen
+        // background so cards never show through the pinned band.
+        stickyHeaderIndices={[0]}
         ListHeaderComponent={
-          <>
-            {summary !== null && <PreferenceSummary {...summary} />}
-            {/* The archive's entry point (D108), superseding D101's quiet
-                footer link: it sits with the shelf it is the complement of,
-                not below the last card. At zero the right half renders
-                NOTHING, on D101's own grounds -- a link into an empty
-                archive is noise, and absence says it already. */}
-            <View style={styles.sectionRow}>
-              <Text style={styles.sectionLabel}>{`ON SHELF · ${rows.length}`}</Text>
-              {offShelfCount > 0 && (
+          <View style={styles.pinnedHeader}>
+            <View style={styles.segmentRow}>
+              {(
+                [
+                  { key: 'active', label: `Active (${activeCount})` },
+                  { key: 'history', label: `History (${historyCount})` },
+                ] as { key: Segment; label: string }[]
+              ).map((option) => (
                 <Pressable
-                  onPress={() => setOffShelfVisible(true)}
+                  key={option.key}
+                  onPress={() => setSegment(option.key)}
                   accessibilityRole="button"
-                  accessibilityLabel="Open off-shelf list">
-                  <Text style={styles.offShelfLabel}>{`Off-shelf (${offShelfCount}) ›`}</Text>
+                  accessibilityLabel={option.label}
+                  style={[
+                    styles.segmentPill,
+                    segment === option.key && styles.segmentPillActive,
+                  ]}>
+                  <Text
+                    style={[
+                      styles.segmentText,
+                      segment === option.key && styles.segmentTextActive,
+                    ]}>
+                    {option.label}
+                  </Text>
                 </Pressable>
-              )}
+              ))}
             </View>
-          </>
+            <View style={styles.sortRow}>
+              {SORT_LABELS.map((option) => (
+                <Pressable
+                  key={option.key}
+                  onPress={() => setSort(option.key)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Sort: ${option.label}`}
+                  style={[styles.sortPill, sort === option.key && styles.sortPillActive]}>
+                  <Text
+                    style={[styles.sortText, sort === option.key && styles.sortTextActive]}>
+                    {sort === option.key ? `\u2713 ${option.label}` : option.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
         }
         ListEmptyComponent={
           <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
-            Nothing on your shelf yet
+            {query.length > 0
+              ? 'Nothing matches your search.'
+              : segment === 'active'
+                ? 'Nothing in your stash yet'
+                : 'Nothing in your History yet.'}
           </ThemedText>
         }
       />
@@ -384,18 +506,6 @@ export function ShelfList({ onSummary }: ShelfListProps) {
           />
         )}
       </Modal>
-      {/* The archive (D101): a sibling modal owning its own fetch, so the
-          shelf gains no second lifecycle for rows it does not render.
-          Closing refetches on the D63 grounds — a COA can be deleted from
-          the archive's detail, and both the summary and this footer's count
-          are computed from the catalog that delete changed. */}
-      <OffShelfList
-        visible={offShelfVisible}
-        onClose={() => {
-          setOffShelfVisible(false);
-          load();
-        }}
-      />
       {/* The ladder (D50/D51): full-screen sibling modal; gestures inside
           an RN Modal are inert without their own root view. Closing
           returns to the shelf, not the detail sheet — accepted behavior
@@ -450,27 +560,56 @@ const styles = StyleSheet.create({
   centered: {
     textAlign: 'center',
   },
-  sectionRow: {
+  // The segment toggle and sort pills (slice 4a, reference screen 01),
+  // replacing the section row and the superseded archive entry link.
+  pinnedHeader: {
+    backgroundColor: Dash.bg,
+  },
+  segmentRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-    gap: Spacing.two,
-    paddingTop: Spacing.three,
-    paddingBottom: Spacing.one,
+    gap: Space.chip,
+    paddingTop: Space.card,
+    marginBottom: Space.row,
   },
-  // The eyebrow register the summary card and the shelf card already use;
-  // the string is literal caps, so it needs no textTransform.
-  sectionLabel: {
+  segmentPill: {
+    paddingHorizontal: Space.card,
+    paddingVertical: Space.chip,
+    borderRadius: Dash.radius.pill,
+    backgroundColor: Dash.surface,
+  },
+  segmentPillActive: {
+    backgroundColor: Dash.accent,
+  },
+  segmentText: {
     fontFamily: SORA_BOLD,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    color: Dash.accent,
+    fontSize: 12,
+    color: Dash.textBody,
   },
-  // The superseded footer link's register, with one gate-driven change:
-  // the operator ruled both section-row labels accent green (2026-08-03).
-  offShelfLabel: {
+  segmentTextActive: {
+    color: Dash.bg,
+  },
+  sortRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Space.chip,
+    marginBottom: Space.row,
+  },
+  sortPill: {
+    paddingHorizontal: Space.row,
+    paddingVertical: 6,
+    borderRadius: Dash.radius.pill,
+    backgroundColor: Dash.surface,
+  },
+  sortPillActive: {
+    backgroundColor: Dash.accent,
+  },
+  sortText: {
     fontFamily: SORA_REGULAR,
     fontSize: 11.5,
-    color: Dash.accent,
+    color: Dash.textBody,
+  },
+  sortTextActive: {
+    fontFamily: SORA_BOLD,
+    color: Dash.bg,
   },
 });

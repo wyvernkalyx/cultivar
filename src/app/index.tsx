@@ -1,13 +1,13 @@
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { PreferenceSummaryProps } from '@/components/preference-summary';
 import { ShelfList } from '@/components/shelf-list';
 import { ThemedText } from '@/components/themed-text';
 import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, Dash, MaxContentWidth, Spacing, Type } from '@/constants/theme';
+import { BottomTabInset, Dash, MaxContentWidth, Space, Spacing, Type } from '@/constants/theme';
 import { exportProfile } from '@/lib/export';
 import { resetProfile } from '@/lib/profile-reset';
 import { supabase } from '@/lib/supabase';
@@ -16,6 +16,7 @@ import { supabase } from '@/lib/supabase';
 // referenced by name exactly as the dashboard's other surfaces do; an unloaded
 // family falls back to the system font rather than blocking the render.
 const SORA_REGULAR = Type.family.regular;
+const SORA_SEMIBOLD = Type.family.semibold;
 const SORA_BOLD = Type.family.bold;
 const SORA_DISPLAY = Type.family.display;
 const SERIF_ITALIC = Type.family.serifItalic;
@@ -41,6 +42,10 @@ export default function HomeScreen() {
   // card does (D109's mock-faithful placement) -- never a second query.
   // null is "no data yet", distinct from a real 0.
   const [sessionCount, setSessionCount] = useState<number | null>(null);
+  // The header search (slice 4a; the standing queue's rank-2 item). The
+  // query lives here because the header owns the input; ShelfList filters.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   // Stable identity on purpose: ShelfList's load() closes over this handler,
   // so an inline arrow would re-identify load() on every render of this
   // screen and refetch the shelf each time.
@@ -189,6 +194,28 @@ export default function HomeScreen() {
           <Text style={styles.wordmark}>CULTIVAR</Text>
           <View style={styles.headerActions}>
             <Pressable
+              onPress={() => {
+                // Plain conditional, never a side effect inside a state
+                // updater: updaters must be pure (dev double-invocation is
+                // exactly the environment that punishes impurity), and the
+                // 4a gate observed the impure form failing to close.
+                if (searchOpen) {
+                  setSearchQuery('');
+                  setSearchOpen(false);
+                } else {
+                  setSearchOpen(true);
+                }
+              }}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={searchOpen ? 'Close search' : 'Search'}>
+              <SymbolView
+                name="magnifyingglass"
+                tintColor={searchOpen ? Dash.accent : Dash.textMuted}
+                size={22}
+              />
+            </Pressable>
+            <Pressable
               onPress={() => setSettingsVisible(true)}
               hitSlop={8}
               accessibilityRole="button"
@@ -204,16 +231,53 @@ export default function HomeScreen() {
             the invitation, and a "0 sessions logged" line above it would
             state the fact twice and clash with that copy. */}
         <View style={styles.shelfHeadingBlock}>
-          <ThemedText type="subtitle" style={styles.shelfHeading}>
-            Your shelf
-          </ThemedText>
-          {sessionCount !== null && sessionCount > 0 && (
+          {searchOpen ? (
+            // The search bar takes the heading's row while open (reference
+            // screen 01). Three exits, per the 4a gate finding that one is
+            // not enough: the header icon toggles, Cancel closes, and a
+            // blur with an empty query collapses (the reference's own
+            // blur-empty rule).
+            <View style={styles.searchRow}>
+              <TextInput
+                style={styles.searchInput}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search your stash"
+                placeholderTextColor={Dash.textFaint}
+                autoFocus
+                autoCorrect={false}
+                autoCapitalize="none"
+                accessibilityLabel="Search your stash"
+                onBlur={() => {
+                  if (searchQuery.trim().length === 0) {
+                    setSearchQuery('');
+                    setSearchOpen(false);
+                  }
+                }}
+              />
+              <Pressable
+                onPress={() => {
+                  setSearchQuery('');
+                  setSearchOpen(false);
+                }}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel search">
+                <Text style={styles.searchCancel}>Cancel</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <ThemedText type="subtitle" style={styles.shelfHeading}>
+              My Stash
+            </ThemedText>
+          )}
+          {!searchOpen && sessionCount !== null && sessionCount > 0 && (
             <Text style={styles.shelfSubtitle}>
-              {`${sessionCount} ${sessionCount === 1 ? 'session' : 'sessions'} logged, on and off the shelf. Verdicts build your picture here.`}
+              {`${sessionCount} ${sessionCount === 1 ? 'session' : 'sessions'} logged across Active and History. Verdicts build your picture here.`}
             </Text>
           )}
         </View>
-        <ShelfList key={shelfVersion} onSummary={handleSummary} />
+        <ShelfList key={shelfVersion} onSummary={handleSummary} filterQuery={searchQuery} />
 
         {Platform.OS === 'web' && <WebBadge />}
       </SafeAreaView>
@@ -320,6 +384,27 @@ const styles = StyleSheet.create({
   shelfHeadingBlock: {
     alignSelf: 'stretch',
     gap: Spacing.one,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Space.row,
+    alignSelf: 'stretch',
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: SORA_BOLD,
+    fontSize: 20,
+    color: Dash.text,
+    backgroundColor: Dash.surface,
+    borderRadius: Dash.radius.row,
+    paddingHorizontal: Space.card,
+    paddingVertical: Space.chip,
+  },
+  searchCancel: {
+    fontFamily: SORA_SEMIBOLD,
+    fontSize: 13,
+    color: Dash.accent,
   },
   shelfHeading: {
     alignSelf: 'stretch',
