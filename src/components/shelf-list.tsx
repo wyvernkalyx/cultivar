@@ -27,7 +27,6 @@ import {
   type SummarySession,
   type SummaryTerpene,
 } from '@/lib/card-data';
-import { promptFavorite } from '@/lib/coa-favorite';
 import { RUNGS } from '@/lib/lexicon';
 import { subscribeDataChanged } from '@/lib/refresh';
 import { buildSummary, type SummaryCoa } from '@/lib/summary';
@@ -363,12 +362,6 @@ export function ShelfList({ onSummary, filterQuery }: ShelfListProps) {
             // detail pageSheet must finish dismissing before a second modal
             // can present (D49), and there is no sheet open here.
             onLog={item.on_shelf_count > 0 ? () => setLoggingCoa(item) : undefined}
-            // D113: the same question the detail asks, raised from the card
-            // through the one shared ritual. A confirmed write refetches
-            // through load(), the existing D63 path -- the chip renders from
-            // the fetched row, so the list is what puts it back in agreement
-            // with the database.
-            onFavorite={(coa) => promptFavorite(coa, load)}
             // D114: the same sequence the detail raises, reached from the
             // card. The archive omits this prop -- that omission is the
             // exclusion, on the onLog form. Refetch is load(), the D63 path:

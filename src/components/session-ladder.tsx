@@ -131,7 +131,7 @@ const ERROR_DOT = '#eb8656';
 // in serif italic. None of these strings contains a double quote, so they read
 // cleanly as double-quoted literals; the "--" is the doc's ASCII em dash.
 const EXPLAINERS: Record<Phase, string> = {
-  ladder: "Gut call. How this run stacked up against the rest of your shelf.",
+  ladder: "Gut call. How this run stacked up against the rest of your stash.",
   closing: "That's the run logged. It'll show up next to the rest of this strain.",
 };
 
@@ -826,7 +826,7 @@ export function SessionLadder({
       onClose('cancelled');
       return;
     }
-    Alert.alert('Discard this session?', "It's already on your shelf. Discard removes it.", [
+    Alert.alert('Discard this session?', "It's already in your stash. Discard removes it.", [
       // Cancel role first, destructive second — the ordering the app's other
       // destructive confirmations already use.
       { text: 'Keep', style: 'cancel' },

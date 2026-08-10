@@ -69,10 +69,6 @@ export type ShelfCardProps = {
   // can never act on this surface is absence, not a disabled state.
   onLog?: () => void;
   // Answering repurchase intent from the card (D113). Optional on the same
-  // grounds the Log handler is: a surface that omits it gets the pre-D113
-  // display-only chip back, unanswered rows included. Both card surfaces
-  // pass it, so the optionality is the contract, not a live branch.
-  onFavorite?: (coa: ShelfCoa) => void;
   // Reaching the retirement ritual from the card (D114). The PROP is the
   // archive's exclusion, exactly as the Log handler is: the shelf passes it
   // and the archive omits it. The count check below is defense in depth, not
@@ -103,27 +99,6 @@ function cardDateLine(coa: ShelfCoa): string {
   if (coa.tested_on) return `Tested ${formatIsoDate(coa.tested_on)}`;
   if (coa.sampled_on) return `Sampled ${formatIsoDate(coa.sampled_on)}`;
   return `Added ${new Date(coa.created_at).toLocaleDateString()}`;
-}
-
-// The chip's three states (D113). A null favorite reads as the QUESTION,
-// never as an answer: the card still renders no verdict that was not given,
-// which is what keeps D48 intact while the ask becomes visible.
-function favoriteLabel(favorite: boolean | null): string {
-  if (favorite === null) return 'Buy again?';
-  return favorite ? 'Would buy again' : "Wouldn't buy again";
-}
-
-// The answered states keep their existing fills verbatim; the unanswered one
-// is deliberately the quietest thing on the card -- an outline, no fill, and
-// the faintest text token. The Log button stays the card's one loud control.
-function favoriteChipStyle(favorite: boolean | null) {
-  if (favorite === null) return styles.chipAsk;
-  return favorite ? styles.chipYes : styles.chipNo;
-}
-
-function favoriteTextStyle(favorite: boolean | null) {
-  if (favorite === null) return styles.chipAskText;
-  return favorite ? styles.chipYesText : styles.chipNoText;
 }
 
 // Two decimals, TRUNCATED (D102: cards truncate, detail shows full lab
@@ -209,7 +184,6 @@ export function ShelfCard({
   effects,
   onOpen,
   onLog,
-  onFavorite,
   onRetire,
   onAttach,
   retirement,
@@ -233,13 +207,6 @@ export function ShelfCard({
             {coa.strain?.trim() ? coa.strain : 'Strain not reported'}
           </Text>
           <View style={styles.strainRowActions}>
-            {/* Quantity badge (D89): one card per COA regardless of count, so
-                the count rides the strain line. Rendered only above a single
-                package -- at one package there is no badge at all, because
-                absence says it and a stated count of one is noise. */}
-            {coa.on_shelf_count > 1 && (
-              <Text style={styles.badge}>{`x${coa.on_shelf_count}`}</Text>
-            )}
             {/* The overflow (D114). Top-right, diagonally opposite the Log
                 button, so the card's one loud control keeps its own corner
                 and this one crowds nothing. Nested inside the card's
@@ -261,44 +228,27 @@ export function ShelfCard({
                       ...(onAttach !== undefined && coa.source_lab === 'manual'
                         ? [{ text: 'Attach COA document', onPress: () => onAttach(coa) }]
                         : []),
-                      { text: 'Retire a package', onPress: () => onRetire(coa) },
+                      { text: 'Retire', onPress: () => onRetire(coa) },
                       { text: 'Cancel', style: 'cancel' as const },
                     ]
                   )
                 }
                 accessibilityRole="button"
-                accessibilityLabel="More actions for this package">
+                accessibilityLabel="More actions for this item">
                 <Text style={styles.overflowGlyph}>…</Text>
               </Pressable>
             )}
           </View>
         </View>
 
-        {/* Repurchase intent (D113). With a handler the chip is a control and
-            always renders, the unanswered ask included: a question-affordance
-            is not a displayed answer, so D48 still holds -- the card shows no
-            verdict that was not given, it shows the question. Without a
-            handler this is the pre-D113 display, where an unanswered COA
-            renders NOTHING at all, never a "No" chip and never a
-            placeholder. */}
-        {onFavorite === undefined ? (
-          coa.favorite !== null && (
-            <View style={favoriteChipStyle(coa.favorite)}>
-              <Text style={favoriteTextStyle(coa.favorite)}>{favoriteLabel(coa.favorite)}</Text>
-            </View>
-          )
-        ) : (
-          /* Nested inside the card's Pressable exactly as the Log button is:
-             RN grants the responder to the innermost view that wants it, so
-             answering the question does not also open the detail. */
-          <Pressable
-            style={favoriteChipStyle(coa.favorite)}
-            hitSlop={8}
-            onPress={() => onFavorite(coa)}
-            accessibilityRole="button"
-            accessibilityLabel="Set whether you would buy this again">
-            <Text style={favoriteTextStyle(coa.favorite)}>{favoriteLabel(coa.favorite)}</Text>
-          </Pressable>
+        {/* Repurchase intent, display-only since D140: the ask lives in the
+            retirement prompt alone, and the card states a Yes that was
+            given -- never the question, never a "No" badge, never a
+            placeholder (D48 held by rendering nothing below true). */}
+        {coa.favorite === true && (
+          <View style={styles.buyAgainBadge}>
+            <Text style={styles.buyAgainText}>{'\u2713 buy again'}</Text>
+          </View>
         )}
 
         {/* Null brand is stated, not left as an empty-looking gap (D97: the
@@ -396,7 +346,7 @@ export function ShelfCard({
               onPress={onLog}
               accessibilityRole="button"
               accessibilityLabel="Log a session">
-              <Text style={styles.logLabel}>Log</Text>
+              <Text style={styles.logLabel}>{'+ Log Session'}</Text>
             </Pressable>
           )}
         </View>
@@ -443,12 +393,6 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     gap: 8,
   },
-  badge: {
-    fontFamily: SORA_BOLD,
-    fontSize: 11.5,
-    fontVariant: ['tabular-nums'],
-    color: Dash.textMuted,
-  },
   // Quiet by construction (D114): a muted glyph on no surface at all. The tap
   // target comes from hitSlop rather than a box, so the control adds nothing
   // to the strain line's height.
@@ -457,46 +401,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Dash.textMuted,
   },
-  chipYes: {
+  // Repurchase display (D140): the one badge the card ever shows for it,
+  // rendered only above a stored Yes.
+  buyAgainBadge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: 'rgba(126, 217, 155, 0.14)',
+    paddingVertical: 3,
+    borderRadius: Dash.radius.pill,
+    borderWidth: 1,
+    borderColor: Dash.accent,
   },
-  chipYesText: {
+  buyAgainText: {
     fontFamily: SORA_SEMIBOLD,
     fontSize: 10,
     color: Dash.accent,
-  },
-  chipNo: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: Dash.surface2,
-  },
-  chipNoText: {
-    fontFamily: SORA_SEMIBOLD,
-    fontSize: 10,
-    color: Dash.textMuted,
-  },
-  // The unanswered ask (D113): an outline where the answered chips carry a
-  // fill, so it reads as an open question rather than a third verdict. The
-  // 1pt border makes it a shade taller than the answered chips; the chip owns
-  // its row, so nothing aligns to it and the difference costs no layout.
-  chipAsk: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: Dash.surface2,
-  },
-  chipAskText: {
-    fontFamily: SORA_SEMIBOLD,
-    fontSize: 10,
-    color: Dash.textFaint,
   },
   brand: {
     fontFamily: SORA_REGULAR,
@@ -630,10 +548,12 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: Dash.textMuted,
   },
+  // The reference's pill (screen 01), sized by its label: the 4b gate
+  // caught the longer label stuffed into the old 48pt circle.
   logButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: Dash.radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Dash.accent,

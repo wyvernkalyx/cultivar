@@ -116,14 +116,10 @@ export function promptRetire(coa: RetireTarget, onDone: () => void): void {
   const strain = coa.strain?.trim() ? coa.strain.trim() : 'this COA';
   const brand = coa.brand?.trim();
   const identity = [strain, ...(brand ? [brand] : [])].join('\n');
-  // Exactly one outcome line, chosen by what will be left. D90's copy
-  // constraint: a card that stays on the shelf must never be told it is
-  // being taken off it.
-  const outcome =
-    coa.on_shelf_count > 1
-      ? `You'll still have ${coa.on_shelf_count - 1} on your shelf.`
-      : 'This takes it off your shelf.';
-  Alert.alert('Retire a package', `${identity}\n\n${outcome}`, [
+  // One outcome line since D139: possession is binary, so there is no
+  // remaining-count branch to word. Retirement is the move to History.
+  const outcome = 'This moves it to your History.';
+  Alert.alert('Retire', `${identity}\n\n${outcome}`, [
     { text: 'Smoked it all', onPress: () => void record('Smoked it all') },
     { text: 'Gave up on it', onPress: () => void record('Gave up on it') },
     // Nothing has been written at this point, so cancelling is a pure

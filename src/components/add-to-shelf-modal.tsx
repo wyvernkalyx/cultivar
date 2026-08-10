@@ -38,7 +38,7 @@ type Phase =
 // only evidence anyone gets.
 function retentionMessage(stage: UploadStage, detail?: string): string {
   return [
-    `Added to your shelf, but the source PDF was not retained (${stage}).`,
+    `Added to your stash, but the source PDF was not retained (${stage}).`,
     detail,
   ]
     .filter(Boolean)
@@ -90,8 +90,6 @@ export default function AddToShelfModal({
   // exists) and by the guard affordance (a picked file exists and pickedUri /
   // pdfSha256 stay live, so retention and the dedup hash ride as usual).
   const [manualEntry, setManualEntry] = useState(false);
-  // The matched row's new count, shown on the 'incremented' arm.
-  const [shelfCount, setShelfCount] = useState<number | null>(null);
 
   // The component stays mounted while the Modal is hidden, so state would
   // survive a close; resetting here (not in an effect) keeps reopen-at-idle
@@ -111,7 +109,6 @@ export default function AddToShelfModal({
     setPickedUri(null);
     setPdfSha256(null);
     setRetentionNotice(null);
-    setShelfCount(null);
     setManualEntry(false);
   };
 
@@ -239,7 +236,7 @@ export default function AddToShelfModal({
         // of D88's outcomes would.
         const name = pickDedupeTarget(matches).strain?.trim();
         setConfirmError(
-          `This document already lives on another shelf item${name ? ` (${name})` : ''}. Nothing was changed.`,
+          `This document already lives on another stash item${name ? ` (${name})` : ''}. Nothing was changed.`,
         );
         setPhase('done');
         return;
@@ -266,12 +263,12 @@ export default function AddToShelfModal({
     const identity = [strain, ...(brand ? [brand] : [])].join('\n');
     const summary =
       rows.length === 1
-        ? 'This document matches a COA already on your shelf.'
-        : `This document matches ${rows.length} COAs on your shelf; the strongest match is shown.`;
-    Alert.alert('Already on your shelf?', `${identity}\n\n${summary}`, [
-      // Outcome 1: no new row, no upload -- the shelf gains a package, not a
-      // document (D88.6).
-      { text: 'I bought another package', onPress: () => void increment(target) },
+        ? 'This document matches a COA already in your stash.'
+        : `This document matches ${rows.length} COAs in your stash; the strongest match is shown.`;
+    Alert.alert('Already in your stash?', `${identity}\n\n${summary}`, [
+      // Outcome 1 since D139: possession is binary, so a repeat document is
+      // acknowledged, never counted -- no new row, no upload, no write.
+      { text: 'I already have this', onPress: () => acknowledge() },
       // Outcome 3: a lab correction is a different document about the same
       // lot. New row; the prior row is left intact, and supersession is
       // banked by D88 rather than improvised here.
@@ -282,24 +279,11 @@ export default function AddToShelfModal({
   };
 
   /**
-   * D88.6 outcome 1: a client update on the matched row. `coas` carries a
-   * single ALL policy by design -- on_shelf_count is derived, revisable state,
-   * not a record -- so this needs no RPC. The count is read from the matched
-   * row rather than recomputed, and the race it loses to (the same user
-   * ingesting the same document on two devices at once) is named and accepted.
+   * D139 outcome 1: nothing is written. Possession is have-it or don't;
+   * the same document arriving again changes no state, and the phase
+   * exists only so the modal can say so.
    */
-  const increment = async (target: DuplicateMatch) => {
-    const next = target.on_shelf_count + 1;
-    const { error } = await supabase
-      .from('coas')
-      .update({ on_shelf_count: next })
-      .eq('id', target.id);
-    if (error) {
-      setConfirmError(error.message);
-      setPhase('done');
-      return;
-    }
-    setShelfCount(next);
+  const acknowledge = () => {
     setPhase('incremented');
   };
 
@@ -368,20 +352,18 @@ export default function AddToShelfModal({
       <ThemedView style={styles.container}>
         <ThemedView style={styles.content}>
           <ThemedText type="subtitle" style={styles.centered}>
-            {attaching ? 'Attach COA document' : 'Add to shelf'}
+            {attaching ? 'Attach COA document' : 'Add to stash'}
           </ThemedText>
 
           {phase === 'incremented' ? (
             <>
               <ScrollView style={styles.resultScroll}>
                 <ThemedText type="smallBold" style={styles.centered}>
-                  Another package added
+                  Already in your stash
                 </ThemedText>
-                {shelfCount !== null && (
-                  <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
-                    {`You now have ${shelfCount} of this on your shelf.`}
-                  </ThemedText>
-                )}
+                <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
+                  Nothing was changed.
+                </ThemedText>
               </ScrollView>
               <Pressable
                 onPress={pickAnother}
@@ -393,7 +375,7 @@ export default function AddToShelfModal({
             <>
               <ScrollView style={styles.resultScroll}>
                 <ThemedText type="smallBold" style={styles.centered}>
-                  {attaching ? 'Attached to your shelf item' : 'Added to your shelf'}
+                  {attaching ? 'Attached to your stash item' : 'Added to your stash'}
                 </ThemedText>
                 {savedId && (
                   <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>

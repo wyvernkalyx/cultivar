@@ -558,7 +558,7 @@ export function CoaEditor({
           { backgroundColor: theme.backgroundElement },
           busy && styles.confirmButtonDisabled,
         ]}>
-        <ThemedText type="smallBold">Add to shelf</ThemedText>
+        <ThemedText type="smallBold">Add to stash</ThemedText>
       </Pressable>
     </View>
   );

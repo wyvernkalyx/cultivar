@@ -83,7 +83,7 @@ function BloomArt({
           ],
         }}>
         <ThemedText style={styles.loggedText}>Logged.</ThemedText>
-        <ThemedText style={styles.loggedSub}>On the shelf with the rest.</ThemedText>
+        <ThemedText style={styles.loggedSub}>In your stash with the rest.</ThemedText>
       </Animated.View>
     </View>
   );

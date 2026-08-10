@@ -139,7 +139,7 @@ export default function HomeScreen() {
       const counts = await readResetCounts();
       Alert.alert(
         'Start from scratch?',
-        `This hides your ${counts.sessions} logged ${counts.sessions === 1 ? 'session' : 'sessions'} and takes ${counts.packages} ${counts.packages === 1 ? 'package' : 'packages'} off the shelf. Favorites are cleared. Your COAs stay, and nothing is deleted. You can export your data first.`,
+        `This hides your ${counts.sessions} logged ${counts.sessions === 1 ? 'session' : 'sessions'} and moves ${counts.packages} ${counts.packages === 1 ? 'item' : 'items'} to History. Buy-again answers are cleared. Your COAs stay, and nothing is deleted. You can export your data first.`,
         [
           {
             text: 'Export first',

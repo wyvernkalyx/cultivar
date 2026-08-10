@@ -425,9 +425,6 @@ export function CoaDetail({
         {/* Quantity badge (D89): rendered only above a single package -- at one
             package there is no badge at all, because absence says it and a
             stated count of one is noise. */}
-        {coa.on_shelf_count > 1 && (
-          <Text style={styles.badge}>{`x${coa.on_shelf_count} on shelf`}</Text>
-        )}
       </View>
 
       <ScrollView
@@ -590,7 +587,7 @@ export function CoaDetail({
             onPress={() => promptRetire(coa, load)}
             accessibilityRole="button"
             style={styles.retireRow}>
-            <Text style={styles.retireLabel}>Retire a package</Text>
+            <Text style={styles.retireLabel}>Retire</Text>
           </Pressable>
         )}
       </ScrollView>
