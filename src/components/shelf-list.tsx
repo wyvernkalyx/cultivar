@@ -9,7 +9,6 @@ import { OffShelfList } from '@/components/off-shelf-list';
 import {
   PreferenceSummary,
   type PreferenceSummaryProps,
-  type RungWord,
 } from '@/components/preference-summary';
 import { SessionLadder, type CloseOutcome } from '@/components/session-ladder';
 import {
@@ -27,14 +26,14 @@ import {
   groupTopCannabinoidsByCoa,
   groupTopEffectsByCoa,
   groupTopTerpenesByCoa,
-  rankTopEffects,
   type SummaryCannabinoid,
   type SummarySession,
   type SummaryTerpene,
 } from '@/lib/card-data';
 import { promptFavorite } from '@/lib/coa-favorite';
+import { subscribeDataChanged } from '@/lib/refresh';
+import { buildSummary, type SummaryCoa } from '@/lib/summary';
 import { promptRetire } from '@/lib/coa-retire';
-import { RUNGS } from '@/lib/lexicon';
 import { supabase } from '@/lib/supabase';
 
 // The card, its date helpers, and the ShelfCoa shape live in shelf-card.tsx
@@ -47,86 +46,11 @@ import { supabase } from '@/lib/supabase';
 const SORA_REGULAR = Type.family.regular;
 const SORA_BOLD = Type.family.bold;
 
-// Deliberately UNFILTERED by on_shelf_count: the summary is all-time,
-// including off-shelf history (D98). RLS scopes the rows. on_shelf_count
-// joins the selection in D101 so the off-shelf count comes from data already
-// fetched -- the archive's own query belongs to the archive, not the shelf.
-type SummaryCoa = {
-  id: string;
-  favorite: boolean | null;
-  total_thc: number | null;
-  total_cbd: number | null;
-  on_shelf_count: number;
-};
-
-// Min/max over REPORTED values only, with the unreported ones counted beside
-// them — the D98 binding, verbatim: ranges compute over reported values only;
-// ND is annotated alongside, never folded in as a zero lower bound. No COA
-// reporting the analyte at all yields null, not a range of zeros.
-function analyteRange(values: (number | null)[]): PreferenceSummaryProps['loved']['thc'] {
-  const reported = values.filter((value): value is number => value !== null);
-  if (reported.length === 0) return null;
-  return {
-    min: Math.min(...reported),
-    max: Math.max(...reported),
-    ndCount: values.length - reported.length,
-  };
-}
-
-// Top 3 terpenes by concentration across the Loved COAs (the ratified v1
-// "relevant terpenes" definition). Per name, the maximum reported pct; a null
-// pct is an unreported analyte and is excluded from the ranking outright, so
-// absence can never rank as a zero. Ties break on name for a stable order.
-function rankLovedTerpenes(rows: SummaryTerpene[], lovedCoaIds: Set<string>) {
-  const best = new Map<string, number>();
-  for (const row of rows) {
-    if (row.pct === null || !lovedCoaIds.has(row.coa_id)) continue;
-    const current = best.get(row.name);
-    if (current === undefined || row.pct > current) best.set(row.name, row.pct);
-  }
-  return [...best.entries()]
-    .map(([name, pct]) => ({ name, pct }))
-    .sort((a, b) => (b.pct !== a.pct ? b.pct - a.pct : a.name.localeCompare(b.name)))
-    .slice(0, 3);
-}
-
-// The whole summary, computed client-side over session_current merged with the
-// unfiltered catalog (D98: no new view, no migration — session_current is
-// already the one source of per-session grain, and this is that consumer).
-function buildSummary(
-  sessions: SummarySession[],
-  coas: SummaryCoa[],
-  terpenes: SummaryTerpene[]
-): PreferenceSummaryProps {
-  const distribution = Object.fromEntries(RUNGS.map((rung) => [rung.word, 0])) as Record<
-    RungWord,
-    number
-  >;
-  for (const session of sessions) {
-    // A word outside RUNGS (or a null) counts toward the all-time total but
-    // has no rung to land on; it is never coerced into one.
-    if (session.overall_word !== null && session.overall_word in distribution) {
-      distribution[session.overall_word as RungWord] += 1;
-    }
-  }
-
-  const lovedSessions = sessions.filter((session) => session.overall_word === 'Loved');
-  const lovedCoaIds = new Set(lovedSessions.map((session) => session.coa_id));
-  const lovedCoas = coas.filter((coa) => lovedCoaIds.has(coa.id));
-
-  return {
-    sessionCount: sessions.length,
-    distribution,
-    buyAgainCount: coas.filter((coa) => coa.favorite === true).length,
-    loved: {
-      terpenes: rankLovedTerpenes(terpenes, lovedCoaIds),
-      thc: analyteRange(lovedCoas.map((coa) => coa.total_thc)),
-      cbd: analyteRange(lovedCoas.map((coa) => coa.total_cbd)),
-      lovedSessionCount: lovedSessions.length,
-    },
-    topEffects: rankTopEffects(sessions),
-  };
-}
+// The summary computation (SummaryCoa, the range and ranking helpers, and
+// buildSummary) moved to src/lib/summary.ts in slice 3: the Insights route
+// consumes it too now, and two copies are two places for the D98 bindings
+// to drift. This list keeps its five-select load because it also feeds the
+// cards; only the builder moved.
 
 // The dashboard's subtitle renders OUTSIDE the card from D109 on (the
 // mock-faithful placement, under the screen title), so the screen needs the
@@ -266,6 +190,9 @@ export function ShelfList({ onSummary }: ShelfListProps) {
   useEffect(() => {
     load();
   }, [load]);
+  // Quick-actions writes (FAB add, FAB-logged session) happen outside this
+  // tree; the tick is their only line of sight into load() (slice 3).
+  useEffect(() => subscribeDataChanged(load), [load]);
 
   // Every ladder-close path refetches (D63): a session may have landed, and
   // a stale band beside a fresh entry is the defect the refetch exists for.

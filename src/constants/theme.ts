@@ -93,7 +93,9 @@ export const Space = {
   section: 24,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
+// Raised for the D138 custom bar (icon + label + FAB overhang); the
+// device gate is the arbiter if scroll content still clips.
+export const BottomTabInset = Platform.select({ ios: 84, android: 96 }) ?? 0;
 export const MaxContentWidth = 800;
 
 /**

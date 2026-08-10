@@ -3,7 +3,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import AddToShelfModal from '@/components/add-to-shelf-modal';
 import type { PreferenceSummaryProps } from '@/components/preference-summary';
 import { ShelfList } from '@/components/shelf-list';
 import { ThemedText } from '@/components/themed-text';
@@ -23,7 +22,6 @@ const SERIF_ITALIC = Type.family.serifItalic;
 
 export default function HomeScreen() {
   const [email, setEmail] = useState<string | null>(null);
-  const [addToShelfVisible, setAddToShelfVisible] = useState(false);
   // The gear's surface (D107.1). It owns no shelf state: nothing behind it
   // can change a COA, so closing it deliberately does NOT bump shelfVersion.
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -184,9 +182,9 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        {/* D107: one row replaces the account row and the full-width "Add to
-            shelf" button. The pill keeps the app's sole ingestion entry
-            point; the gear opens D107.1's surface for the account. */}
+        {/* D138: ingestion entry moved to the tab bar's center FAB (the
+            quick-actions selector); the header keeps the gear for D107.1's
+            account surface. Slice 4 owns the reference's full header. */}
         <View style={styles.header}>
           <Text style={styles.wordmark}>CULTIVAR</Text>
           <View style={styles.headerActions}>
@@ -197,24 +195,8 @@ export default function HomeScreen() {
               accessibilityLabel="Settings">
               <SymbolView name="gearshape" tintColor={Dash.textMuted} size={22} />
             </Pressable>
-            <Pressable
-              onPress={() => setAddToShelfVisible(true)}
-              accessibilityRole="button"
-              accessibilityLabel="Add">
-              <View style={styles.addPill}>
-                <Text style={styles.addPillLabel}>+ Add</Text>
-              </View>
-            </Pressable>
           </View>
         </View>
-
-        <AddToShelfModal
-          visible={addToShelfVisible}
-          onClose={() => {
-            setAddToShelfVisible(false);
-            setShelfVersion((n) => n + 1);
-          }}
-        />
 
         {/* D109: the summary card's old countLine, moved out to sit under
             the screen title per the mock. It renders only once there is a
@@ -332,17 +314,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-  },
-  addPill: {
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    borderRadius: Dash.radius.row,
-    backgroundColor: Dash.accent,
-  },
-  addPillLabel: {
-    fontFamily: SORA_BOLD,
-    fontSize: 11.5,
-    color: Dash.bg,
   },
   // Title and subtitle are one block: the screen's own gap (Spacing.three)
   // would read as two unrelated lines rather than a heading and its gloss.
