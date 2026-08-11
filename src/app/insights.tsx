@@ -1,6 +1,16 @@
+import * as Brightness from 'expo-brightness';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { Modal, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  AppState,
+  Modal,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PreferenceSummary } from '@/components/preference-summary';
@@ -20,8 +30,9 @@ import { subscribeDataChanged } from '@/lib/refresh';
 // Buy Again with Share and Counter view, Profiles to avoid, and the kept
 // preference summary below (operator ruling 2026-08-10 -- distribution and
 // effects line survive; carve-out 4, nothing shipped is lost). The Counter
-// view ships WITHOUT the brightness pin: that is D143's native module, and
-// copy claiming it here would be false, so no such copy renders.
+// view pins screen brightness while it is open (D143, landed with the
+// native module). The pin is behavior only: the reference specifies no
+// on-screen line about it, so none renders.
 //
 // Personal-empirical discipline (D142, restated where most at risk): every
 // number is a reported lab value on batches this user rated. No copy on
@@ -142,6 +153,53 @@ export default function InsightsScreen() {
     }, [load])
   );
 
+  // The Counter view's brightness pin (D143). The modal has no lifecycle of
+  // its own -- both close paths are one state flip -- so this effect is the
+  // owner: it engages only while the counter is open and unwinds itself on
+  // close, on unmount, and on backgrounding.
+  //
+  // Restore is by hand because iOS has no restore call and a pin there
+  // persists until the device locks: the level in effect at open is captured
+  // once and set back, and a re-pin on returning to the foreground reuses
+  // that same captured level rather than re-reading a level we ourselves
+  // pinned. If the capture fails there is nothing to restore to, so nothing
+  // is pinned -- never take the screen somewhere we cannot put it back.
+  //
+  // Every call is failure-swallowed on purpose. Brightness is cosmetic; a
+  // rejection here must never surface, retry, or take the Counter view down
+  // with it.
+  useEffect(() => {
+    if (!counterOpen) return;
+    let closed = false;
+    let held: number | null = null;
+    const pin = () => {
+      if (held === null) return;
+      void Brightness.setBrightnessAsync(1).catch(() => {});
+    };
+    const unpin = () => {
+      if (held === null) return;
+      void Brightness.setBrightnessAsync(held).catch(() => {});
+    };
+    void Brightness.getBrightnessAsync().then(
+      (level) => {
+        // A level that lands after the close is a level we must not act on.
+        if (closed) return;
+        held = level;
+        pin();
+      },
+      () => {}
+    );
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') pin();
+      else unpin();
+    });
+    return () => {
+      closed = true;
+      subscription.remove();
+      unpin();
+    };
+  }, [counterOpen]);
+
   const insights = data?.insights ?? null;
   const share = () => {
     if (insights === null) return;
@@ -254,8 +312,8 @@ export default function InsightsScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      {/* Counter view (D142): full-screen inverted, large type, no
-          brightness claim until D143 ships the module. */}
+      {/* Counter view (D142): full-screen inverted, large type, its
+          brightness pin owned by the effect above (D143). */}
       <Modal
         visible={counterOpen}
         animationType="slide"

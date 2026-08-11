@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import { uuid } from 'expo-modules-core';
 import { useEffect, useState } from 'react';
 import {
@@ -668,6 +669,12 @@ export function SessionLadder({
   // null happens at the write, never in this list.
   const [effectTags, setEffectTags] = useState<string[]>([]);
   const toggleEffect = (tag: string) => {
+    // Touch feedback (D143), the same light tick the verdict tap fires: the
+    // feel answers the finger, not the outcome, so a chip that only moves
+    // draft state feels identical to a rung that writes. Never awaited and
+    // its failure is swallowed -- a device that cannot buzz must not change
+    // what the tap does.
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setEffectTags((current) =>
       current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag]
     );
@@ -818,6 +825,10 @@ export function SessionLadder({
   // identical row on a same-pill re-tap is a semantic no-op the schema
   // absorbs (D54).
   const tapScore = (word: string) => {
+    // Touch feedback (D143): fired first and never gating the write below.
+    // It acknowledges the tap, not the save -- the spinner and the error
+    // banner own the outcome (D54), and a failed buzz stays invisible.
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const index = RUNGS.findIndex((rung) => rung.word === word);
     const rung = RUNGS[index];
     setPendingScore(rung.word);
