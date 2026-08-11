@@ -297,16 +297,17 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
 1. **Stack / test / build.** Expo (React Native) + TypeScript + Expo Router.
    **Expo SDK pinned to 56** (`expo@56.x`) — the current App Store Expo Go predates
    SDK 56, so on-device testing uses an **EAS development build**, not Expo Go.
-   Tests = **Jest + `ts-jest`** (`testEnvironment: 'node'`), whose `roots` discover
-   **only** `supabase/functions/_shared/coa`, and **`deno test`** for Edge Function
-   code (e.g. `supabase/functions/ingest-coa/__tests__/ingestCoa.test.ts`).
-   **App-code tests are not currently possible** — React Native Testing Library,
-   `jest-expo`, and `react-test-renderer` are not installed, and Jest's `roots` would
-   not discover them if they were. A test file placed anywhere under `src/` is silently
-   never run: `npm test` still prints an all-green summary and exits 0, which is a green gate over
-   tests that did not execute. Wiring that up is a `chore:` of its own, undertaken when a
-   slice actually needs it — not before. UI slices gate on the physical iPhone; unit tests
-   are explicitly not evidence for them.
+   Tests = **Jest + `ts-jest`** (`testEnvironment: 'node'`) and **`deno test`** for
+   Edge Function code (e.g. `supabase/functions/ingest-coa/__tests__/ingestCoa.test.ts`).
+   161 tests / 3 suites as of 2026-08-10. Jest roots cover the parser tree AND
+   src/lib/insights (pure TS only, no RN/Expo imports; discovery canary guards the
+   wiring). A test anywhere else under src/ is still silently never run: `npm test`
+   still prints an all-green summary and exits 0, which is a green gate over tests
+   that did not execute. RN/Expo-importing app-code tests remain not possible —
+   React Native Testing Library, `jest-expo`, and `react-test-renderer` are not
+   installed. Wiring that up is a `chore:` of its own, undertaken when a slice
+   actually needs it — not before. UI slices gate on the physical iPhone; unit
+   tests are explicitly not evidence for them.
    Builds = EAS. Package manager = npm.
    **Tests run as `npm test`, never `npx jest`** -- the npm script carries
    `--experimental-vm-modules`, which bare `npx jest` drops (observed: 48
@@ -320,10 +321,10 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
    (Expo Router routes in `src/app/`). Shared client code in `src/lib/`, importable
    as `@/lib/...`.
 3. **Source-of-truth.** Supabase Postgres is canonical; a local cache **will** serve
-   offline reads — none exists and nothing reads from one. COA PDFs **will** live in
+   offline reads — none exists and nothing reads from one. COA PDFs live in
    the private Storage bucket `coa-pdfs` — created in migration `20260728000000`,
-   no writer yet; slice 4 lands the first. No auto-transform on save. Never
-   fabricate terpene / cannabinoid values.
+   populated at save time by the retention slice's writer. No auto-transform
+   on save. Never fabricate terpene / cannabinoid values.
 4. **Protected data dirs.** COA fixtures
    (`supabase/functions/_shared/coa/__fixtures__/`) and any seeded or user data. The
    staging and prefix rules that govern them live in **Commit conventions**; this slot
