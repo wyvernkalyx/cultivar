@@ -102,6 +102,10 @@ consequences: the delete dialog copy must grow "...and its logged
 sessions" in the wiring slice, and COA delete is the one
 dialog-guarded exception to soft-delete-only.
 
+**Superseded 2026-08-11 by D144** -- see coa-delete-restrict.md.
+coa_id changes from ON DELETE CASCADE to ON DELETE RESTRICT; this
+section stands as the historical record of D53 as ratified.
+
 ## Banked (named so they are not improvised later)
 
 - **The latest-entry-per-chain read view** belongs to the scoring slice,

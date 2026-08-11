@@ -329,6 +329,11 @@ so parity is honest and closing it here would mean soft-delete on `coas`,
 which is a larger pass than this one. Recorded so that a reader does not
 mistake "append-only" for "durable."
 
+**D90.3 superseded 2026-08-11 by D144** -- see coa-delete-restrict.md.
+The cascade hole is closed: coa_retirements.coa_id and
+session_entries.coa_id become ON DELETE RESTRICT. The D90.3 paragraph
+above stands as the historical record.
+
 **D87.4 -- slice 4 sequencing: after-save update. Ratified by the operator
 2026-07-28.** The client saves the row via `insert_coa` unchanged, uploads
 the PDF to `{auth.uid()}/{coa_id}.pdf` using the returned id, then writes
