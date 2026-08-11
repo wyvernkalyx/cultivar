@@ -49,7 +49,7 @@ those operations deserve.
 | `entry_no` | bigint | `generated always as identity` | strict global order; within-chain order derives from it |
 | `session_id` | uuid | not null | the chain key; client-generated at drop time |
 | `created_by` | uuid | not null, default `auth.uid()`, references `auth.users (id)` on delete cascade | ownership; the `coas` convention verbatim, observed at `20260708220816_create_core_schema.sql:39` — name included: the repo's convention is `created_by`, and this table does not diverge from it (ratified during this pass when the divergence was flagged) |
-| `coa_id` | uuid | not null, references `coas(id)` **on delete cascade** (D53) | what was consumed |
+| `coa_id` | uuid | not null, references `coas(id)` **on delete restrict** (D144, superseding D53) | what was consumed |
 | `lexicon_version` | smallint | not null | the vocabulary the answers were given under; the client sends its constant (4 today, D92-D96; 5 when the effects UI ships, effects-tags.md) |
 | `overall_word` | text | not null | the raw answer — the word as tapped |
 | `overall_score` | smallint | not null, check between 1 and 5 | the hidden value at that lexicon_version |

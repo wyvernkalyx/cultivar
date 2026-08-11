@@ -98,8 +98,9 @@ upload occurs in the same user action that commits the `coas` row.
   `pdf_url` column is not reused and stays dormant; removing it is banked as
   its own `chore:`. Removed 2026-07-29 by migration `20260729114855`; the
   client mints signed URLs from `pdf_object_path` alone.
-- **Delete must reach Storage.** D53's cascade is a foreign key; foreign
-  keys do not reach Storage objects. A COA delete that removes the row and
+- **Delete must reach Storage.** Foreign keys -- D53's cascade then,
+  D144's restrict now -- do not reach Storage objects. A COA delete
+  that removes the row and
   leaves the object is an orphan leak. The delete path removes the object
   explicitly, and failure to do so is surfaced, never swallowed.
 
@@ -453,13 +454,13 @@ New table `coa_retirements`:
 | column | type | constraints | meaning |
 |---|---|---|---|
 | `id` | uuid | pk, default `gen_random_uuid()` | event identity |
-| `coa_id` | uuid | not null, references `coas(id)` on delete cascade | which COA |
+| `coa_id` | uuid | not null, references `coas(id)` on delete restrict (D144) | which COA |
 | `created_by` | uuid | not null, default `auth.uid()`, references `auth.users(id)` on delete cascade | ownership; the `coas` convention verbatim |
 | `reason` | text | not null | `Smoked it all` / `Gave up on it` |
 | `created_at` | timestamptz | not null, default `now()` | when |
 
-Cascade on `coa_id` matches D53: deleting a COA takes its retirement events
-with it, same as its sessions.
+`coa_id` restricts on COA delete (D144, superseding the D53 cascade this
+table originally mirrored): retirement events block hard delete.
 
 ### RLS
 

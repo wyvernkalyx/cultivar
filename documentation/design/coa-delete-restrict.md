@@ -1,8 +1,8 @@
 # COA Delete -- Restrict Over Cascade (D144)
 
-Status: RATIFIED 2026-08-11 (D144). Not yet implemented; the Tier 3
-migration is slice 2 below. This status line is amended by the commit
-that changes its truth.
+Status: RATIFIED 2026-08-11 (D144). Migration landed as slice 2
+(2026-08-11). This status line is amended by the commit that changes
+its truth.
 
 North stars: documentation/design/session-entries-schema.md (D53, which
 this supersedes), documentation/design/coa-retention-and-possession.md
