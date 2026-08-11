@@ -248,7 +248,10 @@ Each slice is its own prompt and its own commit; gates typed per CLAUDE.md.
    session count it destroys [operator A2, 2026-08-10,
    superseding D104 -- D104's ground survives as the confirm's wording
    and Retire remains the celebrated path]; D140 read-only answer).
-   Device gate.
+   Device gate. [Amended by D144 (`coa-delete-restrict.md`): the
+   session-count clause is superseded -- history-bearing rows are
+   undeletable at the FK, so the confirm renders only for history-free
+   rows and states no count; the identity echo survives.]
 7. `feat:` -- D142 Insights: (7a) aggregation library, Jest gate; (7b) tab
    UI + Counter view sans brightness, device gate.
 8. `chore:` + `feat:` -- D143: manifests, operator EAS build, then haptics

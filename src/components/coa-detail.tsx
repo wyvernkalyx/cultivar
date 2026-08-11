@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CoaPdfViewer from '@/components/coa-pdf-viewer';
 import { SymbolView } from 'expo-symbols';
 import { Dash, Type, verdictHue } from '@/constants/theme';
+import { removeCoaPdf } from '@/lib/coa-pdf-storage';
 import { promptRetire } from '@/lib/coa-retire';
 import { supabase } from '@/lib/supabase';
 
@@ -246,11 +247,15 @@ function SafetySection({ rows }: { rows: SafetyRow[] }) {
  * because the detail shows columns the list never selected.
  *
  * Delete ships from the gear menu (operator ruling 2026-08-10, superseding
- * D104): the cascade D104 guarded against is now NAMED in the confirm --
- * the dialog states the session count it destroys -- so the choice is
- * informed rather than forbidden. D104's ground (the cascade takes logged
- * history, which is the product) survives as the confirm's wording and as
- * Retire remaining the celebrated path. Rename (strain and brand only)
+ * D104) and is now two-branch under D144: a row carrying logged history is
+ * undeletable at the foreign key, so it gets an explanatory notice and, on
+ * shelf, a steer to the other affordance -- no confirm and no write. Only a
+ * history-free row reaches the destructive confirm, which names the row and
+ * promises no destruction of sessions. D104's ground (the cascade takes
+ * logged history, which is the product) is now enforced by the schema
+ * rather than by wording, and Retire remains the celebrated path. Deleting
+ * a history-free row removes its retained PDF explicitly, since foreign
+ * keys do not reach Storage (D87). Rename (strain and brand only)
  * ships beside it as a dedicated two-field sheet, deliberately NOT the
  * parse editor: no path from this surface may touch stored analytes.
  */
@@ -381,20 +386,55 @@ export function CoaDetail({
     ]);
   };
 
-  // The confirm names exactly what the cascade destroys -- the informed
-  // choice that answers D104's ground. Retire stays the celebrated path and
-  // the copy says so.
+  // The identity echo, shipped mid-gate 2026-08-10 after two accidental
+  // deletions under generic copy: strain, with brand in parentheses when it
+  // is present. The fallback's case belongs to the caller -- one message
+  // opens its sentence with it, the other carries it mid-sentence.
+  const coaIdentity = (fallback: string) => {
+    const strain = coa?.strain?.trim();
+    const brand = coa?.brand?.trim();
+    return (strain || fallback) + (brand ? ` (${brand})` : '');
+  };
+
+  // The blocked notice (D144). Both routes that discover history end here --
+  // the count read at load, and the database refusing the write -- so the
+  // two cannot drift into telling the user different things. The steer to
+  // the other affordance is conditional because that affordance renders only
+  // while a package is on the shelf; naming it on an off-shelf row would
+  // point at something that is not on screen. One button, and the screen
+  // stays where it is: nothing happened.
+  const notifyBlocked = () => {
+    if (coa === null) return;
+    const steer = coa.on_shelf_count > 0 ? ' To take it off your shelf, use Retire.' : '';
+    Alert.alert(
+      'This COA has history',
+      `${coaIdentity('This COA')} has logged history, and Cultivar keeps history — it can't be deleted.${steer}`,
+      [{ text: 'OK' }]
+    );
+  };
+
+  // Two branches on the current session count (D144, superseding the
+  // count-naming confirm this replaced). A history-bearing row is
+  // undeletable at the foreign key, so the destructive confirm is never
+  // offered for one -- the notice explains and steers instead. Only a
+  // history-free row reaches a confirm, and that confirm promises no
+  // destruction of sessions, because there is none to promise.
+  //
+  // The database stays the authority over the count: history that is not
+  // current -- soft-deleted chains, retirement events -- reads as zero here
+  // and is still refused at the write, which lands on the same notice.
   const confirmDelete = () => {
     if (coa === null) return;
-    const n = sessions.length;
-    const sessionsClause =
-      n === 0 ? '' : ` and its ${n} logged ${n === 1 ? 'session' : 'sessions'}`;
-    const identity =
-      (coa.strain?.trim() || 'this COA') +
-      (coa.brand?.trim() ? ` (${coa.brand.trim()})` : '');
+    // Read off the record before the closure, the narrowing convention this
+    // file already uses for the PDF row.
+    const objectPath = coa.pdf_object_path;
+    if (sessions.length > 0) {
+      notifyBlocked();
+      return;
+    }
     Alert.alert(
       'Delete from stash?',
-      `This permanently deletes ${identity}${sessionsClause}. It cannot be undone. Retire keeps history instead.`,
+      `This permanently deletes ${coaIdentity('this COA')}. It cannot be undone. Retire keeps history instead.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -405,10 +445,31 @@ export function CoaDetail({
               .from('coas')
               .delete()
               .eq('id', coaId)
-              .then(({ error: deleteError }) => {
+              .then(async ({ error: deleteError }) => {
                 if (deleteError) {
+                  // A foreign-key refusal is an answer, not a fault to report
+                  // raw: it says history exists that the count could not see.
+                  if (deleteError.code === '23503') {
+                    notifyBlocked();
+                    return;
+                  }
                   Alert.alert('Could not delete', deleteError.message);
                   return;
+                }
+                // Row first, then the Storage object (D87). Foreign keys do
+                // not reach Storage, so the removal is explicit and its
+                // failure is surfaced rather than swallowed -- and never a
+                // reason to hold open the screen of a row already gone. A
+                // failure here leaves a detectable orphan; the inverse, an
+                // object removed under a surviving row, is not detectable.
+                if (objectPath !== null) {
+                  const removed = await removeCoaPdf(objectPath);
+                  if (!removed.ok) {
+                    Alert.alert(
+                      'PDF not removed',
+                      `This COA was deleted, but its stored PDF was not removed.\n\n${removed.message}`
+                    );
+                  }
                 }
                 onClose();
               });
