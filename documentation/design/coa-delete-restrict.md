@@ -1,8 +1,8 @@
 # COA Delete -- Restrict Over Cascade (D144)
 
-Status: RATIFIED 2026-08-11 (D144). Migration landed as slice 2
-(2026-08-11). This status line is amended by the commit that changes
-its truth.
+Status: RATIFIED 2026-08-11 (D144). Migration landed as slice 2, the
+follow-up UI as slice 3 (both 2026-08-11). This status line is amended
+by the commit that changes its truth.
 
 North stars: documentation/design/session-entries-schema.md (D53, which
 this supersedes), documentation/design/coa-retention-and-possession.md
@@ -70,6 +70,8 @@ COAs; disposition revisits before any public release.
   unpolished FK error -- failing in the safe direction. Ruled: this
   migration precedes D143 and the copy; a proven data-loss path
   outranks the written entry point.
+  Discharged 2026-08-11 at 906d05f: the blocked notice and steer
+  shipped; the unpolished-FK interval closed same-day.
 - True erasure of a history-bearing COA (privacy request) becomes an
   operator-run ceremony. Acceptable at this cohort size; revisit before
   any public release.
@@ -86,7 +88,8 @@ COAs; disposition revisits before any public release.
    implementer authors, operator applies, observed-state gate below.
 3. Banked follow-up (Tier 2, after D143): steer-to-Retire copy on the
    blocked path, and delete-reaches-Storage restored per D87, its
-   Phase A reading the v2 delete path at HEAD.
+   Phase A reading the v2 delete path at HEAD. Shipped 2026-08-11
+   (906d05f).
 
 ## Gate (slice 2)
 

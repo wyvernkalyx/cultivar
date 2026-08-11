@@ -9,8 +9,9 @@ This status line is amended by the commit that changes its truth.
 
 North stars: `documentation/design/product-metaphor.md` (the "in stock"
 open question this pass answers), `documentation/design/session-entries-schema.md`
-(the `coas` conventions and the D53 cascade), `CLAUDE.md` (no fabricated
-data; nothing recorded is silently destroyed).
+(the `coas` conventions and the D53 cascade, superseded by D144 -- see
+coa-delete-restrict.md), `CLAUDE.md` (no fabricated data; nothing recorded
+is silently destroyed).
 
 ---
 
@@ -55,22 +56,27 @@ out to represent nothing.
 
 ## Purpose
 
-Three defects share one root: the COA row is currently the only record of
-the COA, and it is treated as both a lab document and a physical thing.
+Three defects shared one root at authoring: the COA row was the only
+record of the COA, and it was treated as both a lab document and a
+physical thing.
 
-1. **The source PDF is discarded after parsing.** Every analyte value in
+All three are resolved at HEAD (D87, D88, D89 -- the delete cascade
+closed later by D144); they stand as the record of why this pass
+exists.
+
+1. **The source PDF was discarded after parsing.** Every analyte value in
    `coa_terpenes`, `coa_cannabinoids`, and `coa_safety` is derived from a
    document that no longer exists. There is no re-parse path when a parser
    is fixed, and no audit path for the no-fabrication invariant. The
    strongest guarantee that a value was not invented is the document it
    came from.
-2. **Ingest has no duplicate detection.** Re-uploading a COA creates a
+2. **Ingest had no duplicate detection.** Re-uploading a COA creates a
    second shelf entry and splits that product's sessions across two
    `coa_session_stats` averages.
-3. **There is no possession state.** `product-metaphor.md` names "in stock"
+3. **There was no possession state.** `product-metaphor.md` names "in stock"
    as a needed primitive and records that the schema does not have one. The
-   only way to clear a finished product off the shelf today is to delete the
-   COA, which cascades (D53) and destroys its logged sessions -- forcing a
+   only way to clear a finished product off the shelf was to delete the
+   COA, which then cascaded (D53) and destroyed its logged sessions -- forcing a
    choice between a cluttered shelf and destroying the engine's own training
    data.
 
@@ -99,10 +105,10 @@ upload occurs in the same user action that commits the `coas` row.
   its own `chore:`. Removed 2026-07-29 by migration `20260729114855`; the
   client mints signed URLs from `pdf_object_path` alone.
 - **Delete must reach Storage.** Foreign keys -- D53's cascade then,
-  D144's restrict now -- do not reach Storage objects. A COA delete
-  that removes the row and
-  leaves the object is an orphan leak. The delete path removes the object
-  explicitly, and failure to do so is surfaced, never swallowed.
+  D144's restrict now -- do not reach Storage objects. A COA delete that
+  removes the row and leaves the object is an orphan leak. The delete path
+  removes the object explicitly, and failure to do so is surfaced, never
+  swallowed.
 
 Grounds: parses are editable (the confirm/edit slice), and once the source
 is gone there is no ground truth to check an edit against. This is the same
