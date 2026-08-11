@@ -196,7 +196,7 @@ describe('formatting', () => {
 });
 
 describe('share text', () => {
-  it('composes the profile facts and the buy-again list, nothing invented', () => {
+  it('composes the ask with ND stated for unreported analytes, never 0%', () => {
     const out = buildInsights(
       [s('b', 'Loved')],
       [
@@ -207,10 +207,9 @@ describe('share text', () => {
     );
     expect(buildShareText(out)).toBe(
       [
-        'My target profile',
-        'Terpenes: Caryophyllene',
-        'THC 27.05% · terps 3.34%',
-        'Ranges are the reported values of batches I rated Loved. No effect claims.',
+        'What I’m looking for:',
+        'Caryophyllene',
+        'THC 27.05% · CBD ND · terps 3.34%',
         '',
         'Would buy again:',
         '- Alpha',
@@ -219,9 +218,7 @@ describe('share text', () => {
     );
   });
   it('an empty log yields the honest one-liner', () => {
-    expect(buildShareText(buildInsights([], [], []))).toBe(
-      'No Loved sessions or buy-again picks logged yet.'
-    );
+    expect(buildShareText(buildInsights([], [], []))).toBe('Nothing logged yet.');
   });
   it('buy-again alone renders without a phantom profile section', () => {
     const out = buildInsights([], [coa('a', { strain: 'Alpha', favorite: true })], []);

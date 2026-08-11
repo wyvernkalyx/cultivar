@@ -213,28 +213,27 @@ export function formatRangePct(range: AnalyteRange | null): string | null {
 }
 
 /**
- * The Counter/Share text (D142): the user's own list as plain text --
- * chemistry facts about batches they rated, never claims about anyone or
- * anything else. Deterministic, ASCII except the en dash, no trailing
- * whitespace. Sections render only when they have content; an empty log
- * yields the honest one-liner.
+ * The Share text (D142, copy re-ratified at the device gate 2026-08-10):
+ * human-first, the user's own ask -- terpene names and the three ranges,
+ * with ND stated for anything unreported (never 0%, the ND-null
+ * invariant). Deterministic, no trailing whitespace; sections render only
+ * when they have content; an empty log yields the honest one-liner.
  */
 export function buildShareText(insights: Insights): string {
   const lines: string[] = [];
   const { target, buyAgain } = insights;
-  const hasProfile = target.coaCount > 0;
-  if (hasProfile) {
-    lines.push('My target profile');
+  if (target.coaCount > 0) {
+    lines.push('What I’m looking for:');
     if (target.terpenes.length > 0) {
-      lines.push(`Terpenes: ${target.terpenes.slice(0, 3).map((row) => row.name).join(', ')}`);
+      lines.push(target.terpenes.slice(0, 3).map((row) => row.name).join(', '));
     }
-    const thc = formatRangePct(target.thc);
-    const terps = formatRangePct(target.totalTerpenes);
-    const facts = [thc === null ? null : `THC ${thc}`, terps === null ? null : `terps ${terps}`]
-      .filter((fact): fact is string => fact !== null)
-      .join(' · ');
-    if (facts !== '') lines.push(facts);
-    lines.push('Ranges are the reported values of batches I rated Loved. No effect claims.');
+    const fact = (label: string, range: AnalyteRange | null) =>
+      `${label} ${formatRangePct(range) ?? 'ND'}`;
+    lines.push(
+      [fact('THC', target.thc), fact('CBD', target.cbd), fact('terps', target.totalTerpenes)].join(
+        ' · '
+      )
+    );
   }
   if (buyAgain.length > 0) {
     if (lines.length > 0) lines.push('');
@@ -245,6 +244,6 @@ export function buildShareText(insights: Insights): string {
       lines.push(`- ${name}${brand}`);
     }
   }
-  if (lines.length === 0) return 'No Loved sessions or buy-again picks logged yet.';
+  if (lines.length === 0) return 'Nothing logged yet.';
   return lines.join('\n');
 }
