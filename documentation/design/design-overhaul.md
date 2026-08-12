@@ -238,6 +238,10 @@ Each slice is its own prompt and its own commit; gates typed per CLAUDE.md.
    rank-2 item lands here), card restyle, D139 badge/dedupe/retire-copy
    changes, D140 chip display-only. Device gate with MCP read-back. May
    split at prompt time if the diff argues for it.
+   [Amended by D145 (`delta-stash-header.md`): the segment row and the
+   four sort pills are superseded on this surface by a two-segment
+   control and a single Sort chip opening a native menu. The archive
+   absorption, the search, and the card restyle are unchanged.]
 5. `feat:` -- D141 survey restyle. Device gate.
 6. `feat:` -- COA detail restyle + gear menu (Edit name/brand via a
    dedicated two-field rename sheet -- deliberately NOT the parse
@@ -277,7 +281,9 @@ Each slice is its own prompt and its own commit; gates typed per CLAUDE.md.
 - Whether slice 4 splits (header/segments/search vs cards/D139/D140).
 - The exact set of sort pills at launch (reference shows Recent /
   Highest THC / Highest terps / Top rated; Top rated needs the session
-  join the cards already do).
+  join the cards already do). Resolved by D145
+  (`delta-stash-header.md`): all four ship, as options in the sort
+  menu rather than as pills.
 - What the seven untracked v1 `0N-screens.png` files become (operator may
   delete them; nothing references them once this lands). The tracked v1
   set is a separate question: a future `chore:` may sweep

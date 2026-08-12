@@ -120,6 +120,15 @@ export const Dash = {
   textMuted: '#8FA093',
   textFaint: '#5E6B61',
   accent: '#7ED99B',
+  // The D145 Stash-header tokens (documentation/design/delta-stash-header.md):
+  // the segmented control's track and its standing segment, the sort chip's
+  // fill and hairline border, and the chip's value text. Ratified spec values,
+  // carried here rather than inline so a header restyle edits this file.
+  segmentTrack: 'rgba(255,255,255,0.06)',
+  segmentOn: '#2A342C',
+  chipFill: 'rgba(255,255,255,0.05)',
+  chipBorder: 'rgba(255,255,255,0.08)',
+  textStrong: '#D5DED7',
   // Verdict band identity, keyed by the D85 rung words, fixed order.
   verdict: {
     Loved: '#7ED99B',

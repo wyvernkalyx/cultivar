@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FlatList, Modal, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import {
+  ActionSheetIOS,
+  FlatList,
+  Modal,
+  Platform,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import AddToShelfModal from '@/components/add-to-shelf-modal';
@@ -40,6 +50,7 @@ import { supabase } from '@/lib/supabase';
 // Font families for the section row, registered app-wide in the root layout
 // (D83 Decision 1) and referenced by name as the card does.
 const SORA_REGULAR = Type.family.regular;
+const SORA_SEMIBOLD = Type.family.semibold;
 const SORA_BOLD = Type.family.bold;
 
 // The retirement events (D90), exactly the columns selected; ported here
@@ -310,6 +321,30 @@ export function ShelfList({ onSummary, filterQuery }: ShelfListProps) {
         );
   const activeCount = rows === null ? 0 : rows.filter((coa) => coa.on_shelf_count > 0).length;
   const historyCount = rows === null ? 0 : rows.filter((coa) => coa.on_shelf_count === 0).length;
+  // The chip states the standing order; the menu is the only place it
+  // changes. Falls back to the first entry so the chip always names
+  // something rather than rendering an empty value.
+  const sortLabel = SORT_LABELS.find((option) => option.key === sort)?.label ?? SORT_LABELS[0].label;
+
+  // The sort menu (D145): a system control, so the standing choice is
+  // announced by the platform rather than by a colored fill, and the
+  // checkmark rides the option the spec asks for it on.
+  const openSortMenu = () => {
+    // iOS only by construction. Android is banked for this app, and a
+    // platform this module does not serve must no-op rather than throw.
+    if (Platform.OS !== 'ios') return;
+    const labels = SORT_LABELS.map((option) =>
+      option.key === sort ? `\u2713 ${option.label}` : option.label
+    );
+    ActionSheetIOS.showActionSheetWithOptions(
+      { options: [...labels, 'Cancel'], cancelButtonIndex: labels.length },
+      (index) => {
+        // Cancel and the dismissal index both land outside the options.
+        if (index < 0 || index >= labels.length) return;
+        setSort(SORT_LABELS[index].key);
+      }
+    );
+  };
 
   if (error) {
     return (
@@ -385,46 +420,53 @@ export function ShelfList({ onSummary, filterQuery }: ShelfListProps) {
         stickyHeaderIndices={[0]}
         ListHeaderComponent={
           <View style={styles.pinnedHeader}>
-            <View style={styles.segmentRow}>
+            {/* Possession as a two-way switch, one track (D145). The counts
+                stay whole-segment: they say how much is on each side, which
+                is what a switch has to say to be worth reading. */}
+            <View style={styles.segmentTrack}>
               {(
                 [
                   { key: 'active', label: `Active (${activeCount})` },
                   { key: 'history', label: `History (${historyCount})` },
                 ] as { key: Segment; label: string }[]
-              ).map((option) => (
-                <Pressable
-                  key={option.key}
-                  onPress={() => setSegment(option.key)}
-                  accessibilityRole="button"
-                  accessibilityLabel={option.label}
-                  style={[
-                    styles.segmentPill,
-                    segment === option.key && styles.segmentPillActive,
-                  ]}>
-                  <Text
-                    style={[
-                      styles.segmentText,
-                      segment === option.key && styles.segmentTextActive,
-                    ]}>
-                    {option.label}
-                  </Text>
-                </Pressable>
-              ))}
+              ).map((option) => {
+                const isSelected = segment === option.key;
+                return (
+                  <Pressable
+                    key={option.key}
+                    onPress={() => setSegment(option.key)}
+                    // The 32pt visual is the ratified dimension; the slop is
+                    // what carries the target to the 44pt floor without
+                    // moving anything on screen.
+                    hitSlop={{ top: 6, bottom: 6 }}
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: isSelected }}
+                    accessibilityLabel={option.label}
+                    style={[styles.segment, isSelected && styles.segmentSelected]}>
+                    <Text style={isSelected ? styles.segmentLabelSelected : styles.segmentLabel}>
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
+            {/* The count reports what is actually on screen -- segment,
+                search, and order already applied -- so it answers "how many
+                am I looking at", not "how many exist". */}
             <View style={styles.sortRow}>
-              {SORT_LABELS.map((option) => (
-                <Pressable
-                  key={option.key}
-                  onPress={() => setSort(option.key)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Sort: ${option.label}`}
-                  style={[styles.sortPill, sort === option.key && styles.sortPillActive]}>
-                  <Text
-                    style={[styles.sortText, sort === option.key && styles.sortTextActive]}>
-                    {sort === option.key ? `\u2713 ${option.label}` : option.label}
-                  </Text>
-                </Pressable>
-              ))}
+              <Text style={styles.strainCount}>
+                {`${displayRows.length} ${displayRows.length === 1 ? 'strain' : 'strains'}`}
+              </Text>
+              <Pressable
+                onPress={openSortMenu}
+                hitSlop={{ top: 8, bottom: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Sort: ${sortLabel}`}
+                style={styles.sortChip}>
+                <Text style={styles.sortChipPrefix}>Sort:</Text>
+                <Text style={styles.sortChipValue}>{sortLabel}</Text>
+                <Text style={styles.sortChipCaret}>{'\u25bc'}</Text>
+              </Pressable>
             </View>
           </View>
         }
@@ -571,56 +613,81 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: Dash.textMuted,
   },
-  // The segment toggle and sort pills (slice 4a, reference screen 01),
-  // replacing the section row and the superseded archive entry link.
+  // The D145 header: a two-segment switch over one track, then the count
+  // and the sort chip on one row. The band carries the screen background
+  // so cards never show through it while it is pinned.
   pinnedHeader: {
     backgroundColor: Dash.bg,
-  },
-  segmentRow: {
-    flexDirection: 'row',
-    gap: Space.chip,
     paddingTop: Space.card,
-    marginBottom: Space.row,
+    paddingBottom: Space.row,
+    gap: Space.row,
   },
-  segmentPill: {
-    paddingHorizontal: Space.card,
-    paddingVertical: Space.chip,
-    borderRadius: Dash.radius.pill,
-    backgroundColor: Dash.surface,
+  segmentTrack: {
+    flexDirection: 'row',
+    backgroundColor: Dash.segmentTrack,
+    borderRadius: 10,
+    padding: 2,
   },
-  segmentPillActive: {
-    backgroundColor: Dash.accent,
+  segment: {
+    flex: 1,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  segmentText: {
+  segmentSelected: {
+    backgroundColor: Dash.segmentOn,
+    // The one elevation in this app, and the ratified spec pins it: it is
+    // what lifts the standing side off the track it shares with the other.
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+  },
+  segmentLabel: {
+    fontFamily: SORA_SEMIBOLD,
+    fontSize: 12.5,
+    color: Dash.textMuted,
+  },
+  segmentLabelSelected: {
     fontFamily: SORA_BOLD,
-    fontSize: 12,
-    color: Dash.textBody,
-  },
-  segmentTextActive: {
-    color: Dash.bg,
+    fontSize: 12.5,
+    color: Dash.text,
   },
   sortRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Space.chip,
-    marginBottom: Space.row,
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  sortPill: {
+  strainCount: {
+    fontFamily: SORA_REGULAR,
+    fontSize: 11,
+    color: Dash.textMuted,
+  },
+  sortChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Space.inline,
+    height: 28,
     paddingHorizontal: Space.row,
-    paddingVertical: 6,
-    borderRadius: Dash.radius.pill,
-    backgroundColor: Dash.surface,
+    borderRadius: 14,
+    backgroundColor: Dash.chipFill,
+    borderWidth: 1,
+    borderColor: Dash.chipBorder,
   },
-  sortPillActive: {
-    backgroundColor: Dash.accent,
-  },
-  sortText: {
+  sortChipPrefix: {
     fontFamily: SORA_REGULAR,
     fontSize: 11.5,
-    color: Dash.textBody,
+    color: Dash.textMuted,
   },
-  sortTextActive: {
-    fontFamily: SORA_BOLD,
-    color: Dash.bg,
+  sortChipValue: {
+    fontFamily: SORA_SEMIBOLD,
+    fontSize: 11.5,
+    color: Dash.textStrong,
+  },
+  sortChipCaret: {
+    fontFamily: SORA_REGULAR,
+    fontSize: 9,
+    color: Dash.textMuted,
   },
 });
