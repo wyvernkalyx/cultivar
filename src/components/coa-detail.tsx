@@ -368,8 +368,9 @@ export function CoaDetail({
   };
 
   // The gear menu (slice 6, reference screen 03): Edit opens the rename
-  // sheet; Delete runs the cascade-naming confirm (the D104 supersession's
-  // condition). Re-parse stays banked (design doc non-goal).
+  // sheet; Delete runs the two-branch confirm (blocked-with-steer when
+  // history exists, D144; plain confirm otherwise). Re-parse stays
+  // banked (design doc non-goal).
   const openGear = () => {
     if (coa === null) return;
     Alert.alert(coa.strain?.trim() || 'This item', undefined, [
