@@ -7,7 +7,7 @@ import type { PreferenceSummaryProps } from '@/components/preference-summary';
 import { ShelfList } from '@/components/shelf-list';
 import { ThemedText } from '@/components/themed-text';
 import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, Dash, MaxContentWidth, Space, Spacing, Type } from '@/constants/theme';
+import { Dash, MaxContentWidth, Space, Spacing, Type } from '@/constants/theme';
 import { exportProfile } from '@/lib/export';
 import { resetProfile } from '@/lib/profile-reset';
 import { supabase } from '@/lib/supabase';
@@ -357,7 +357,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     alignItems: 'center',
     gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
     maxWidth: MaxContentWidth,
   },
   header: {
