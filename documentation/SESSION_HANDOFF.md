@@ -1,171 +1,221 @@
 # SESSION_HANDOFF
 
-Status: WRITE-LAST. Committed as this session's final act, 2026-08-11
-(second handoff this date; the prior session closed past midnight).
-HEAD at write time is c308e13f (tense-truth pass); this commit rides on
-top.
+Status: WRITE-LAST. Committed as this session's final act, 2026-08-12.
+HEAD at write time is d7c1ebdb (dead-band fix); this commit rides on
+top. State claims below were implementer-verified against the repo
+before this commit (HEAD, worktree, shipped shas, migrations count,
+delta-doc line 22).
 
 ## Preamble -- argue against yourself first
 
-Two refutations from this session. First, the architect predicted at
-70% confidence that the seven untracked 0N-screens.png were slice-6
-gate evidence, siding with the 2026-08-10 handoff against
-design-overhaul.md; the operator opened one and they were v1 design
-mockups (9:41 mock status bar, sample data). The fresher witness was
-the wrong one, and a handoff error survived a session unchallenged.
-Second, the banked tense-pass item said "defects 1 and 3 both read
-present-tense-false"; the end-to-end read found all three defects
-false. Trust this file only through its Phase A predictions; carried
-characterizations of artifacts are guesses until the artifact is read.
+Three refutations from this session's own work. First: the synced
+project-knowledge copies of this file and CLAUDE.md were one session
+stale at open -- five commits of drift, caught only by the Phase A
+paste; treat any off-repo copy as historical context, never state.
+Second: the architect predicted the History blank space three ways
+(empty-data card, invisible card, stale list measurement) and the
+device refuted all three; the actual cause was container padding
+reserving space for an in-flow tab bar. Third: a build prompt
+asserted "operator-ruled" for a one-line headline without reading
+art-direction.md, which carries a ratified wrap-never-shrink rule;
+the implementer's STOP caught it. Trust this file only through its
+Phase A predictions.
 
 ## Entry point
 
-The standing-rules promotion pass (Tier 1): the six standing rules and
-seven promotion candidates recorded in the 2026-08-10 handoff, still
-unpromoted -- the last owed docs debt. Retrieve the exact text from
-commit 60a2977e's SESSION_HANDOFF.md blob, never from memory (note:
-git dates that commit 2026-08-11 -- committed past midnight; identity
-is settled by its content). After it lands, the backlog is
-operator-paced only, and the named next product move is the app-rename
-collision check (shortlist: Firsthand, Analyte, Batchbook, Chemovar)
--- an App Store-facing decision, no prompt owed until the operator
-picks it up. Ratio note (handoff-specs 4.7): this session shipped two
-docs commits and one feat; the feat closed a proven data-loss
-regression, but the next session should tilt toward product.
+The standing-rules promotion pass (Tier 1) -- now deferred four
+times and grown: the six standing rules and seven candidates from
+the 2026-08-10 handoff (retrieve from commit 60a2977e's blob, never
+memory), plus four new candidates from this session: (1) skill-run
+prompts must state platform explicitly (context.mjs cannot infer it
+without PRODUCT.md; omission silently scores against web
+heuristics); (2) dead-space defects get their geometry pinned
+(scrolls-with-content vs fixed-on-screen) before any hypothesis is
+written; (3) range-scoped ASCII gates pair a same-file whole-count
+control only when the file carries non-ASCII -- state which case
+holds; (4) package presence is probed by directory, never
+require.resolve (exports maps false-negative). After it lands, the
+named product move is the FAB dead-zone fix (device-observed, the
+app's primary control), then the remaining ranked backlog below.
 
 ## State at close (verified at origin at write time)
 
-- At write time origin/main = c308e13f1e8be46d3e625b565f23f2ad7b5bce9e
-  (observed push line 906d05f..c308e13, rev-list 0 0); this handoff
-  commit rides on top and is pushed as the session's final act. At
-  next open expect origin/main = the handoff commit (subject
-  predicted: "docs: session handoff -- D144 arc closed, promotion
-  pass next"), sync 0 0. If HEAD is neither, work continued past this
-  handoff -- reconcile before proceeding.
+- At write time origin/main = d7c1ebdbfdbdc5d830df2297eb0c1a7a5aa77c33
+  (observed push line 1b3b565..d7c1ebd, rev-list 0 0; corroborated
+  by the implementer from the local remote-tracking ref, no fetch);
+  this handoff commit rides on top and is pushed as the session's
+  final act. At next open expect origin/main = the handoff commit
+  (subject predicted: "docs: session handoff -- design validation
+  shipped seven, dead band dead"), sync 0 0. If HEAD is neither,
+  work continued past this handoff -- reconcile before proceeding.
 - Worktree at close: clean except the standing TWO untracked
-  (.claude/settings.local.json, .claude/skills/). The seven
-  0N-screens.png are deleted by operator ruling -- any precondition
-  still expecting nine untracked lines is stale.
+  (.claude/settings.local.json, .claude/skills/ -- the latter now
+  contains the impeccable skill, installed this session for the
+  implementer).
 - Toolchain: 161 tests / 3 suites (npm test, never bare npx jest);
-  tsc 0 errors; lint exactly 1 error (template use-color-scheme.web.ts);
-  migrations 19 well-formed names.
-- DB, MCP-observed this session (stale on arrival by design): coas 15,
-  retirements 16, storage objects in coa-pdfs 14 (11 live paths + 3
-  kept orphans) -- all three re-read after the device gate.
-  session_entries 92, session_current 5 (3 Loved, 1 Liked, 1 Neutral),
-  on_shelf_count {0:13, 1:2}, favorite=true 0 -- read at session open;
-  the gate exercised no survey, so entries are predicted unchanged,
-  unverified. The gate's throwaway Death Star row (+1 coa, +1 object)
-  netted to zero, DB-verified by pinned object path.
+  tsc 0 errors; lint exactly 1 error (template
+  use-color-scheme.web.ts); migrations 19 well-formed names.
+  Re-measured repeatedly today at these values.
+- DB reads made this session (MCP, stale on arrival by design):
+  on_shelf_count partition {0:13, 1:2} (coas 15); all 13 History
+  rows carry strain and totals; created_at ordering read for the
+  rated-sort tail; three duplicate Animal Face rows, two RAINBOW
+  RUNTZ, two Permanent Shades (one null brand). Other pins
+  (retirements, session counts, favorite) were NOT re-read today --
+  carry the 2026-08-11 handoff's values as stale.
 
-## What shipped (newest first)
+## What shipped (newest first; seven commits, shas verified)
 
-c308e13 docs: tense-truth pass -- retention Purpose defects and D144
-        slice 3 read as history
-906d05f feat: D144 follow-up -- two-branch delete confirm, D87 Storage
-        removal restored
-3099c28 docs: CLAUDE.md truth-fix -- [ADAPT] items 1 and 3 match HEAD
+d7c1ebd feat: remove Stash bottom reservation -- the tab bar is
+        in-flow
+1b3b565 feat: stash card strain headline renders one line (D83
+        scope amendment)
+5575d5e feat: A-Z sort option; segment shadow literal tokenized
+d8ec3c6 feat: D145 -- Stash header: segmented control and native
+        sort menu
+6c144f8 docs: D145 -- Stash header delta ratified (segmented
+        control + sort menu)
+e42b6f2 chore: declare dark-only appearance in app.json
+ec8c178 feat: Stash message states declare Dash colors, not
+        scheme-resolved
 
 ## The arcs
 
-D144 slice 3 (the entry point, executed whole). Phase A traced the
-live delete path: openGear -> confirmDelete -> inline supabase delete,
-no Storage call anywhere, removeCoaPdf dead at zero callers. Mechanism
-of the D87 regression, established from history: 00a6e9c (D104)
-removed Delete and correctly took its Storage half with it; 00a9dcc
-(slice 6) rebuilt Delete from the reference design rather than from
-the deleted code, and no gate could notice -- an unused export is
-invisible to tsc, lint, and the suites. Design ratified: two-branch on
-current session count (n > 0 pre-empts with a blocked notice --
-identity echo, Retire steer only when on-shelf since the Retire row
-does not render off-shelf; n == 0 reaches the confirm, now without the
-count clause D144 falsified); a 23503 on the write lands on the same
-notice, because current-count zero does not imply deletable
-(tombstones and retirement rows block too -- the DB stays the
-authority). Success re-wires removeCoaPdf: row first, then object,
-failure surfaced, never blocking close. Device gate, per-step
-verdicts: Fuel Pump (blocked, steer), compliance test (blocked, no
-steer), Hooch (confirm then FK refusal mapped to the notice --
-retirement-only row, the exact case n == 0 cannot see), and a
-throwaway Death Star ingest for the success path, its Storage object
-pinned by path before delete and confirmed absent by name after.
+Design validation (the session's frame). Operator invoked the
+Impeccable skill; read-only dual-agent critique + native audit ran
+in-repo (findings in chat, not repo): heuristics 24/40, audit
+10/20, systemic finding "semantics governed, surfaces not" -- D137
+shipped half-finished (no sized type roles) is upstream of most
+P1s. The bundled detector returned [] and the implementer proved
+the zero vacuous by control-pairing (8 of 59 rules reachable on RN
+source); a skill-run platform line is mandatory (see entry point).
+The P0 (scheme-resolved text on fixed-dark grounds, 1.09:1 in
+phone-Light) was device-corroborated via a forced empty state and
+fixed at Scope A by ruling; dark-only declared in app.json kills
+the class at platform level, gate owed at next EAS rebuild.
 
-Docs truth (two commits). CLAUDE.md [ADAPT] items 1 and 3 corrected
-from the 2026-08-10 handoff's owed text (161/3 suites, insights roots,
-retention writer landed). Tense-truth pass: retention doc's three
-Purpose defects converted to past tense under a framing note;
-coa-delete-restrict.md's status line, Named-costs interval, and slice
-3 entry now record the 906d05f discharge.
+D145 (Stash header). Claude Design delta ratified with operator
+floors (44pt hit areas, AA count label, native menu); the new
+mockup superseded the v2 north-star reference screen in place by
+ruling, pinned by hash on both sides. Feat shipped: two-segment
+control (tab role + selected state), Sort chip opening
+ActionSheetIOS (Platform-guarded), five Dash tokens. Operator then
+added A-Z (null/blank strains follow named rows in fetched order,
+extending the standing absence convention) and one-line card
+headlines (bounded shrink to 0.7) -- the latter required a D83
+scope amendment: wrap-only now explicitly governs the survey line
+only, dissent recorded, survey reopening condition unchanged.
+Card distillation is DEAD by ruling: D131/D132 stand.
+
+Dead band (diagnosis arc, the session's humbling). A fixed
+touch-dead band above the tab bar, both segments, surviving cold
+restart. Three architect hypotheses refuted by device observation
+before the geometry was pinned (fixed-on-screen, not in-flow);
+Phase A2 then found it by arithmetic: index.tsx reserved
+BottomTabInset+spacing (+ additive safe-area inset, ~134pt) for a
+bar expo-router/ui renders in-flow -- layout had already
+subtracted it. A one-line worktree-only magenta probe confirmed
+ownership on device (Insights as control: same constant on
+scrollable content = benign over-pad). Fix: delete the
+reservation. The probe methodology is worth reusing; the
+geometry-pin rule is promotion candidate 2.
 
 ## Refuted hypotheses / memory corrections
 
-- The seven 0N-screens.png were mockups, not gate evidence (see
-  Preamble). Slice-6 gate evidence lives where it always did: operator
-  verdicts in chat, recorded in 00a9dcc's body. Deleted by ruling.
-- The tense-pass banked item undercounted: all three Purpose defects,
-  not two.
-- Implementer's Phase A claimed "n > 0 is exactly the predicate that
-  says the delete will fail" -- half right; n > 0 guarantees a block,
-  n == 0 guarantees nothing. The 23503 branch exists because of the
-  correction, and Hooch proved it live.
-- 906d05f changed coa-delete-restrict.md's truth and did not amend it
-  -- architect miss at prompt authoring, caught at the tense-pass
-  read, fixed at c308e13.
-- The architect's first Phase A block omitted the HEAD-subject
-  request, leaving the handoff-commit identity predicted rather than
-  observed for one round trip -- gap self-caught and closed.
+- Project-knowledge copies of governance docs were stale at open
+  (five commits); repo settled it.
+- Blank-space hypotheses refuted in order: empty-data card (DB
+  read), invisible card (dead-to-touch), stale measurement (cold
+  restart). Cause: container padding.
+- The critique's claim that add-to-shelf-modal sits on a fixed-dark
+  parent was false (scheme-consistent island); the P0's blast
+  radius was 4 sites in one file, not codebase-wide.
+- "Every row has a strain" was false (string | null, live null
+  rows on four surfaces).
+- "RN's default shadowColor is black" was false (default is unset;
+  rendering rested on an undocumented CALayer fallback) -- resolved
+  by token, not removal.
+- The audit note "sort/segment state destroyed on every
+  shelfVersion remount" was overstated (profile reset only;
+  case-sensitive grep had hidden the setter).
+- The audit's BottomTabInset note drew the wrong conclusion from
+  correct arithmetic (assumed the bar overlapped; it does not).
+- The draft of this handoff said "shipped eight" for seven -- a
+  hand-count, corrected against git log at the verification pass.
 
 ## Operator rulings this session
 
-Slice-3 design ratified (four points, recorded in the 906d05f body);
-tense-pass bytes ratified; seven mockup PNGs deleted (identity settled
-by operator look; ls-tree deletion gate returned 0 first); two banked
-items killed: CoaDetail docblock claim (fixed at 906d05f) and the
-delete-confirm UX watch (superseded -- D144 blocks the accident class
-at the FK; a recurrence costs one history-free row and its PDF).
+Design validation preceded the promotion-pass entry point; P0 fix
+Scope A (4 sites) with dark-only both-now; D145 floors + three
+implementation rulings (chip prefix textMuted, post-filter strains
+count, spec colors as Dash tokens); A-Z with null-partition +
+shadowInk token; card headline diverges / survey stands (D83 scope
+amendment, dissent recorded); Reduce Motion = Scope B (all
+animation sites, prompt owed when it reaches the front); card
+distillation dead (D131/D132 stand); north-star 01-stash.png
+superseded in place; expandable History cards requested (delta doc
++ D-number owed before code); handoff now.
 
 ## Refutation ledger, this session
 
-Architect errors: 3 (the 70% PNG prediction, refuted by operator look;
-the unamended coa-delete-restrict.md at 906d05f, caught at the
-end-to-end read; the omitted HEAD-subject request, self-caught).
-Implementer: 0 errors; two catch credits (the Q5 premise flag; the
-79-column line finding); one protocol deviation correct in outcome (Q5
-premise wrong -- Retire is not in the gear menu -- answered the
-question's intent instead of STOPping; outcome accepted, precedent
-not, second occurrence of this pattern). Operator: 0. Zero errors
-reached origin.
+Architect errors, enumerated (count = list length): airplane-mode
+gate design severed the dev-server channel the gate needed; an
+unsatisfiable git-status expectation (directories are never
+listed); a placement directive that ignored the delta doc's own
+"replaces the previous" clause; the nullable-strain premise; the
+shadow-default premise; "both docs carry non-ASCII" (one is pure
+ASCII); a hand-counted accessibilityState prediction the correct
+.map() implementation refutes; "operator-ruled" written against an
+unread design doc (D83); a verbatim line-break that would have
+split its own gate phrase across a wrap; three unpinned-geometry
+predictions on the dead band; the draft handoff's shipped-commit
+hand-count (eight for seven). Implementer errors, enumerated per
+its own correction of this ledger's first draft: the critique's
+fixed-dark-parent claim (self-caught next run); the shelfVersion
+remount overstatement and the BottomTabInset wrong conclusion
+(both originating in the same audit, listed above as refutations
+and attributed here); plus two mid-run mechanical slips
+self-caught in one arc (literal glyphs written for escape forms,
+then a sed backslash-u mangling while fixing them). Operator: 0.
+Zero errors reached origin; several reached the worktree and none
+survived a gate.
 
-## Owed corrections and promotions (carried)
+## Banked follow-ups (ranked backlog, then unranked)
 
-The six standing rules and seven promotion candidates from the
-2026-08-10 handoff (60a2977e blob) -- the entry point above. Nothing
-else is owed.
+Ranked (operator-ratified order, updated): 1 FAB dead zone
+(observed; after the entry point); 2 raw error copy slice; 3 D137
+completion (typeset -- unblocks most P1s); 4 accessibility labels
+(session-ladder first; D145 discharged this header's share);
+5 splash dark sub-key; 6 dead chrome chore (web-badge, hint-row);
+7 Reduce Motion Scope B (ruled); 8 expandable History (delta doc +
+D-number first; collects the delta doc's false line-22
+"top-terpene subline" description).
 
-## Banked follow-ups (beyond the entry point)
+Unranked: retire BottomTabInset's last consumer (insights.tsx
+over-pad) + its stale rationale comment in one chore; the bloom's
+false takes-no-touches comment (three reports now); session-ladder
+D83 comment lacks the scope note; same-name disambiguation
+(heavier: three Animal Faces observed); Stash message states
+render system font on a Sora surface (dissolves into typeset);
+last-card 8pt breathing room (taste call, contentContainerStyle
+only); orphaned PDFs before public release; app rename collision
+check (shortlist unchanged).
 
-- App rename collision check on the shortlist (operator-paced).
-- Same-name row disambiguation cue (two Permanent Shades, two Animal
-  Faces; a wrong-row open has happened).
-- Orphaned-PDF disposition (3 kept orphans), before any public release.
-- Purpose-section micro-rewrap in coa-retention-and-possession.md (a
-  79-column line and a ragged framing note; rides with the next commit
-  touching that doc, never its own).
-- Standing fixture recipe, recorded for reuse: delete-path gates use a
-  throwaway ingest (any COA PDF not already in the stash; dedupe
-  answers "Already in your stash" if the hash is live), with the
-  Storage object pinned by path pre-delete so the read-back is
-  discriminating by name, not by count.
-- Unexercised arms, carried honestly: the null-strain confirm/notice
-  fallbacks and the PDF-not-removed alert branch -- code-read-verified
-  only, never fired live.
+## Unexercised arms (carried honestly)
+
+Error/Retry state (arithmetic-verified only); loading-state look;
+A-Z null-strain ordering, accent/case ties, device-locale
+variance; narrowest card width (badge + overflow; no live
+favorite); survey-side wrap divergence on device; VoiceOver
+selected-state announcement; dark-only launch gate (next EAS
+rebuild, which also checks D145's menu on a fresh binary).
 
 ## Working rhythm
 
-Stable method lives in CLAUDE.md. Two deltas proven this session:
-architect-run MCP with pre-stated predictions carried the entire gate
-observation load (Tier 3 precedent extended to Tier 2 read-backs), and
-device-gate verdicts arrived as screenshots plus one-line answers --
-accepted as per-step evidence, with the rule that a screenshot of a
-confirm proves the confirm, never the tap after it: the fork's far
-side needs its own verdict or a discriminating DB read.
+Stable method lives in CLAUDE.md. Three deltas proven this
+session: architect-run MCP carried DB observation including
+mid-diagnosis reads; a worktree-only visual probe (one property,
+never committed, staged-blob-gated out) is the ratified form for
+layout ownership questions; device gates arrived as screenshots
+plus one-line answers, with one aggregate verdict accepted and
+recorded as aggregate per the standing rule.
