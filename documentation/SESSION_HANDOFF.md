@@ -219,3 +219,18 @@ never committed, staged-blob-gated out) is the ratified form for
 layout ownership questions; device gates arrived as screenshots
 plus one-line answers, with one aggregate verdict accepted and
 recorded as aggregate per the standing rule.
+
+## Amendment (2026-08-12, promotion pass)
+
+- "Seven promotion candidates" (cited here and in the 2026-08-11
+  handoff) is a phantom count: 60a2977e's blob carries six standing
+  rules and one owed correction, no seven-item list. Unrecoverable.
+  Promoted set: nine items (rules 2-6 from 2026-08-10, all four
+  2026-08-12 candidates); rule 1 recorded as already covered by the
+  carried-content bullet in Prompt conventions.
+- The two owed [ADAPT] corrections were found already landed at HEAD
+  3ef28f6 during this pass's blob read: commit 3099c28 ("docs:
+  CLAUDE.md truth-fix -- [ADAPT] items 1 and 3 match HEAD"), a
+  discharge recorded in neither this handoff nor the 2026-08-11 one.
+- The seven 0N-screens.png: operator confirms the banked identity
+  check ran before their removal.
