@@ -52,14 +52,15 @@ was the runner-up; rejected because it ratifies the mechanism that
 destroyed data three times in one gate session, and because the current
 delete path is not even erasure-complete (next section).
 
-## The delete path today is also a D87 regression
+## The delete path was also a D87 regression (closed at 906d05f)
 
 Observed 2026-08-11 (read-only SQL): 3 objects in coa-pdfs match no live
 pdf_object_path -- the accident COAs' PDFs. D87 ruled that delete must
 reach Storage with failure surfaced, and the retention slice's gate
 observed removal working; the v2 delete path orphaned all three. The
-code-side cause is unread and is the opening Phase A question of the
-follow-up slice below. Operator ruling 2026-08-11: the 3 orphans are
+code-side cause was read at the follow-up slice's Phase A and recorded
+in 906d05f's body (00a6e9c removed the flow with its Storage half;
+00a9dcc rebuilt it without it). Operator ruling 2026-08-11: the 3 orphans are
 KEPT -- reversible, and the sole surviving artifacts of the accident
 COAs; disposition revisits before any public release.
 
