@@ -234,3 +234,24 @@ recorded as aggregate per the standing rule.
   discharge recorded in neither this handoff nor the 2026-08-11 one.
 - The seven 0N-screens.png: operator confirms the banked identity
   check ran before their removal.
+
+### Erratum (same day)
+
+- "Recorded in neither this handoff nor the 2026-08-11 one" is wrong.
+  Two handoffs carry 2026-08-11: 14ab7bb (where the claim holds) and
+  00e1e9b (where it fails -- 3099c28 sits in What shipped, line 67,
+  and in the docs-truth arc, line 93). The sentence was written
+  against a stale copy that predated 00e1e9b entirely; the session
+  range 2ecafb3..3ef28f6 (13 commits, three sessions) was enumerated
+  only afterward. Enumerate the range first, then claim.
+- The phantom seven is cited in three handoffs, not two: 60a2977e's
+  successor chain at 14ab7bb, 00e1e9b, and 3ef28f6. Phantom status
+  unchanged -- 60a2977e's blob was observed directly and carries six
+  rules, no seven-item list.
+- Rank 2 "raw error copy slice" was ratified without a recorded
+  definition (operator could not reconstruct it, 2026-08-12). Redefined
+  by ruling: replace raw Supabase/Postgres error strings with human
+  copy at the sites the 2026-08-12 delete-path audit enumerated:
+  src/app/index.tsx:75,114,161; src/components/coa-detail.tsx:456,494;
+  src/lib/coa-retire.ts:83,107. Line numbers are the audit's; the
+  slice's own Phase A re-verifies them at its HEAD.
