@@ -1,257 +1,179 @@
 # SESSION_HANDOFF
 
-Status: WRITE-LAST. Committed as this session's final act, 2026-08-12.
-HEAD at write time is d7c1ebdb (dead-band fix); this commit rides on
-top. State claims below were implementer-verified against the repo
-before this commit (HEAD, worktree, shipped shas, migrations count,
-delta-doc line 22).
+Status: WRITE-LAST. Committed as this session's final act, 2026-08-12
+(second session this date). HEAD at write time is 8634a516 (F1 comment
+fix); this commit rides on top.
 
 ## Preamble -- argue against yourself first
 
-Three refutations from this session's own work. First: the synced
-project-knowledge copies of this file and CLAUDE.md were one session
-stale at open -- five commits of drift, caught only by the Phase A
-paste; treat any off-repo copy as historical context, never state.
-Second: the architect predicted the History blank space three ways
-(empty-data card, invisible card, stale list measurement) and the
-device refuted all three; the actual cause was container padding
-reserving space for an in-flow tab bar. Third: a build prompt
-asserted "operator-ruled" for a one-line headline without reading
-art-direction.md, which carries a ratified wrap-never-shrink rule;
-the implementer's STOP caught it. Trust this file only through its
-Phase A predictions.
+Three refutations from this session. First: the architect opened
+holding a project-knowledge handoff one full session stale -- it knew
+one 2026-08-11 handoff where two exist (14ab7bb, 00e1e9b) and nothing
+of the 13-commit range 2ecafb3..3ef28f6; Phase A caught the drift,
+but not before one false sentence about that range reached origin
+(c47c677, erratum eb26a0e same day). Second: a discovery prompt
+presented D144 slice 3 as outstanding work; it had shipped at 906d05f
+a day earlier -- the implementer's STOP was correct and the "it was
+finished" hypothesis had never made the architect's list. Third: the
+2026-08-10 "seven promotion candidates" cited by three successive
+handoffs is a phantom -- 60a2977e's blob, read directly, carries six
+rules and no seven-item list. Trust this file only through its Phase A
+predictions.
 
 ## Entry point
 
-The standing-rules promotion pass (Tier 1) -- now deferred four
-times and grown: the six standing rules and seven candidates from
-the 2026-08-10 handoff (retrieve from commit 60a2977e's blob, never
-memory), plus four new candidates from this session: (1) skill-run
-prompts must state platform explicitly (context.mjs cannot infer it
-without PRODUCT.md; omission silently scores against web
-heuristics); (2) dead-space defects get their geometry pinned
-(scrolls-with-content vs fixed-on-screen) before any hypothesis is
-written; (3) range-scoped ASCII gates pair a same-file whole-count
-control only when the file carries non-ASCII -- state which case
-holds; (4) package presence is probed by directory, never
-require.resolve (exports maps false-negative). After it lands, the
-named product move is the FAB dead-zone fix (device-observed, the
-app's primary control), then the remaining ranked backlog below.
+FAB dead zone (rank 1 of the ranked backlog, device-observed, the
+app's primary control). This session shipped five commits, all docs --
+zero product code beyond a comment. Per handoff-specs 4.7 that ratio
+is the finding: the verification apparatus spent the day repairing its
+own records, correctly, and the next session should open on the
+product. Rank 2 is now defined (see rulings); the backlog below it is
+unchanged from the prior handoff.
 
-## State at close (verified at origin at write time)
+## Start here (Phase A, read-only)
 
-- At write time origin/main = d7c1ebdbfdbdc5d830df2297eb0c1a7a5aa77c33
-  (observed push line 1b3b565..d7c1ebd, rev-list 0 0; corroborated
-  by the implementer from the local remote-tracking ref, no fetch);
-  this handoff commit rides on top and is pushed as the session's
-  final act. At next open expect origin/main = the handoff commit
-  (subject predicted: "docs: session handoff -- design validation
-  shipped seven, dead band dead"), sync 0 0. If HEAD is neither,
-  work continued past this handoff -- reconcile before proceeding.
-- Worktree at close: clean except the standing TWO untracked
-  (.claude/settings.local.json, .claude/skills/ -- the latter now
-  contains the impeccable skill, installed this session for the
-  implementer).
-- Toolchain: 161 tests / 3 suites (npm test, never bare npx jest);
-  tsc 0 errors; lint exactly 1 error (template
-  use-color-scheme.web.ts); migrations 19 well-formed names.
-  Re-measured repeatedly today at these values.
-- DB reads made this session (MCP, stale on arrival by design):
-  on_shelf_count partition {0:13, 1:2} (coas 15); all 13 History
-  rows carry strain and totals; created_at ordering read for the
-  rated-sort tail; three duplicate Animal Face rows, two RAINBOW
-  RUNTZ, two Permanent Shades (one null brand). Other pins
-  (retirements, session counts, favorite) were NOT re-read today --
-  carry the 2026-08-11 handoff's values as stale.
+- origin/main at write time = 8634a516b03b07df671858e18b5440d475edd397
+  (observed push line eb26a0e..8634a51, rev-list 0 0). This handoff
+  commit rides on top, pushed as the final act. At next open expect
+  origin/main = the handoff commit (subject predicted: "docs: session
+  handoff -- records repaired, rank 2 defined, product next"), sync
+  0 0. If HEAD is neither, work continued past this handoff --
+  reconcile before proceeding.
+- Worktree: clean except the standing two untracked
+  (.claude/settings.local.json, .claude/skills/).
+- Toolchain, re-measured this session at the F1 build gate: 161 tests
+  / 3 suites (npm test, never bare npx jest); tsc 0 errors; lint
+  exactly 1 error (template use-color-scheme.web.ts; lint's own exit
+  is 1 when the baseline error is present -- unmasked forms below).
+  Migrations: 19 well-formed names.
+- DB (MCP read at session open, stale on arrival by design): coas 15,
+  possession {0:13, 1:2}, retirements 16, session_entries 92,
+  session_current 5, favorite=true 0. Unchanged from the 2026-08-11
+  close -- no app writes between sessions. D144 constraint state
+  re-observed: both history FKs RESTRICT, three analyte FKs CASCADE.
+- If any of these don't match, the repo wins -- re-baseline before
+  proceeding.
 
-## What shipped (newest first; seven commits, shas verified)
+## What shipped (newest first; five commits, shas from pasted output)
 
-d7c1ebd feat: remove Stash bottom reservation -- the tab bar is
-        in-flow
-1b3b565 feat: stash card strain headline renders one line (D83
-        scope amendment)
-5575d5e feat: A-Z sort option; segment shadow literal tokenized
-d8ec3c6 feat: D145 -- Stash header: segmented control and native
-        sort menu
-6c144f8 docs: D145 -- Stash header delta ratified (segmented
-        control + sort menu)
-e42b6f2 chore: declare dark-only appearance in app.json
-ec8c178 feat: Stash message states declare Dash colors, not
-        scheme-resolved
+8634a51 docs: gear-menu comment reads the two-branch confirm (audit F1)
+eb26a0e docs: erratum -- two 2026-08-11 handoffs; rank 2 defined by ruling
+daec9af docs: tense-truth -- D87 regression paragraph reads as history
+c47c677 docs: handoff amendment -- phantom seven, 3099c28 attributed
+d4fb6e3 docs: promote nine standing rules to CLAUDE.md (2026-08-10/12)
 
 ## The arcs
 
-Design validation (the session's frame). Operator invoked the
-Impeccable skill; read-only dual-agent critique + native audit ran
-in-repo (findings in chat, not repo): heuristics 24/40, audit
-10/20, systemic finding "semantics governed, surfaces not" -- D137
-shipped half-finished (no sized type roles) is upstream of most
-P1s. The bundled detector returned [] and the implementer proved
-the zero vacuous by control-pairing (8 of 59 rules reachable on RN
-source); a skill-run platform line is mandatory (see entry point).
-The P0 (scheme-resolved text on fixed-dark grounds, 1.09:1 in
-phone-Light) was device-corroborated via a forced empty state and
-fixed at Scope A by ruling; dark-only declared in app.json kills
-the class at platform level, gate owed at next EAS rebuild.
+Promotion pass (the entry point, executed). Nine items promoted to
+CLAUDE.md: rules 2-6 of the 2026-08-10 six (rule 1 already covered by
+the carried-content bullet) plus all four 2026-08-12 candidates. The
+owed [ADAPT] corrections were found already discharged at 3099c28 --
+a discharge no handoff recorded; the amendment (c47c677) attributes
+it. The "seven candidates" both prior handoffs cited do not exist in
+the blob they cite; promoted set claimed accordingly.
 
-D145 (Stash header). Claude Design delta ratified with operator
-floors (44pt hit areas, AA count label, native menu); the new
-mockup superseded the v2 north-star reference screen in place by
-ruling, pinned by hash on both sides. Feat shipped: two-segment
-control (tab role + selected state), Sort chip opening
-ActionSheetIOS (Platform-guarded), five Dash tokens. Operator then
-added A-Z (null/blank strains follow named rows in fetched order,
-extending the standing absence convention) and one-line card
-headlines (bounded shrink to 0.7) -- the latter required a D83
-scope amendment: wrap-only now explicitly governs the survey line
-only, dissent recorded, survey reopening condition unchanged.
-Card distillation is DEAD by ruling: D131/D132 stand.
+Delete-path audit (read-only discovery). Commissioned to find whether
+the D144 follow-up slice lost its backlog slot; found instead that it
+shipped (906d05f) and the prompt's premise was stale. Yield: the
+delete path at HEAD is sound (one delete site; FK-distinguished
+blocked copy with conditional Retire steer; explicit Storage removal,
+failure surfaced; the count-guard reads the soft-delete-filtered view
+with the 23503 branch as designed backstop) -- plus findings F1
+(stale gear-menu comment, fixed 8634a51), F2 (present-tense-false
+regression paragraph, fixed daec9af), and the seven raw-error-copy
+sites that now define rank 2.
 
-Dead band (diagnosis arc, the session's humbling). A fixed
-touch-dead band above the tab bar, both segments, surviving cold
-restart. Three architect hypotheses refuted by device observation
-before the geometry was pinned (fixed-on-screen, not in-flow);
-Phase A2 then found it by arithmetic: index.tsx reserved
-BottomTabInset+spacing (+ additive safe-area inset, ~134pt) for a
-bar expo-router/ui renders in-flow -- layout had already
-subtracted it. A one-line worktree-only magenta probe confirmed
-ownership on device (Insights as control: same constant on
-scrollable content = benign over-pad). Fix: delete the
-reservation. The probe methodology is worth reusing; the
-geometry-pin rule is promotion candidate 2.
+Records repair (the erratum chain). c47c677's claim "recorded in
+neither this handoff nor the 2026-08-11 one" was written against a
+stale copy and is false of 00e1e9b; eb26a0e corrects it and pins the
+true session map (13 commits, three sessions, two handoffs dated
+2026-08-11). The root in both stale-premise errors: claiming about a
+range never enumerated. Rule below.
 
 ## Refuted hypotheses / memory corrections
 
-- Project-knowledge copies of governance docs were stale at open
-  (five commits); repo settled it.
-- Blank-space hypotheses refuted in order: empty-data card (DB
-  read), invisible card (dead-to-touch), stale measurement (cold
-  restart). Cause: container padding.
-- The critique's claim that add-to-shelf-modal sits on a fixed-dark
-  parent was false (scheme-consistent island); the P0's blast
-  radius was 4 sites in one file, not codebase-wide.
-- "Every row has a strain" was false (string | null, live null
-  rows on four surfaces).
-- "RN's default shadowColor is black" was false (default is unset;
-  rendering rested on an undocumented CALayer fallback) -- resolved
-  by token, not removal.
-- The audit note "sort/segment state destroyed on every
-  shelfVersion remount" was overstated (profile reset only;
-  case-sensitive grep had hidden the setter).
-- The audit's BottomTabInset note drew the wrong conclusion from
-  correct arithmetic (assumed the bar overlapped; it does not).
-- The draft of this handoff said "shipped eight" for seven -- a
-  hand-count, corrected against git log at the verification pass.
+- Two 2026-08-11 handoffs exist (14ab7bb, 00e1e9b); the architect's
+  copy knew only the first.
+- "The D144 follow-up lost its slot" -- refuted; it shipped (906d05f).
+- "The 2026-08-10 blob is pager-truncated" (stated at 60%) -- refuted
+  by wc -l 136 and a whole tail; the phantom-seven finding replaced it.
+- "The [ADAPT] corrections are owed" -- refuted; 3099c28 discharged
+  them a session earlier, unrecorded.
 
 ## Operator rulings this session
 
-Design validation preceded the promotion-pass entry point; P0 fix
-Scope A (4 sites) with dark-only both-now; D145 floors + three
-implementation rulings (chip prefix textMuted, post-filter strains
-count, spec colors as Dash tokens); A-Z with null-partition +
-shadowInk token; card headline diverges / survey stands (D83 scope
-amendment, dissent recorded); Reduce Motion = Scope B (all
-animation sites, prompt owed when it reaches the front); card
-distillation dead (D131/D132 stand); north-star 01-stash.png
-superseded in place; expandable History cards requested (delta doc
-+ D-number owed before code); handoff now.
+Promotion scope 9-of-10 with rule 1 recorded as covered; corrections
+folded (then found moot); screenshots identity check confirmed done
+("checked", corroborated at 00e1e9b lines 11/102/121); erratum
+ratified; rank 2 "raw error copy slice" redefined by ruling to the
+seven audited sites (src/app/index.tsx:75,114,161;
+src/components/coa-detail.tsx:456,494; src/lib/coa-retire.ts:83,107 --
+audit's line numbers, slice's Phase A re-verifies); F1+F2 folded into
+a truth pass; docs: prefix ruled by content, path-agnostic (first
+docs: commit under src/ is 8634a51 -- noted for any future sweep that
+greps docs: expecting documentation/ paths).
 
 ## Refutation ledger, this session
 
-Architect errors, enumerated (count = list length): airplane-mode
-gate design severed the dev-server channel the gate needed; an
-unsatisfiable git-status expectation (directories are never
-listed); a placement directive that ignored the delta doc's own
-"replaces the previous" clause; the nullable-strain premise; the
-shadow-default premise; "both docs carry non-ASCII" (one is pure
-ASCII); a hand-counted accessibilityState prediction the correct
-.map() implementation refutes; "operator-ruled" written against an
-unread design doc (D83); a verbatim line-break that would have
-split its own gate phrase across a wrap; three unpinned-geometry
-predictions on the dead band; the draft handoff's shipped-commit
-hand-count (eight for seven). Implementer errors, enumerated per
-its own correction of this ledger's first draft: the critique's
-fixed-dark-parent claim (self-caught next run); the shelfVersion
-remount overstatement and the BottomTabInset wrong conclusion
-(both originating in the same audit, listed above as refutations
-and attributed here); plus two mid-run mechanical slips
-self-caught in one arc (literal glyphs written for escape forms,
-then a sed backslash-u mangling while fixing them). Operator: 0.
-Zero errors reached origin; several reached the worktree and none
-survived a gate.
+Architect errors, enumerated (count = list length): a corrections
+commit queued on the stale "owed" premise (self-caught by the blob
+read the prompt required); "promote 8 of the 10" for 9 (hand-count,
+self-caught reconciling amendment against insertions); the amendment
+section contradicting the ratified insertion on rule 6 (self-caught
+pre-ship); VERIFY patterns beginning with '-' shipped without -e,
+violating the rule in the file under edit (implementer caught); the
+discovery prompt's stale CONTEXT premise (implementer STOP); the
+false "neither handoff" sentence -- REACHED ORIGIN, erratum same day
+(architect-caught after the STOP forced range enumeration); a ruled
+bullet shipped as a placeholder, the carried-content rule promoted
+that same morning (implementer STOP); baseline verification forms
+masking exit codes behind tail pipes (implementer caught, standing
+forms corrected). Eight. Implementer: 0 errors, 4 catch credits, plus
+one unprompted staged-blob verification per the handbook's own rule.
+Operator: 0. One error reached origin; its correction shipped within
+the hour.
+
+## Promotion candidates (next promotion pass)
+
+1. Enumerate the range first, then claim: any assertion about "the
+   handoff", "the session", or a commit span is preceded by
+   git log --oneline over the span. Two surfaces today, one reached
+   origin -- meets the corrected-twice bar.
+2. Unmasked baseline forms: `npx expo lint > <file> 2>&1; echo $?`
+   then grep the file for the expected template path;
+   `npm test > <file> 2>&1; echo $?` then tail -6 (suite count is
+   discriminating). Pipeline-through-tail reports tail's exit and
+   truncates the evidence.
 
 ## Banked follow-ups (ranked backlog, then unranked)
 
-Ranked (operator-ratified order, updated): 1 FAB dead zone
-(observed; after the entry point); 2 raw error copy slice; 3 D137
-completion (typeset -- unblocks most P1s); 4 accessibility labels
-(session-ladder first; D145 discharged this header's share);
-5 splash dark sub-key; 6 dead chrome chore (web-badge, hint-row);
-7 Reduce Motion Scope B (ruled); 8 expandable History (delta doc +
-D-number first; collects the delta doc's false line-22
-"top-terpene subline" description).
+Ranked, carried from 3ef28f6 with rank 2 now defined: 1 FAB dead
+zone; 2 raw error copy slice (defined above); 3 D137 completion
+(typeset); 4 accessibility labels; 5 splash dark sub-key; 6 dead
+chrome chore; 7 Reduce Motion Scope B; 8 expandable History (delta
+doc + D-number first).
 
-Unranked: retire BottomTabInset's last consumer (insights.tsx
-over-pad) + its stale rationale comment in one chore; the bloom's
-false takes-no-touches comment (three reports now); session-ladder
-D83 comment lacks the scope note; same-name disambiguation
-(heavier: three Animal Faces observed); Stash message states
-render system font on a Sora surface (dissolves into typeset);
-last-card 8pt breathing room (taste call, contentContainerStyle
-only); orphaned PDFs before public release; app rename collision
-check (shortlist unchanged).
+Unranked: unchanged from 3ef28f6 (BottomTabInset last consumer;
+bloom comment; session-ladder D83 scope note; same-name
+disambiguation; Stash system-font states; last-card breathing room;
+orphaned PDFs before public release; app rename collision check).
+One addition: migration 20260715185455's D53 cascade comment is
+superseded by 20260811113039 -- historical record, expected, noted
+so nobody reads migrations for current schema truth.
 
 ## Unexercised arms (carried honestly)
 
-Error/Retry state (arithmetic-verified only); loading-state look;
-A-Z null-strain ordering, accent/case ties, device-locale
-variance; narrowest card width (badge + overflow; no live
-favorite); survey-side wrap divergence on device; VoiceOver
-selected-state announcement; dark-only launch gate (next EAS
-rebuild, which also checks D145's menu on a fresh binary).
+Unchanged from 3ef28f6 (error/retry state; loading look; A-Z
+null-strain ordering ties; narrowest card; survey wrap divergence;
+VoiceOver selected-state; dark-only launch gate at next EAS rebuild).
+Nothing this session touched runtime behavior.
 
 ## Working rhythm
 
-Stable method lives in CLAUDE.md. Three deltas proven this
-session: architect-run MCP carried DB observation including
-mid-diagnosis reads; a worktree-only visual probe (one property,
-never committed, staged-blob-gated out) is the ratified form for
-layout ownership questions; device gates arrived as screenshots
-plus one-line answers, with one aggregate verdict accepted and
-recorded as aggregate per the standing rule.
-
-## Amendment (2026-08-12, promotion pass)
-
-- "Seven promotion candidates" (cited here and in the 2026-08-11
-  handoff) is a phantom count: 60a2977e's blob carries six standing
-  rules and one owed correction, no seven-item list. Unrecoverable.
-  Promoted set: nine items (rules 2-6 from 2026-08-10, all four
-  2026-08-12 candidates); rule 1 recorded as already covered by the
-  carried-content bullet in Prompt conventions.
-- The two owed [ADAPT] corrections were found already landed at HEAD
-  3ef28f6 during this pass's blob read: commit 3099c28 ("docs:
-  CLAUDE.md truth-fix -- [ADAPT] items 1 and 3 match HEAD"), a
-  discharge recorded in neither this handoff nor the 2026-08-11 one.
-- The seven 0N-screens.png: operator confirms the banked identity
-  check ran before their removal.
-
-### Erratum (same day)
-
-- "Recorded in neither this handoff nor the 2026-08-11 one" is wrong.
-  Two handoffs carry 2026-08-11: 14ab7bb (where the claim holds) and
-  00e1e9b (where it fails -- 3099c28 sits in What shipped, line 67,
-  and in the docs-truth arc, line 93). The sentence was written
-  against a stale copy that predated 00e1e9b entirely; the session
-  range 2ecafb3..3ef28f6 (13 commits, three sessions) was enumerated
-  only afterward. Enumerate the range first, then claim.
-- The phantom seven is cited in three handoffs, not two: 60a2977e's
-  successor chain at 14ab7bb, 00e1e9b, and 3ef28f6. Phantom status
-  unchanged -- 60a2977e's blob was observed directly and carries six
-  rules, no seven-item list.
-- Rank 2 "raw error copy slice" was ratified without a recorded
-  definition (operator could not reconstruct it, 2026-08-12). Redefined
-  by ruling: replace raw Supabase/Postgres error strings with human
-  copy at the sites the 2026-08-12 delete-path audit enumerated:
-  src/app/index.tsx:75,114,161; src/components/coa-detail.tsx:456,494;
-  src/lib/coa-retire.ts:83,107. Line numbers are the audit's; the
-  slice's own Phase A re-verifies them at its HEAD.
+Stable method lives in CLAUDE.md. Two deltas proven this session:
+span-hash verification (architect hashes ratified insertion spans,
+operator extracts by diff-derived ranges with boundary lines printed
+so a range slip shows as wrong text) as the partial-edit form of the
+blob-hash rule; and the read-only discovery prompt as the cheap way
+to be wrong -- both stale-premise errors today cost nothing because
+the prompts that carried them could change nothing.
