@@ -129,6 +129,9 @@ export const Dash = {
   chipFill: 'rgba(255,255,255,0.05)',
   chipBorder: 'rgba(255,255,255,0.08)',
   textStrong: '#D5DED7',
+  // The ink of the segmented control's ratified elevation, tokenized so the
+  // one shadow in the app carries no literal at its call site.
+  shadowInk: '#000000',
   // Verdict band identity, keyed by the D85 rung words, fixed order.
   verdict: {
     Loved: '#7ED99B',

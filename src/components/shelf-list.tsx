@@ -78,13 +78,14 @@ type Segment = 'active' | 'history';
 // Sort pills (reference screen 01). 'rated' orders by the mean hidden score
 // of the user's own logged sessions -- personal-empirical: the user's
 // verdicts, never chemistry, decide "top". Unscored items sort last.
-type SortKey = 'recent' | 'thc' | 'terps' | 'rated';
+type SortKey = 'recent' | 'thc' | 'terps' | 'rated' | 'alpha';
 
 const SORT_LABELS: { key: SortKey; label: string }[] = [
   { key: 'recent', label: 'Recent' },
   { key: 'thc', label: 'Highest THC' },
   { key: 'terps', label: 'Highest terps' },
   { key: 'rated', label: 'Top rated' },
+  { key: 'alpha', label: 'A-Z' },
 ];
 
 const SCORE_BY_WORD = new Map<string, number>(RUNGS.map((rung) => [rung.word, rung.score]));
@@ -300,6 +301,24 @@ export function ShelfList({ onSummary, filterQuery }: ShelfListProps) {
   };
   const sortRows = (list: ShelfCoa[]): ShelfCoa[] => {
     if (sort === 'recent') return list;
+    // Alphabetical partitions on whether a strain was reported at all, never
+    // on a coerced name: a row the lab left unnamed has nothing to
+    // alphabetize, and treating its absence as '' would file every such row
+    // together under a key nobody entered. Named rows order among
+    // themselves; the rest follow in fetched order -- the same standing
+    // absence convention the numeric branch below applies to ND and unscored
+    // rows.
+    if (sort === 'alpha') {
+      const named = list.filter((coa) => (coa.strain?.trim() ?? '') !== '');
+      const unnamed = list.filter((coa) => (coa.strain?.trim() ?? '') === '');
+      named.sort((a, b) =>
+        (a.strain as string).trim().localeCompare((b.strain as string).trim(), undefined, {
+          sensitivity: 'base',
+          numeric: true,
+        })
+      );
+      return [...named, ...unnamed];
+    }
     const value = (coa: ShelfCoa): number | null =>
       sort === 'thc' ? coa.total_thc : sort === 'terps' ? coa.total_terpenes : meanScore(coa.id);
     // Stable partition: valued rows descending, unvalued rows after them in
@@ -639,7 +658,7 @@ const styles = StyleSheet.create({
     backgroundColor: Dash.segmentOn,
     // The one elevation in this app, and the ratified spec pins it: it is
     // what lifts the standing side off the track it shares with the other.
-    shadowColor: '#000000',
+    shadowColor: Dash.shadowInk,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.4,
     shadowRadius: 3,

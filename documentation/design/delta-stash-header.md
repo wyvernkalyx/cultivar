@@ -46,3 +46,7 @@ superseding the prior v2 reference screen 01 in place (operator
 ruling, 2026-08-12; the prior image remains in git history). It is
 a Claude Design mockup (simulated status bar, sample data) --
 design reference, never gate evidence.
+
+Operator addition, 2026-08-12: a fifth sort option, A-Z
+(alphabetical by strain name; rows without a reported strain follow
+after the named ones), appended after Top rated.

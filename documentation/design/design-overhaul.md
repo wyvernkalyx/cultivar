@@ -282,8 +282,9 @@ Each slice is its own prompt and its own commit; gates typed per CLAUDE.md.
 - The exact set of sort pills at launch (reference shows Recent /
   Highest THC / Highest terps / Top rated; Top rated needs the session
   join the cards already do). Resolved by D145
-  (`delta-stash-header.md`): all four ship, as options in the sort
-  menu rather than as pills.
+  (`delta-stash-header.md`): five ship, as options in the sort menu
+  rather than as pills -- the four above plus A-Z, operator-added
+  2026-08-12.
 - What the seven untracked v1 `0N-screens.png` files become (operator may
   delete them; nothing references them once this lands). The tracked v1
   set is a separate question: a future `chore:` may sweep
