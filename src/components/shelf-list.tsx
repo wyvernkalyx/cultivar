@@ -16,7 +16,6 @@ import {
   type CardTerpene,
   type ShelfCoa,
 } from '@/components/shelf-card';
-import { ThemedText } from '@/components/themed-text';
 import { Dash, Space, Spacing, Type } from '@/constants/theme';
 import {
   groupSessionsByCoa,
@@ -315,13 +314,9 @@ export function ShelfList({ onSummary, filterQuery }: ShelfListProps) {
   if (error) {
     return (
       <View style={styles.messageContainer}>
-        <ThemedText type="small" style={styles.centered}>
-          {error}
-        </ThemedText>
+        <Text style={styles.message}>{error}</Text>
         <Pressable onPress={load}>
-          <ThemedText type="smallBold" style={styles.centered}>
-            Retry
-          </ThemedText>
+          <Text style={styles.messageAction}>Retry</Text>
         </Pressable>
       </View>
     );
@@ -330,9 +325,7 @@ export function ShelfList({ onSummary, filterQuery }: ShelfListProps) {
   if (rows === null) {
     return (
       <View style={styles.messageContainer}>
-        <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
-          Loading…
-        </ThemedText>
+        <Text style={styles.messageMuted}>Loading…</Text>
       </View>
     );
   }
@@ -436,13 +429,13 @@ export function ShelfList({ onSummary, filterQuery }: ShelfListProps) {
           </View>
         }
         ListEmptyComponent={
-          <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
+          <Text style={styles.messageMuted}>
             {query.length > 0
               ? 'Nothing matches your search.'
               : segment === 'active'
                 ? 'Nothing in your stash yet'
                 : 'Nothing in your History yet.'}
-          </ThemedText>
+          </Text>
         }
       />
       {/* The completion transient (2026-08-04). It sits here, over the shelf,
@@ -550,8 +543,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.two,
   },
-  centered: {
+  // The list's message states stand on the screen's fixed dark ground
+  // (Dash.bg), so each states its own color instead of resolving one from the
+  // device color scheme: a scheme-resolved color renders near-black on
+  // near-black in Light appearance, which is what took the error state and its
+  // Retry off the screen. Size, weight, and leading are the values these four
+  // lines already rendered at, carried over unchanged -- this slice moves where
+  // the color comes from and nothing else.
+  message: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: 500,
     textAlign: 'center',
+    color: Dash.text,
+  },
+  messageAction: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: 700,
+    textAlign: 'center',
+    color: Dash.text,
+  },
+  messageMuted: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: 500,
+    textAlign: 'center',
+    color: Dash.textMuted,
   },
   // The segment toggle and sort pills (slice 4a, reference screen 01),
   // replacing the section row and the superseded archive entry link.
