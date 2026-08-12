@@ -143,7 +143,9 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   exit 1 on files od-verified to contain em dashes (GNU grep 3.11) — it
   never worked, and every pass it produced observed only the protected
   case. Controls are od-verified too: a control whose dirty bytes were
-  never actually written is itself vacuous.
+  never actually written is itself vacuous. Range-scoped ASCII gates
+  pair a same-file whole-count control only when the file carries
+  non-ASCII -- state which case holds (2026-08-12).
 - **Exactly one co-author trailer:** `Claude <noreply@anthropic.com>`. No
   model-specific trailer — models change, and the handbook must not need an edit
   per release.
@@ -261,6 +263,28 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   never edit the excerpt. One unused import edited in prompt text
   diverged from the tested file and was caught only by the blob-hash
   channel (2026-08-05).
+- **Carried bodies use decoded characters only.** The implementer cannot
+  reliably emit backslash-u escape sequences (transcription, not
+  tooling -- its own correction); source files may carry raw UTF-8. The
+  commit-message ASCII gate governs messages, not source (2026-08-10).
+- **Bodies the editor tool cannot emit travel as operator-run quoted
+  heredocs, hash-gated, implementer-verified.** ASCII and
+  decoded-unicode bodies go inline through the implementer prompt
+  regardless of size. The operator terminal has its own paste length
+  limit (hit 2026-08-10) -- heredocs are the fallback channel, not the
+  default.
+- **Narrowing/scope claims in prompts are verified in the target
+  scope, not a neighboring one** (the confirmDelete TS18047 STOP,
+  2026-08-10).
+- **Commit-prompt preconditions pin the pre-commit state (HEAD +
+  status) and stay discriminating:** a replayed commit prompt was
+  refused cleanly by exactly those preconditions (2026-08-10).
+- **Skill-run prompts state the platform explicitly.** context.mjs
+  cannot infer it without PRODUCT.md; omission silently scores against
+  web heuristics (2026-08-12).
+- **Package presence is probed by directory, never `require.resolve`.**
+  exports maps false-negative on packages that are present
+  (2026-08-12).
 
 ---
 
@@ -289,6 +313,12 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   place the observation as the final statement of its own call, or it
   was never observed (a durability probe's ACL read vanished mid-batch,
   2026-08-03).
+- **`npx expo lint` runs before any UI bytes ship -- alongside `tsc`
+  and the suite, in the build prompt's verification block.** One
+  lint-gate failure shipped when the gate was skipped (2026-08-10).
+- **Dead-space defects get their geometry pinned -- scrolls-with-content
+  vs fixed-on-screen -- before any hypothesis is written**
+  (2026-08-12).
 
 ---
 
