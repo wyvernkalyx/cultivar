@@ -4,7 +4,8 @@ Status: D83 ratified at `45e721d`; slice 1 (statics) shipped at `d24c8b4`;
 the animation-constraint section amended by the Reanimated excision chore;
 slice 2 (motion) shipped with this commit's amendments; bloom
 placement superseded by the 2026-08-04 amendment (post-close
-transient; see "Screen mapping").
+transient; see "Screen mapping"). Item 1's wrap rule scoped to the survey
+by the 2026-08-12 card amendment.
 
 ## Scope and inputs
 
@@ -245,6 +246,17 @@ bring back here, not a license to reinstate it.
    wraps at up to two lines and never shrinks. Grounds: the ratified
    direction says wrap-never-shrink; a real overflow observed at a
    device gate is the only thing that reopens it.
+
+   Scope amendment (operator ruling, 2026-08-12): item 1 governs
+   the survey's product line only. The stash card's strain headline
+   diverges by ruling -- one line, adjustsFontSizeToFit to a 0.7
+   floor, then ellipsis -- on device observation of real two-line
+   wraps in the stash list. Grounds: the card is scanned in a list
+   where two-line titles cost density; the survey line is read once
+   at full size. Dissent recorded: the same strain may render
+   shrunk on the card and full-size wrapped in the survey. The
+   survey rule is unchanged and still reopens only on an observed
+   overflow at a device gate.
 2. **Tier ramp on the score pills.** The five-color 5pt leading
    stripe, best -> worst, ports from the mock's rating buttons to the
    live score pills. Grounds: score is the one screen where order

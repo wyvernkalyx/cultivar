@@ -203,7 +203,9 @@ export function ShelfCard({
               title line (D97, the same treatment brand gets below). */}
           <Text
             style={coa.strain?.trim() ? styles.strain : styles.strainAbsent}
-            numberOfLines={2}>
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}>
             {coa.strain?.trim() ? coa.strain : 'Strain not reported'}
           </Text>
           <View style={styles.strainRowActions}>
