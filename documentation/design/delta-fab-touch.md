@@ -24,9 +24,10 @@ Present on both routes; the bar is shared.
 The bar keeps a single flex container -- the TabList asChild
 target, with the tab triggers as its direct children. The
 container owns the top protrusion as padding, takes the bottom
-safe-area inset, and hosts the FAB Pressable as an
-absolutely-positioned child whose raise comes from position, so
-the responder and the circle share a top edge. The painted
+safe-area inset, and hosts the FAB responder in a full-width,
+touch-transparent, absolutely-positioned top layer that centers
+it -- the raise comes from position, so the responder and the
+circle share a top edge. The painted
 surface -- background color and hairline top border -- moves to an
 absolutely-positioned backdrop child spanning from the protrusion
 line to the container's bottom, so the hairline sits exactly where

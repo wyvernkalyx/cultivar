@@ -24,21 +24,25 @@ export default function AppTabs() {
       <TabSlot style={styles.slot} />
       <TabList asChild>
         <View style={StyleSheet.flatten([styles.bar, { paddingBottom: insets.bottom }])}>
+          <View style={styles.backdrop} />
           <TabTrigger name="index" href="/" asChild>
             <TabButton label="Stash" icon="archivebox" />
           </TabTrigger>
-          <Pressable
-            onPress={() => setSelectorVisible(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Add or log"
-            style={styles.fabSlot}>
-            <View style={styles.fab}>
-              <Text style={styles.fabPlus}>+</Text>
-            </View>
-          </Pressable>
+          <View style={styles.fabSpacer} />
           <TabTrigger name="insights" href="/insights" asChild>
             <TabButton label="Insights" icon="chart.bar" />
           </TabTrigger>
+          <View style={styles.fabLayer} pointerEvents="box-none">
+            <Pressable
+              onPress={() => setSelectorVisible(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Add or log"
+              style={styles.fabSlot}>
+              <View style={styles.fab}>
+                <Text style={styles.fabPlus}>+</Text>
+              </View>
+            </Pressable>
+          </View>
         </View>
       </TabList>
       <QuickActions visible={selectorVisible} onClose={() => setSelectorVisible(false)} />
@@ -61,6 +65,11 @@ function TabButton({
   );
 }
 
+// How far the circle stands proud of the painted surface: the shipped raise
+// (18) minus the bar's old top padding (Space.chip, 8), so the protrusion on
+// screen is exactly what it is today.
+const FAB_PROTRUSION = 10;
+
 const styles = StyleSheet.create({
   slot: {
     flex: 1,
@@ -69,11 +78,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-around',
+    paddingTop: FAB_PROTRUSION + Space.chip,
+    paddingHorizontal: Space.gutter,
+  },
+  backdrop: {
+    position: 'absolute',
+    top: FAB_PROTRUSION,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: Dash.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: Dash.surface2,
-    paddingTop: Space.chip,
-    paddingHorizontal: Space.gutter,
   },
   trigger: {
     alignItems: 'center',
@@ -86,12 +102,28 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 0.4,
   },
-  // The raised center action (reference 01): the circle sits proud of the
-  // bar. Raising is a transform so the bar's own layout height stays what
-  // BottomTabInset accounts for.
-  fabSlot: {
+  fabSpacer: {
     minWidth: 72,
+    height: 56,
+  },
+  // The raised center action (reference 01): the bar owns the protrusion as
+  // top padding, the surface and hairline live on the backdrop, and the
+  // responder rides a touch-transparent full-width layer, so it shares a top
+  // edge with the circle the user sees. See
+  // documentation/design/delta-fab-touch.md.
+  fabLayer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 56,
     alignItems: 'center',
+  },
+  fabSlot: {
+    width: 72,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   fab: {
     width: 56,
@@ -100,7 +132,6 @@ const styles = StyleSheet.create({
     backgroundColor: Dash.accent,
     alignItems: 'center',
     justifyContent: 'center',
-    transform: [{ translateY: -18 }],
   },
   fabPlus: {
     fontFamily: Type.family.display,
