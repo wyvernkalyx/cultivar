@@ -80,7 +80,10 @@ export function promptRetire(coa: RetireTarget, onDone: () => void): void {
   const answerFavorite = async (value: boolean) => {
     const result = await setFavorite(coa.id, value);
     if (!result.ok) {
-      Alert.alert('Could not save', result.message);
+      Alert.alert(
+        'Could not save your answer',
+        'The retirement itself was recorded, but your buy-again answer was not saved.'
+      );
     }
     onDone();
   };
@@ -104,7 +107,10 @@ export function promptRetire(coa: RetireTarget, onDone: () => void): void {
   const record = async (reason: string) => {
     const result = await retireCoa(coa.id, reason);
     if (!result.ok) {
-      Alert.alert('Could not retire', result.message);
+      Alert.alert(
+        'Could not retire',
+        'Nothing was recorded — the strain is still in your stash as it was. Check your connection and try again.'
+      );
       onDone();
       return;
     }

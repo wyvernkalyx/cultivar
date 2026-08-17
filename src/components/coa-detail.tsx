@@ -454,7 +454,10 @@ export function CoaDetail({
                     notifyBlocked();
                     return;
                   }
-                  Alert.alert('Could not delete', deleteError.message);
+                  Alert.alert(
+                    'Could not delete',
+                    'Something unexpected stopped the delete. The COA is still in your stash. If this keeps happening, try again after reopening the app.'
+                  );
                   return;
                 }
                 // Row first, then the Storage object (D87). Foreign keys do
@@ -492,7 +495,10 @@ export function CoaDetail({
       .then(({ error: renameError }) => {
         setRenameBusy(false);
         if (renameError) {
-          Alert.alert('Could not save', renameError.message);
+          Alert.alert(
+            'Could not save',
+            'Your edits were not saved. They are still here — try Save again.'
+          );
           return;
         }
         setRenameOpen(false);

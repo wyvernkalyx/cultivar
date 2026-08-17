@@ -71,8 +71,11 @@ export default function HomeScreen() {
     try {
       await exportProfile();
       return true;
-    } catch (e) {
-      Alert.alert('Export failed', e instanceof Error ? e.message : String(e));
+    } catch {
+      Alert.alert(
+        'Export failed',
+        'The export did not finish and no file was shared. Nothing was changed. Try again.',
+      );
       return false;
     } finally {
       setExporting(false);
@@ -111,7 +114,10 @@ export default function HomeScreen() {
     const result = await resetProfile();
     setResetting(false);
     if (!result.ok) {
-      Alert.alert('Reset failed', result.message);
+      Alert.alert(
+        'Reset failed',
+        'Nothing was changed — your sessions and stash are exactly as they were. Check your connection and try again.',
+      );
       return;
     }
     Alert.alert(
@@ -157,8 +163,11 @@ export default function HomeScreen() {
           { text: 'Cancel', style: 'cancel' },
         ],
       );
-    } catch (e) {
-      Alert.alert('Reset failed', e instanceof Error ? e.message : String(e));
+    } catch {
+      Alert.alert(
+        'Could not check your data',
+        'Reset needs a quick count of your sessions and stash first, and that lookup did not go through. Nothing was changed. Check your connection and try again.',
+      );
     } finally {
       setResetting(false);
     }
