@@ -19,20 +19,41 @@ values (bar paddingTop 8, circle 56, translateY -18):
 
 Present on both routes; the bar is shared.
 
-## Decision (D146): two-layer bar, responder aligned with paint
+## Decision (D146): paint/layout split, responder aligned with paint
 
-The bar splits into an outer transparent container and an inner
-painted row. The outer container owns the top protrusion as
-padding and hosts the FAB Pressable, with the raise moved onto the
-Pressable itself so hit-testing tracks the paint. The inner row
-carries the surface color, hairline top border, tab triggers, and
-bottom safe-area inset. The circle protrudes past the painted bar
+The bar keeps a single flex container -- the TabList asChild
+target, with the tab triggers as its direct children. The
+container owns the top protrusion as padding, takes the bottom
+safe-area inset, and hosts the FAB Pressable as an
+absolutely-positioned child whose raise comes from position, so
+the responder and the circle share a top edge. The painted
+surface -- background color and hairline top border -- moves to an
+absolutely-positioned backdrop child spanning from the protrusion
+line to the container's bottom, so the hairline sits exactly where
+it does today. The circle protrudes past the painted backdrop
 exactly as today and sits wholly inside the touchable container.
 
-Rejected alternative: flush crown (raise absorbed into paddingTop
-on the single bar). Smaller diff; discards the raised-FAB look,
-which is the shipped, device-gated D138-arc appearance. Ruled out
-by operator 2026-08-13.
+Amendment (2026-08-13, pre-implementation): the mechanism as first
+ratified -- an outer transparent container wrapping an inner
+painted row -- is unimplementable against the installed
+expo-router (56.2.14). Trigger discovery is a static walk that
+recurses only into Fragments and TabLists and unwraps exactly one
+asChild layer, so triggers nested in an inner row are never found
+and the navigator builds with zero screens; separately, the
+asChild style merge is per-key, leaking the TabList's row
+flexDirection into any shell that does not set its own. Both
+verified against node_modules source; implementer-caught, twice
+STOPped. The substance -- protrusion inside the touchable
+container, responder aligned with paint, hairline unmoved -- is
+unchanged; only the mechanism moved.
+
+Rejected alternatives: flush crown (raise absorbed into paddingTop
+on the single bar) -- smaller diff; discards the raised-FAB look,
+which is the shipped, device-gated D138-arc appearance; ruled out
+by operator 2026-08-13. Explicit triggers via useTabsWithTriggers
+to buy the literal two-View tree -- materially larger slice on a
+less-trodden API for no substance gain; ruled out by operator
+2026-08-13.
 
 ## Grounds against grounds
 
@@ -62,7 +83,7 @@ FAB opens the selector, terminology) is untouched.
 
 ## Device gate
 
-All five steps get individual verdicts. Steps 1 and 4 are both
+All six steps get individual verdicts. Steps 1 and 4 are both
 required on the first pass. JS-only change: Metro reload is
 sufficient, no new EAS build.
 
@@ -76,3 +97,7 @@ sufficient, no new EAS build.
 5. Visual: hairline position and circle protrusion match the
    current build (compare against reference/handoff/01-stash.png
    framing if in doubt).
+6. Stash: tap the transparent band beside the circle (left or
+   right of it, level with the crown). Nothing opens; nothing
+   behind the bar scrolls or activates. This settles the
+   protrusion-band fall-through question raised at re-spec.
