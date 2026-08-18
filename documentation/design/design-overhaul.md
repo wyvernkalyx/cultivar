@@ -79,6 +79,52 @@ the reference was built on the shipped palette; the system half (type,
 spacing) is the half that never landed, and its absence is why a font swap
 today edits 10 files.
 
+[Amendment, 2026-08-18 -- typeset completion mechanism superseded.
+The restyle slices adopted the reference's sizes as literals, not
+tokens: at df127bc, 80 of 148 fontSize sites sit at role sizes while
+Type carries family only. The "join the token set as each surface's
+restyle slice adopts them" clause above is superseded by a single
+collapse pass over the sites enumerated in the 2026-08-18 read-only
+audit (implementer-derived: 41 FULL / 27 PARTIAL / 12 COINCIDENT).
+
+The shipped system is richer than the reference's five-role line,
+deliberately: body 11.5 split on real surfaces into three tiers.
+Type gains a role layer recording what shipped, values from the
+audited sites:
+
+  display  Sora 800, 26, lineHeight 29
+  title    Sora 700, 13
+  label    Sora 700, 10, letterSpacing 1.2, uppercase
+  body     Sora 400, 11.5
+  value    Sora 600, 11.5
+  action   Sora 700, 11.5
+  serif    Newsreader italic, explicit weight 400, 14.5
+
+Roles carry type props only, never color or layout: consumers spread
+the role and add their own. fontVariant tabular-nums stays a per-site
+prop where numerals render -- the reference scopes it to lab values,
+not to a weight tier. 57 live sites collapse (per-role: display 1,
+title 1, label 7, body 25, value 8, action 9, serif 6; the full
+site list rides in the collapse commit's body) with zero intended
+visual change; two prop additions are visual no-ops (analyteLabel
+gains uppercase over already-uppercase string literals and joins
+label; four serif sites gain the explicit weight 400 the two
+coa-detail serif sites already carry).
+
+Kept literal by design (no lived demand for a token): the 12
+COINCIDENT sites -- among them the FAB and error-badge glyphs, the
+serif voice at 13 (the two effectsLine keys), the label voice at
+13/.14em (effectGroupLabel), and the settings sheet's Sora at 14.5
+-- and the nine PARTIALs no shipped role covers: the stat numeral
+at 26 (flankValue), value at weight 500 (terpeneRange), the five
+13pt action/status sites at weights 500-600, the tab-bar
+triggerLabel, and the D140 buyAgainText badge (deliberately
+lowercase copy). The three consumerless coa-detail keys (badge and
+meta, both FULL; sourceLab, one of the 12) are untouched by the
+collapse and banked to the dead-chrome chore, the 2026-08-18 audit
+as citation. Reconciliation: 57 collapsing + 21 literal by design
++ 2 consumerless FULL = the 80 audited sites.]
+
 ## D138 -- Three-tab nav; Stash / Active / History terminology
 
 Nav becomes: Stash (default) / center + FAB / Insights, per the reference.
