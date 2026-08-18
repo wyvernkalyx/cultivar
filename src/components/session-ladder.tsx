@@ -242,7 +242,12 @@ function SequenceHeader({
           the trailing glossary trigger (D86). space-between keeps the nav chip
           left when the trigger is absent (closing). */}
       <View style={styles.headerTopRow}>
-        <Pressable disabled={disabled} onPress={onLeading} style={styles.controlChip}>
+        <Pressable
+          disabled={disabled}
+          onPress={onLeading}
+          accessibilityRole="button"
+          accessibilityLabel={leadingLabel}
+          style={styles.controlChip}>
           {/* Leading glyph per D83 item 9: cross for Close, single-angle for
               Back. */}
           <ThemedText style={styles.controlChipLabel}>
@@ -257,7 +262,11 @@ function SequenceHeader({
             </View>
           )}
           {onInfo !== undefined && (
-            <Pressable disabled={disabled} onPress={onInfo} style={styles.controlChip}>
+            <Pressable
+              disabled={disabled}
+              onPress={onInfo}
+              accessibilityRole="button"
+              style={styles.controlChip}>
               {/* An ASCII label, not a glyph: Sora's cmap is not guaranteed to
                   carry an info codepoint (cf. the U+2713 checkbox fix), and a
                   word is unambiguously discoverable at the gate. */}
@@ -265,7 +274,11 @@ function SequenceHeader({
             </Pressable>
           )}
           {onTrailing !== undefined && trailingLabel !== undefined && (
-            <Pressable disabled={disabled} onPress={onTrailing} hitSlop={8}>
+            <Pressable
+              disabled={disabled}
+              onPress={onTrailing}
+              accessibilityRole="button"
+              hitSlop={8}>
               <ThemedText style={styles.trailingLabel}>{trailingLabel}</ThemedText>
             </Pressable>
           )}
@@ -379,6 +392,9 @@ function PillScreen({
               // Disabled while any insert is on the wire (D54).
               disabled={disabled}
               onPress={() => onSelect(value)}
+              accessibilityRole="button"
+              accessibilityLabel={value}
+              accessibilityState={{ selected: isSelected, disabled, busy: isPending }}
               style={({ pressed }) => [
                 styles.pill,
                 // Selection inverts (the unchanged D57/D80 chip grammar,
@@ -454,7 +470,10 @@ function PillScreen({
       onDismiss={() => setGlossaryOpen(false)}>
       <ThemedView style={styles.glossarySheet}>
         <View style={styles.glossaryHeader}>
-          <Pressable onPress={() => setGlossaryOpen(false)} style={styles.controlChip}>
+          <Pressable
+            onPress={() => setGlossaryOpen(false)}
+            accessibilityRole="button"
+            style={styles.controlChip}>
             <ThemedText style={styles.controlChipLabel}>Close</ThemedText>
           </Pressable>
         </View>
@@ -514,6 +533,9 @@ function EffectsPicker({
                   // every other control on both screens.
                   disabled={disabled}
                   onPress={() => onToggle(tag)}
+                  accessibilityRole="button"
+                  accessibilityLabel={tag}
+                  accessibilityState={{ selected: isSelected, disabled }}
                   style={[
                     styles.effectChip,
                     // The reference's selected state (D141): solid accent with
@@ -1068,6 +1090,7 @@ export function SessionLadder({
               <Pressable
                 disabled={inFlight}
                 onPress={closeWithClosingState}
+                accessibilityRole="button"
                 style={styles.closeButton}>
                 {/* The reference's CTA label (D141); the handler is the same
                     single closing write it always was. */}
