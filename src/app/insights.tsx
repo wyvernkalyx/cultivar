@@ -404,14 +404,11 @@ const styles = StyleSheet.create({
     color: Dash.accent,
   },
   title: {
-    fontFamily: Type.family.display,
-    fontSize: 26,
-    lineHeight: 29,
+    ...Type.role.display,
     color: Dash.text,
   },
   subtitle: {
-    fontFamily: Type.family.serifItalic,
-    fontSize: 14.5,
+    ...Type.role.serif,
     color: Dash.textBody,
   },
   messageBlock: {
@@ -420,19 +417,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorText: {
-    fontFamily: Type.family.regular,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textBody,
     textAlign: 'center',
   },
   retry: {
-    fontFamily: Type.family.bold,
-    fontSize: 11.5,
+    ...Type.role.action,
     color: Dash.accent,
   },
   loading: {
-    fontFamily: Type.family.regular,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textMuted,
     textAlign: 'center',
     paddingVertical: Space.section,
@@ -462,15 +456,11 @@ const styles = StyleSheet.create({
     color: Dash.textMuted,
   },
   label: {
-    fontFamily: Type.family.bold,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    ...Type.role.label,
     color: Dash.textMuted,
   },
   absent: {
-    fontFamily: Type.family.regular,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textFaint,
   },
   explainer: {
@@ -545,8 +535,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   actionChipText: {
-    fontFamily: Type.family.semibold,
-    fontSize: 11.5,
+    ...Type.role.value,
     color: Dash.text,
   },
   buyRow: {
@@ -566,8 +555,7 @@ const styles = StyleSheet.create({
     color: Dash.text,
   },
   buyBrand: {
-    fontFamily: Type.family.regular,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textMuted,
   },
   buyStats: {

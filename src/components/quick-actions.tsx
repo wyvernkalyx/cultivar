@@ -260,8 +260,7 @@ const styles = StyleSheet.create({
     color: Dash.text,
   },
   actionSub: {
-    fontFamily: Type.family.regular,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textMuted,
   },
   cancel: {
@@ -293,8 +292,7 @@ const styles = StyleSheet.create({
     color: Dash.accent,
   },
   pickerSub: {
-    fontFamily: Type.family.regular,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textMuted,
     marginTop: 2,
     marginBottom: Space.row,
@@ -304,8 +302,7 @@ const styles = StyleSheet.create({
     paddingBottom: Space.section,
   },
   pickerMessage: {
-    fontFamily: Type.family.regular,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textMuted,
     textAlign: 'center',
     paddingVertical: Space.section,
@@ -317,13 +314,11 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   pickerStrain: {
-    fontFamily: Type.family.bold,
-    fontSize: 13,
+    ...Type.role.title,
     color: Dash.text,
   },
   pickerBrand: {
-    fontFamily: Type.family.regular,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textMuted,
   },
   gestureRoot: {

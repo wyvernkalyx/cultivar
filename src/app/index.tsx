@@ -19,7 +19,6 @@ const SORA_REGULAR = Type.family.regular;
 const SORA_SEMIBOLD = Type.family.semibold;
 const SORA_BOLD = Type.family.bold;
 const SORA_DISPLAY = Type.family.display;
-const SERIF_ITALIC = Type.family.serifItalic;
 
 export default function HomeScreen() {
   const [email, setEmail] = useState<string | null>(null);
@@ -422,8 +421,7 @@ const styles = StyleSheet.create({
   },
   // The register the summary card's countLine carried before D109 moved it.
   shelfSubtitle: {
-    fontFamily: SERIF_ITALIC,
-    fontSize: 14.5,
+    ...Type.role.serif,
     color: Dash.textBody,
   },
   sheet: {
@@ -448,8 +446,7 @@ const styles = StyleSheet.create({
     color: Dash.text,
   },
   sheetClose: {
-    fontFamily: SORA_BOLD,
-    fontSize: 11.5,
+    ...Type.role.action,
     color: Dash.textMuted,
   },
   sheetEmail: {

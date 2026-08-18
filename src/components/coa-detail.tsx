@@ -19,7 +19,6 @@ const SORA_REGULAR = Type.family.regular;
 const SORA_SEMIBOLD = Type.family.semibold;
 const SORA_BOLD = Type.family.bold;
 const SORA_DISPLAY = Type.family.display;
-const SERIF_ITALIC = Type.family.serifItalic;
 
 // How long a signed COA-PDF link lives, in seconds. The URL's whole job is a
 // single load in the in-app viewer, so it expires almost immediately after
@@ -799,8 +798,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   close: {
-    fontFamily: SORA_BOLD,
-    fontSize: 11.5,
+    ...Type.role.action,
     color: Dash.accent,
   },
   badge: {
@@ -823,14 +821,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   message: {
-    fontFamily: SORA_REGULAR,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textMuted,
     textAlign: 'center',
   },
   retry: {
-    fontFamily: SORA_BOLD,
-    fontSize: 11.5,
+    ...Type.role.action,
     color: Dash.accent,
     textAlign: 'center',
   },
@@ -858,13 +854,11 @@ const styles = StyleSheet.create({
     color: Dash.textMuted,
   },
   brand: {
-    fontFamily: SORA_REGULAR,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textBody,
   },
   brandAbsent: {
-    fontFamily: SORA_REGULAR,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textMuted,
   },
   meta: {
@@ -884,10 +878,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    fontFamily: SORA_BOLD,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    ...Type.role.label,
     color: Dash.textMuted,
   },
   totalsRow: {
@@ -900,10 +891,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   totalLabel: {
-    fontFamily: SORA_BOLD,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    ...Type.role.label,
     color: Dash.textFaint,
   },
   totalValue: {
@@ -922,14 +910,12 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   rowLabel: {
+    ...Type.role.body,
     flexShrink: 1,
-    fontFamily: SORA_REGULAR,
-    fontSize: 11.5,
     color: Dash.textBody,
   },
   rowValue: {
-    fontFamily: SORA_SEMIBOLD,
-    fontSize: 11.5,
+    ...Type.role.value,
     fontVariant: ['tabular-nums'],
     color: Dash.text,
     textAlign: 'right',
@@ -941,19 +927,16 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   toggleText: {
-    fontFamily: SORA_BOLD,
-    fontSize: 11.5,
+    ...Type.role.action,
     color: Dash.accent,
   },
   summaryLine: {
-    fontFamily: SORA_SEMIBOLD,
-    fontSize: 11.5,
+    ...Type.role.value,
     fontVariant: ['tabular-nums'],
     color: Dash.text,
   },
   absent: {
-    fontFamily: SORA_REGULAR,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textMuted,
   },
   session: {
@@ -973,35 +956,29 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   sessionWord: {
+    ...Type.role.value,
     flex: 1,
-    fontFamily: SORA_SEMIBOLD,
-    fontSize: 11.5,
     color: Dash.text,
   },
   sessionWordAbsent: {
+    ...Type.role.body,
     flex: 1,
-    fontFamily: SORA_REGULAR,
-    fontSize: 11.5,
     color: Dash.textMuted,
   },
   sessionDate: {
-    fontFamily: SORA_REGULAR,
-    fontSize: 11.5,
+    ...Type.role.body,
     fontVariant: ['tabular-nums'],
     color: Dash.textFaint,
   },
   sessionNote: {
-    fontFamily: SERIF_ITALIC,
-    // The loaded face is the 400 italic; leaving a heavier weight in place
-    // would ask iOS to synthesize one this family has no file for.
-    fontWeight: '400',
-    fontSize: 14.5,
+    // The serif role carries the explicit 400 this site used to declare:
+    // the loaded face is the 400 italic, and a heavier weight would ask
+    // iOS to synthesize one this family has no file for.
+    ...Type.role.serif,
     color: Dash.textBody,
   },
   pdfAbsent: {
-    fontFamily: SERIF_ITALIC,
-    fontWeight: '400',
-    fontSize: 14.5,
+    ...Type.role.serif,
     color: Dash.textMuted,
     textAlign: 'center',
     paddingVertical: 8,
@@ -1017,8 +994,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   actionLabel: {
-    fontFamily: SORA_BOLD,
-    fontSize: 11.5,
+    ...Type.role.action,
     color: Dash.text,
   },
   // D114(a). The retire row stops twinning the PDF row above it: it carries
@@ -1034,8 +1010,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
   },
   retireLabel: {
-    fontFamily: SORA_BOLD,
-    fontSize: 11.5,
+    ...Type.role.action,
     color: Dash.verdict.Hated,
   },
   renameSheet: {
@@ -1057,10 +1032,7 @@ const styles = StyleSheet.create({
     color: Dash.text,
   },
   renameFieldLabel: {
-    fontFamily: SORA_BOLD,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    ...Type.role.label,
     color: Dash.textMuted,
     marginTop: 8,
   },
@@ -1102,8 +1074,7 @@ const styles = StyleSheet.create({
     backgroundColor: Dash.accent,
   },
   logLabel: {
-    fontFamily: SORA_BOLD,
-    fontSize: 11.5,
+    ...Type.role.action,
     color: Dash.bg,
   },
 });

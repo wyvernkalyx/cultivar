@@ -61,20 +61,57 @@ export const Spacing = {
   six: 64,
 } as const;
 
+// Declared beside Type rather than inside it: an object literal cannot
+// reference its own properties, and the role layer below is built from
+// these names. `Type.family` re-exports it unchanged.
+const family = {
+  regular: 'Sora_400Regular',
+  medium: 'Sora_500Medium',
+  semibold: 'Sora_600SemiBold',
+  bold: 'Sora_700Bold',
+  display: 'Sora_800ExtraBold',
+  serifItalic: 'Newsreader_400Regular_Italic',
+} as const;
+
 /**
- * Font-family token roles (D137). One source for the loaded family names:
- * a font swap edits this object, never a component. Sizes, weights-as-
- * numbers, and tracking stay in the consuming styles until each surface's
- * restyle slice adopts the reference's type roles.
+ * Type tokens (D137, completed by the 2026-08-18 amendment in
+ * `documentation/design/design-overhaul.md`).
+ *
+ * `family` is the one source for the loaded family names: a font swap edits
+ * this object, never a component.
+ *
+ * `role` is the sized layer, recording what the restyle slices actually
+ * shipped rather than the reference's five-role line -- body 11.5 split on
+ * real surfaces into three weights (body/value/action), so the roles are
+ * seven. Values come from the audited sites, not from a redesign.
+ *
+ * A role carries type props only -- never color, never layout, never
+ * fontVariant. Consumers spread the role and add their own: tabular
+ * numerals stay a per-site prop where numerals render, because the
+ * reference scopes them to lab values rather than to a weight tier.
+ *
+ * Sizes that no role covers stay literals at their sites by design (the
+ * stat numeral at 26, the serif voice at 13, the label voice at 13/.14em,
+ * and the rest of the amendment's kept-literal list): a token with one or
+ * two consumers is scaffolding, not a system.
  */
 export const Type = {
-  family: {
-    regular: 'Sora_400Regular',
-    medium: 'Sora_500Medium',
-    semibold: 'Sora_600SemiBold',
-    bold: 'Sora_700Bold',
-    display: 'Sora_800ExtraBold',
-    serifItalic: 'Newsreader_400Regular_Italic',
+  family,
+  role: {
+    display: { fontFamily: family.display, fontSize: 26, lineHeight: 29 },
+    title: { fontFamily: family.bold, fontSize: 13 },
+    label: {
+      fontFamily: family.bold,
+      fontSize: 10,
+      letterSpacing: 1.2,
+      textTransform: 'uppercase',
+    },
+    body: { fontFamily: family.regular, fontSize: 11.5 },
+    value: { fontFamily: family.semibold, fontSize: 11.5 },
+    action: { fontFamily: family.bold, fontSize: 11.5 },
+    // The loaded face is the 400 italic; leaving a heavier weight in place
+    // would ask iOS to synthesize one this family has no file for.
+    serif: { fontFamily: family.serifItalic, fontWeight: '400', fontSize: 14.5 },
   },
 } as const;
 

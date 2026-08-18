@@ -695,13 +695,11 @@ const styles = StyleSheet.create({
     borderColor: Dash.chipBorder,
   },
   sortChipPrefix: {
-    fontFamily: SORA_REGULAR,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textMuted,
   },
   sortChipValue: {
-    fontFamily: SORA_SEMIBOLD,
-    fontSize: 11.5,
+    ...Type.role.value,
     color: Dash.textStrong,
   },
   sortChipCaret: {

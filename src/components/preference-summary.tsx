@@ -10,9 +10,6 @@ import { RUNGS } from '@/lib/lexicon';
 // the reference's display role -- was deferred out of slice 1 and registered
 // in D99 for the shelf card's strain line; D109's header totals are this
 // file's first consumer of it.
-const SORA_REGULAR = Type.family.regular;
-const SORA_SEMIBOLD = Type.family.semibold;
-const SORA_BOLD = Type.family.bold;
 const SORA_DISPLAY = Type.family.display;
 const SERIF_ITALIC = Type.family.serifItalic;
 
@@ -220,15 +217,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   label: {
-    fontFamily: SORA_BOLD,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    ...Type.role.label,
     color: Dash.textMuted,
   },
   empty: {
-    fontFamily: SERIF_ITALIC,
-    fontSize: 14.5,
+    ...Type.role.serif,
     color: Dash.textBody,
   },
   effectsLine: {
@@ -279,8 +272,7 @@ const styles = StyleSheet.create({
     borderRadius: Dash.radius.badge,
   },
   barCount: {
-    fontFamily: SORA_SEMIBOLD,
-    fontSize: 11.5,
+    ...Type.role.value,
     fontVariant: ['tabular-nums'],
     color: Dash.text,
     textAlign: 'center',
@@ -295,8 +287,7 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   muted: {
-    fontFamily: SORA_REGULAR,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textMuted,
   },
   chipRow: {
@@ -319,8 +310,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   chipText: {
-    fontFamily: SORA_REGULAR,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textBody,
   },
   analyteRow: {
@@ -339,14 +329,11 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   analyteLabel: {
-    fontFamily: SORA_BOLD,
-    fontSize: 10,
-    letterSpacing: 1.2,
+    ...Type.role.label,
     color: Dash.textFaint,
   },
   analyteValue: {
-    fontFamily: SORA_SEMIBOLD,
-    fontSize: 11.5,
+    ...Type.role.value,
     fontVariant: ['tabular-nums'],
     color: Dash.text,
   },

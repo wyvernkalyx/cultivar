@@ -419,23 +419,19 @@ const styles = StyleSheet.create({
     color: Dash.accent,
   },
   brand: {
-    fontFamily: SORA_REGULAR,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textBody,
   },
   brandAbsent: {
-    fontFamily: SORA_REGULAR,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textMuted,
   },
   meta: {
-    fontFamily: SORA_REGULAR,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textFaint,
   },
   retired: {
-    fontFamily: SORA_REGULAR,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textMuted,
   },
   totalsRow: {
@@ -448,15 +444,11 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   totalLabel: {
-    fontFamily: SORA_BOLD,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
+    ...Type.role.label,
     color: Dash.textFaint,
   },
   totalValue: {
-    fontFamily: SORA_SEMIBOLD,
-    fontSize: 11.5,
+    ...Type.role.value,
     fontVariant: ['tabular-nums'],
     color: Dash.text,
   },
@@ -515,8 +507,7 @@ const styles = StyleSheet.create({
     color: Dash.textMuted,
   },
   ndTerpenes: {
-    fontFamily: SERIF_ITALIC,
-    fontSize: 14.5,
+    ...Type.role.serif,
     color: Dash.textMuted,
     marginTop: 4,
   },
@@ -541,13 +532,11 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   footerText: {
-    fontFamily: SORA_REGULAR,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textBody,
   },
   footerAbsent: {
-    fontFamily: SORA_REGULAR,
-    fontSize: 11.5,
+    ...Type.role.body,
     color: Dash.textMuted,
   },
   // The reference's pill (screen 01), sized by its label: the 4b gate
@@ -561,8 +550,7 @@ const styles = StyleSheet.create({
     backgroundColor: Dash.accent,
   },
   logLabel: {
-    fontFamily: SORA_BOLD,
-    fontSize: 11.5,
+    ...Type.role.action,
     color: Dash.bg,
   },
 });

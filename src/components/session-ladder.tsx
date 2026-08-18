@@ -123,7 +123,6 @@ type Phase = 'ladder' | 'closing';
 // Font families registered app-wide in the root layout (D83 Decision 1).
 // Referenced by name; when a family is not yet loaded RN falls back to the
 // system font — the ratified fallback, so the survey never blocks on a font.
-const SORA_REGULAR = Type.family.regular;
 const SORA_MEDIUM = Type.family.medium;
 const SORA_SEMIBOLD = Type.family.semibold;
 const SORA_BOLD = Type.family.bold;
@@ -1264,8 +1263,7 @@ const styles = StyleSheet.create({
   },
   // The footer microcopy (D141): quiet, centered, below the stack.
   rungFootnote: {
-    fontFamily: SORA_REGULAR,
-    fontSize: 11.5,
+    ...Type.role.body,
     lineHeight: 15,
     color: Dash.textFaint,
     textAlign: 'center',
