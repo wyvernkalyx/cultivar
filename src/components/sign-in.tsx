@@ -89,6 +89,7 @@ export default function SignIn() {
             <Pressable
               onPress={sendCode}
               disabled={sendDisabled}
+              accessibilityRole="button"
               style={[
                 styles.button,
                 { backgroundColor: theme.backgroundElement },
@@ -118,6 +119,7 @@ export default function SignIn() {
             <Pressable
               onPress={verifyCode}
               disabled={verifyDisabled}
+              accessibilityRole="button"
               style={[
                 styles.button,
                 { backgroundColor: theme.backgroundElement },
@@ -125,7 +127,11 @@ export default function SignIn() {
               ]}>
               <ThemedText type="smallBold">{busy ? 'Verifying…' : 'Verify'}</ThemedText>
             </Pressable>
-            <Pressable onPress={useDifferentEmail} disabled={busy} style={styles.linkButton}>
+            <Pressable
+              onPress={useDifferentEmail}
+              disabled={busy}
+              accessibilityRole="button"
+              style={styles.linkButton}>
               <ThemedText type="link" themeColor="textSecondary">
                 Use a different email
               </ThemedText>

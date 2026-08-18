@@ -369,7 +369,7 @@ export function ShelfList({ onSummary, filterQuery }: ShelfListProps) {
     return (
       <View style={styles.messageContainer}>
         <Text style={styles.message}>{error}</Text>
-        <Pressable onPress={load}>
+        <Pressable onPress={load} accessibilityRole="button">
           <Text style={styles.messageAction}>Retry</Text>
         </Pressable>
       </View>

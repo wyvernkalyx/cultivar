@@ -196,7 +196,7 @@ export function ShelfCard({
   const latest = sessions.length === 0 ? null : sessions[sessions.length - 1];
 
   return (
-    <Pressable onPress={onOpen}>
+    <Pressable onPress={onOpen} accessibilityRole="button">
       <View style={styles.card}>
         <View style={styles.strainRow}>
           {/* Null or whitespace-only strain is stated, not left as a blank

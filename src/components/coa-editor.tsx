@@ -184,6 +184,7 @@ function ValueCell({
     return (
       <Pressable
         onPress={() => setText(na || value === null ? '' : String(value))}
+        accessibilityRole="button"
         hitSlop={Spacing.two}>
         <ThemedText
           type="small"
@@ -227,7 +228,11 @@ function NameCell({
 
   if (text === null) {
     return (
-      <Pressable onPress={() => setText(name)} style={styles.nameCell} hitSlop={Spacing.two}>
+      <Pressable
+        onPress={() => setText(name)}
+        accessibilityRole="button"
+        style={styles.nameCell}
+        hitSlop={Spacing.two}>
         <ThemedText type="small" themeColor={secondary || name === '' ? 'textSecondary' : undefined}>
           {/* A fresh manual add-row arrives unnamed; an invisible empty label
               would be untappable. Display-only -- emit drops unnamed rows. */}
@@ -289,7 +294,11 @@ function AnalyteRow({
         secondary={secondary}
         onCommit={(next) => onEdit({ pct: next.pct, na: next.na })}
       />
-      <Pressable onPress={confirmDelete} hitSlop={Spacing.two}>
+      <Pressable
+        onPress={confirmDelete}
+        accessibilityRole="button"
+        accessibilityLabel={row.name === '' ? 'Remove row' : `Remove ${row.name}`}
+        hitSlop={Spacing.two}>
         <ThemedText type="small" themeColor="textSecondary">
           ✕
         </ThemedText>
@@ -333,7 +342,11 @@ function AnalyteSection({
         />
       ))}
       {manual && onAdd && (
-        <Pressable onPress={onAdd} style={styles.ndToggle} hitSlop={Spacing.two}>
+        <Pressable
+          onPress={onAdd}
+          accessibilityRole="button"
+          style={styles.ndToggle}
+          hitSlop={Spacing.two}>
           <ThemedText type="small" themeColor="textSecondary">
             + Add analyte
           </ThemedText>
@@ -341,7 +354,11 @@ function AnalyteSection({
       )}
       {nd.length > 0 && (
         <>
-          <Pressable onPress={() => setShowNd((s) => !s)} style={styles.ndToggle}>
+          <Pressable
+            onPress={() => setShowNd((s) => !s)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showNd }}
+            style={styles.ndToggle}>
             <ThemedText type="small" themeColor="textSecondary">
               {showNd ? '▾' : '▸'} Not detected ({nd.length})
             </ThemedText>
@@ -553,6 +570,7 @@ export function CoaEditor({
       <Pressable
         onPress={() => onConfirm(emitDraft(draft, manual))}
         disabled={busy}
+        accessibilityRole="button"
         style={[
           styles.confirmButton,
           { backgroundColor: theme.backgroundElement },

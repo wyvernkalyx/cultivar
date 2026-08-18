@@ -367,6 +367,7 @@ export default function AddToShelfModal({
               </ScrollView>
               <Pressable
                 onPress={pickAnother}
+                accessibilityRole="button"
                 style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
                 <ThemedText type="smallBold">Pick another</ThemedText>
               </Pressable>
@@ -392,6 +393,7 @@ export default function AddToShelfModal({
               </ScrollView>
               <Pressable
                 onPress={pickAnother}
+                accessibilityRole="button"
                 style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
                 <ThemedText type="smallBold">Pick another</ThemedText>
               </Pressable>
@@ -413,6 +415,7 @@ export default function AddToShelfModal({
               )}
               <Pressable
                 onPress={pickAnother}
+                accessibilityRole="button"
                 style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
                 <ThemedText type="smallBold">Start over</ThemedText>
               </Pressable>
@@ -464,6 +467,7 @@ export default function AddToShelfModal({
               )}
               <Pressable
                 onPress={pickAnother}
+                accessibilityRole="button"
                 style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
                 <ThemedText type="smallBold">Pick another</ThemedText>
               </Pressable>
@@ -479,6 +483,7 @@ export default function AddToShelfModal({
               <Pressable
                 onPress={pick}
                 disabled={busy}
+                accessibilityRole="button"
                 style={[
                   styles.button,
                   { backgroundColor: theme.backgroundElement },
@@ -497,6 +502,7 @@ export default function AddToShelfModal({
               <Pressable
                 onPress={() => setPhase('scanning')}
                 disabled={busy}
+                accessibilityRole="button"
                 style={[
                   styles.button,
                   { backgroundColor: theme.backgroundElement },
@@ -514,6 +520,7 @@ export default function AddToShelfModal({
                   setManualEntry(true);
                 }}
                 disabled={busy}
+                accessibilityRole="button"
                 style={[
                   styles.button,
                   { backgroundColor: theme.backgroundElement },
@@ -527,6 +534,7 @@ export default function AddToShelfModal({
 
           <Pressable
             onPress={close}
+            accessibilityRole="button"
             style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
             <ThemedText type="smallBold">Close</ThemedText>
           </Pressable>
@@ -610,6 +618,7 @@ function ReviewOrGuard({
         {onManual !== undefined && (
           <Pressable
             onPress={onManual}
+            accessibilityRole="button"
             style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
             <ThemedText type="smallBold">Enter this COA manually</ThemedText>
           </Pressable>

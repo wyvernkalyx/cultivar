@@ -116,6 +116,7 @@ export default function QrImportBrowser({
   const cancelButton = (
     <Pressable
       onPress={onCancel}
+      accessibilityRole="button"
       style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
       <ThemedText type="smallBold">Cancel</ThemedText>
     </Pressable>
@@ -178,6 +179,7 @@ export default function QrImportBrowser({
           </ThemedText>
           <Pressable
             onPress={() => onImport(detectedUrl)}
+            accessibilityRole="button"
             style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
             <ThemedText type="smallBold">Import this COA</ThemedText>
           </Pressable>
@@ -187,6 +189,7 @@ export default function QrImportBrowser({
           the user a tap, never the feature. */}
       <Pressable
         onPress={() => onImport(currentUrlRef.current ?? scannedUrl)}
+        accessibilityRole="button"
         style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
         <ThemedText type="smallBold">Import this page</ThemedText>
       </Pressable>

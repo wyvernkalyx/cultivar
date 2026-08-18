@@ -247,7 +247,11 @@ export function CompletionBloomOverlay({ onDone }: { onDone: () => void }) {
           including the opening delay while the layer is still transparent: a
           tap in that window is a user who wants the screen back, and honoring
           it is the same answer as honoring one a second later. */}
-      <Pressable style={styles.skipSurface} onPress={skip}>
+      <Pressable
+        style={styles.skipSurface}
+        onPress={skip}
+        accessibilityRole="button"
+        accessibilityLabel="Skip">
         <BloomArt petalAnims={petalAnims} calyxAnim={calyxAnim} captionAnim={captionAnim} />
       </Pressable>
     </Animated.View>
