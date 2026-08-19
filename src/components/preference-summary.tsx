@@ -169,17 +169,16 @@ export function PreferenceSummary({
 
   return (
     <View style={styles.card}>
-      {/* D109's header row, mock layout: the two all-time totals flank the
-          distribution. The card opens on it -- the "Your preferences"
-          eyebrow is gone from this branch because the screen's own subtitle
-          now frames the card, and the standalone "Would buy again: N" line
-          is absorbed into the right flank. The empty branch above keeps its
-          eyebrow: nothing frames a card that has no header row. */}
+      {/* D109's header row, D148's cut: the verdict distribution with the
+          BUY AGAIN total to its right. The left flank's all-time session
+          count left the card 2026-08-19 (D148) -- the Insights subtitle
+          already states that number before the card is reached. The
+          "Your preferences" eyebrow remains gone from this branch because
+          the screen's own subtitle frames the card, and the standalone
+          "Would buy again: N" line stays absorbed into the right flank.
+          The empty branch above keeps its eyebrow: nothing frames a card
+          that has no header row. */}
       <View style={styles.headerRow}>
-        <View style={styles.flank}>
-          <Text style={styles.flankValue}>{sessionCount}</Text>
-          <Text style={styles.label}>SESSIONS · ALL-TIME</Text>
-        </View>
         {/* RUNGS order, top rung first -- the fixed green->red band identity. */}
         <View style={styles.barRow}>
           {RUNGS.map((rung) => (
@@ -231,14 +230,12 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    // The two flanks and the bar row all end on the same line: each column
-    // is value-over-eyebrow or bar-over-count, so bottom alignment is what
-    // lines the three eyebrow-register rows up.
+    // The bar row and the remaining flank end on the same line: each column
+    // is bar-over-count or value-over-eyebrow, so bottom alignment is what
+    // lines the eyebrow-register rows up (D148 removed the left flank; the
+    // geometry rule is unchanged).
     alignItems: 'flex-end',
     gap: 12,
-  },
-  flank: {
-    gap: 2,
   },
   flankRight: {
     gap: 2,
@@ -252,8 +249,8 @@ const styles = StyleSheet.create({
     color: Dash.text,
   },
   barRow: {
-    // Takes the header row's middle; the flanks are content-sized, so the
-    // distribution absorbs whatever width their digits leave.
+    // Takes the header row's left and middle; the flank is content-sized,
+    // so the distribution absorbs whatever width its digits leave.
     flex: 1,
     flexDirection: 'row',
     alignItems: 'flex-end',
