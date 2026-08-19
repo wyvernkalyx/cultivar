@@ -46,11 +46,38 @@ export type TerpeneRange = {
    *  ND -- the lab never listed it, and absence is not a fact about it. */
   ndRowCount: number;
 };
+export type TerpeneProfileCompanion = {
+  name: string;
+  /** Group members (COAs) on which this name is REPORTED beside the
+   *  dominant. A co-occurrence count in the log, stated as such -- never a
+   *  synergy or effect claim (D147.1). */
+  coaCount: number;
+};
+export type TerpeneProfileGroup = {
+  dominant: string;
+  coaCount: number;
+  sessionCount: number;
+  /** Dominant pct across members, reported values only (D147.1). */
+  dominantPct: { min: number; max: number };
+  /** Top 3 by coaCount desc, then name asc (D147.1). */
+  companions: TerpeneProfileCompanion[];
+};
+export type TerpeneProfiles = {
+  /** Member count desc, then dominant name asc (D147.1). */
+  groups: TerpeneProfileGroup[];
+  /** COAs in the set with zero reported terpene rows: counted, displayed,
+   *  never merged into a group and never invented (D147). */
+  noDataCoaCount: number;
+  noDataSessionCount: number;
+};
 export type ChemistryProfile = {
   coaCount: number;
   sessionCount: number;
-  /** Every name with >= 1 reported value in the set; max pct desc, name asc. */
+  /** Every name with >= 1 reported value in the set; max pct desc, name asc.
+   *  Retained for the share text (D147 non-goal); the cards render profiles. */
   terpenes: TerpeneRange[];
+  /** D147: per-COA profiles grouped by dominant terpene. */
+  profiles: TerpeneProfiles;
   thc: AnalyteRange | null;
   cbd: AnalyteRange | null;
   totalTerpenes: AnalyteRange | null;
@@ -143,6 +170,87 @@ function topReportedTerpene(rows: InsightTerpene[], coaId: string): BuyAgainRow[
   return best;
 }
 
+// D147: per-COA profiles grouped by dominant terpene. The profile grain is
+// the COA's own reported rows, pct desc with name-asc ties (the
+// topReportedTerpene ordering, generalized to the full list); null rows join
+// nothing. A COA with zero reported rows lands in the no-data bucket:
+// counted, never merged, never invented. Groups count distinct COAs
+// (D147.2); session counts ride beside as evidence weight. Companions count
+// each non-dominant reported NAME once per member COA (D147.1).
+function terpeneProfiles(
+  terpenes: InsightTerpene[],
+  coaIds: Set<string>,
+  sessionsByCoa: Map<string, number>
+): TerpeneProfiles {
+  const rowsByCoa = new Map<string, { name: string; pct: number }[]>();
+  for (const id of coaIds) rowsByCoa.set(id, []);
+  for (const row of terpenes) {
+    if (!coaIds.has(row.coa_id) || row.pct === null) continue;
+    rowsByCoa.get(row.coa_id)!.push({ name: row.name, pct: row.pct });
+  }
+  type GroupEntry = {
+    coaCount: number;
+    sessionCount: number;
+    min: number;
+    max: number;
+    companionCoas: Map<string, number>;
+  };
+  const groups = new Map<string, GroupEntry>();
+  let noDataCoaCount = 0;
+  let noDataSessionCount = 0;
+  for (const [coaId, rows] of rowsByCoa) {
+    const sessionCount = sessionsByCoa.get(coaId) ?? 0;
+    if (rows.length === 0) {
+      noDataCoaCount += 1;
+      noDataSessionCount += sessionCount;
+      continue;
+    }
+    rows.sort((a, b) => (b.pct !== a.pct ? b.pct - a.pct : a.name.localeCompare(b.name)));
+    const dominant = rows[0];
+    let entry = groups.get(dominant.name);
+    if (entry === undefined) {
+      entry = {
+        coaCount: 0,
+        sessionCount: 0,
+        min: dominant.pct,
+        max: dominant.pct,
+        companionCoas: new Map(),
+      };
+      groups.set(dominant.name, entry);
+    }
+    entry.coaCount += 1;
+    entry.sessionCount += sessionCount;
+    entry.min = Math.min(entry.min, dominant.pct);
+    entry.max = Math.max(entry.max, dominant.pct);
+    const seen = new Set<string>();
+    for (const row of rows) {
+      if (row.name === dominant.name || seen.has(row.name)) continue;
+      seen.add(row.name);
+      entry.companionCoas.set(row.name, (entry.companionCoas.get(row.name) ?? 0) + 1);
+    }
+  }
+  return {
+    groups: [...groups.entries()]
+      .map(([dominant, entry]) => ({
+        dominant,
+        coaCount: entry.coaCount,
+        sessionCount: entry.sessionCount,
+        dominantPct: { min: entry.min, max: entry.max },
+        companions: [...entry.companionCoas.entries()]
+          .map(([name, coaCount]) => ({ name, coaCount }))
+          .sort((a, b) =>
+            b.coaCount !== a.coaCount ? b.coaCount - a.coaCount : a.name.localeCompare(b.name)
+          )
+          .slice(0, 3),
+      }))
+      .sort((a, b) =>
+        b.coaCount !== a.coaCount ? b.coaCount - a.coaCount : a.dominant.localeCompare(b.dominant)
+      ),
+    noDataCoaCount,
+    noDataSessionCount,
+  };
+}
+
 function buildProfile(
   words: Set<string>,
   sessions: InsightSession[],
@@ -153,11 +261,16 @@ function buildProfile(
     (session) => session.overall_word !== null && words.has(session.overall_word)
   );
   const coaIds = new Set(matching.map((session) => session.coa_id));
+  const sessionsByCoa = new Map<string, number>();
+  for (const session of matching) {
+    sessionsByCoa.set(session.coa_id, (sessionsByCoa.get(session.coa_id) ?? 0) + 1);
+  }
   const setCoas = coas.filter((coa) => coaIds.has(coa.id));
   return {
     coaCount: setCoas.length,
     sessionCount: matching.length,
     terpenes: terpeneRanges(terpenes, coaIds),
+    profiles: terpeneProfiles(terpenes, coaIds, sessionsByCoa),
     thc: analyteRange(setCoas.map((coa) => coa.total_thc)),
     cbd: analyteRange(setCoas.map((coa) => coa.total_cbd)),
     totalTerpenes: analyteRange(setCoas.map((coa) => coa.total_terpenes)),

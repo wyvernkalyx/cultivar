@@ -231,22 +231,19 @@ describe('empty log', () => {
   it('yields zero counts, null ranges, empty lists -- no invention', () => {
     expect(out.sessionCount).toBe(0);
     expect(out.strainCount).toBe(0);
-    expect(out.target).toEqual({
+    const emptyProfile = {
       coaCount: 0,
       sessionCount: 0,
       terpenes: [],
+      // D147: an empty set has empty profile groups and zero buckets --
+      // the no-invention property now asserted at the profile grain too.
+      profiles: { groups: [], noDataCoaCount: 0, noDataSessionCount: 0 },
       thc: null,
       cbd: null,
       totalTerpenes: null,
-    });
-    expect(out.avoid).toEqual({
-      coaCount: 0,
-      sessionCount: 0,
-      terpenes: [],
-      thc: null,
-      cbd: null,
-      totalTerpenes: null,
-    });
+    };
+    expect(out.target).toEqual(emptyProfile);
+    expect(out.avoid).toEqual(emptyProfile);
     expect(out.buyAgain).toEqual([]);
   });
 });
