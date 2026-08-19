@@ -287,6 +287,8 @@ modules, no EAS cycle. Named non-goal: the mock's status-bar chrome
   THC/CBD collapse to one line. The dashboard subtitle reads
   "N sessions logged, on and off the shelf. Verdicts build your
   picture here." All D98 computation rules are unchanged.
+  The left flank is superseded 2026-08-19 by D148 (see the D148
+  amendment below).
 - **D109.1 -- reference defect, named: the mock renders CBD as
   "ND-0.08%".** ND as a range endpoint folds ND in as a zero lower
   bound, which the binding D98 rule forbids -- ND != 0, applied to
@@ -542,3 +544,32 @@ that COA). The D133b commit also amends the effects-tags.md
 detail surface; any Off-Key styling distinction (banked -- one hue
 decision if it ever grates); any schema change;
 canonicalize-at-read.
+
+## Amendments -- 2026-08-19 (D148: sessions flank removed from the compact summary)
+
+Ratified by the operator 2026-08-19 in chat. Operator grounds, verbatim:
+"it makes the page look busier and really doesn't provide user value."
+
+- **D148 -- the left flank is deleted.** The compact summary's header
+  row drops the all-time session count and its SESSIONS - ALL-TIME
+  label (the left flank in preference-summary.tsx). The verdict bars
+  and the BUY AGAIN right flank stand, and every other D109 clause
+  stands: five rungs rendered, empty rungs dimmed never hidden, chips,
+  the THC/CBD line, D98 computation untouched. Supersedes D109's
+  left-flank clause, grounds against grounds: D109's authority was
+  mock fidelity to the annotated reference; at HEAD the card renders
+  on the Insights screen, whose own subtitle two cards up already
+  carries the count ("Based on N logged sessions across M strains.",
+  src/app/insights.tsx), so the flank duplicates a number the screen
+  states before the card is reached. Fidelity to the mock yields to a
+  duplication the operator ruled busy and valueless; no information
+  leaves the screen.
+- The same feat rewrites the header-row comment block in
+  preference-summary.tsx, whose "the two all-time totals flank the
+  distribution" sentence this change falsifies (status-truth rule).
+- Non-goals: the BUY AGAIN flank; the bars and their dimming; the
+  empty branch and its copy; D98 computation; the Stash subtitle;
+  the Insights subtitle; every other D109 surface.
+
+Slice plan: this amendment (Tier 1); D148 as one feat: commit
+(Tier 2, device-gated on the physical iPhone).
