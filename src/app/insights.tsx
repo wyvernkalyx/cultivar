@@ -44,35 +44,48 @@ function rangeText(range: AnalyteRange | null): string {
   return formatRangePct(range) ?? RANGE_ABSENT;
 }
 
-// Bar fill relative to the loudest terpene shown -- comparison within the
-// card only, no absolute scale claimed.
-function TerpeneRows({ profile }: { profile: ChemistryProfile }) {
-  const shown = profile.terpenes.slice(0, 5);
-  const loudest = shown.length > 0 ? Math.max(...shown.map((row) => row.max)) : 0;
+// D147: profile groups replace the pooled per-name list. Each row is a
+// batch shape this user actually rated, grouped by dominant terpene; every
+// line is a count or reported range from the log. Companion counts are
+// co-occurrence in the log, stated as such -- no synergy or effect claim
+// (D147.1). The no-data bucket is counted, never merged, never invented.
+function ProfileGroups({ profile }: { profile: ChemistryProfile }) {
+  const { groups, noDataCoaCount, noDataSessionCount } = profile.profiles;
   return (
     <View style={styles.terpeneRows}>
-      {shown.map((row) => (
-        <View key={row.name} style={styles.terpeneRow}>
-          <View style={[styles.terpeneDot, { backgroundColor: terpeneHue(row.name) }]} />
-          <Text style={styles.terpeneName} numberOfLines={1} ellipsizeMode="tail">
-            {row.name}
-          </Text>
-          <View style={styles.terpeneBarTrack}>
-            <View
-              style={[
-                styles.terpeneBarFill,
-                {
-                  backgroundColor: terpeneHue(row.name),
-                  width: `${loudest > 0 ? Math.max(6, Math.round((row.max / loudest) * 100)) : 0}%`,
-                },
-              ]}
-            />
+      {groups.map((group) => (
+        <View key={group.dominant} style={styles.profileGroup}>
+          <View style={styles.terpeneRow}>
+            <View style={[styles.terpeneDot, { backgroundColor: terpeneHue(group.dominant) }]} />
+            <Text style={styles.profileDominant} numberOfLines={1} ellipsizeMode="tail">
+              {group.dominant}
+            </Text>
+            <Text style={styles.terpeneRange}>
+              {rangeText({ ...group.dominantPct, ndCount: 0 })}
+            </Text>
           </View>
-          <Text style={styles.terpeneRange}>
-            {rangeText({ min: row.min, max: row.max, ndCount: row.ndRowCount })}
+          {/* Counts and companions share one wrapping line so neither fights
+              the name for width (device-gate ruling, 2026-08-18). */}
+          <Text style={styles.profileMeta} numberOfLines={2} ellipsizeMode="tail">
+            {group.coaCount === 1 ? '1 batch' : `${group.coaCount} batches`}
+            {' · '}
+            {group.sessionCount === 1 ? '1 session' : `${group.sessionCount} sessions`}
+            {group.companions.length > 0
+              ? ` · with ${group.companions
+                  .map((companion) => `${companion.name} (${companion.coaCount})`)
+                  .join(' · ')}`
+              : ''}
           </Text>
         </View>
       ))}
+      {noDataCoaCount > 0 && (
+        <Text style={styles.profileNoData}>
+          {noDataCoaCount === 1 ? '1 batch' : `${noDataCoaCount} batches`} with no reported
+          terpene data
+          {' · '}
+          {noDataSessionCount === 1 ? '1 session' : `${noDataSessionCount} sessions`}
+        </Text>
+      )}
     </View>
   );
 }
@@ -242,7 +255,7 @@ export default function InsightsScreen() {
                   <Text style={styles.absent}>No Loved sessions yet.</Text>
                 ) : (
                   <>
-                    <TerpeneRows profile={insights.target} />
+                    <ProfileGroups profile={insights.target} />
                     <FactLine profile={insights.target} />
                     <Text style={styles.explainer}>
                       Ranges are the reported values of batches you rated Loved. No effect
@@ -295,7 +308,7 @@ export default function InsightsScreen() {
                   <Text style={styles.absent}>No Disliked or Hated sessions yet.</Text>
                 ) : (
                   <>
-                    <TerpeneRows profile={insights.avoid} />
+                    <ProfileGroups profile={insights.avoid} />
                     <FactLine profile={insights.avoid} />
                     <Text style={styles.explainer}>
                       Reported values of batches you rated Disliked or Hated. Same facts,
@@ -481,22 +494,26 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
   },
-  terpeneName: {
+  profileGroup: {
+    gap: 2,
+  },
+  profileDominant: {
+    flex: 1,
     fontFamily: Type.family.semibold,
     fontSize: 12,
     color: Dash.text,
-    width: 118,
   },
-  terpeneBarTrack: {
-    flex: 1,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Dash.surface2,
-    overflow: 'hidden',
+  // Indent past the dot (8) + row gap so the meta line hangs under the name.
+  profileMeta: {
+    fontFamily: Type.family.regular,
+    fontSize: 11,
+    color: Dash.textMuted,
+    paddingLeft: 16,
   },
-  terpeneBarFill: {
-    height: 6,
-    borderRadius: 3,
+  profileNoData: {
+    fontFamily: Type.family.regular,
+    fontSize: 11,
+    color: Dash.textFaint,
   },
   terpeneRange: {
     fontFamily: Type.family.medium,
