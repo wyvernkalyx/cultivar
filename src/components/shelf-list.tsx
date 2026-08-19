@@ -128,6 +128,10 @@ export function ShelfList({ onSummary, filterQuery }: ShelfListProps) {
   // and the archive fetches its own when it opens.
   const [retirementByCoa, setRetirementByCoa] = useState<Map<string, CardRetirement>>(new Map());
   const [segment, setSegment] = useState<Segment>('active');
+  // D149: History expansion state, session-local by design (the ratified
+  // v1 cost): keyed by COA id; every refetch and every segment switch
+  // resets the tab to all-collapsed.
+  const [expandedHistory, setExpandedHistory] = useState<Set<string>>(new Set());
   const [sort, setSort] = useState<SortKey>('recent');
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -213,6 +217,8 @@ export function ShelfList({ onSummary, filterQuery }: ShelfListProps) {
           return;
         }
         setError(null);
+        // D149: a refetch resets History to the collapsed resting state.
+        setExpandedHistory(new Set());
         // The client is untyped (no generated DB types); these casts assert
         // the selected-columns shapes. Runtime validation remains the
         // accepted debt.
@@ -418,6 +424,25 @@ export function ShelfList({ onSummary, filterQuery }: ShelfListProps) {
             // D135: attach reached from the same overflow retire lives in.
             // The card itself gates on source_lab === 'manual'.
             onAttach={item.on_shelf_count > 0 ? (coa) => setAttachTarget(coa) : undefined}
+            // D149: the collapse, History rows only -- the same
+            // prop-omission scoping as Log and retire. Collapsed is the
+            // resting state; the toggle flips this one card's entry in the
+            // session-local set.
+            collapsed={item.on_shelf_count === 0 ? !expandedHistory.has(item.id) : undefined}
+            onToggleCollapse={
+              item.on_shelf_count === 0
+                ? () =>
+                    setExpandedHistory((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(item.id)) {
+                        next.delete(item.id);
+                      } else {
+                        next.add(item.id);
+                      }
+                      return next;
+                    })
+                : undefined
+            }
           />
         )}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
@@ -453,7 +478,12 @@ export function ShelfList({ onSummary, filterQuery }: ShelfListProps) {
                 return (
                   <Pressable
                     key={option.key}
-                    onPress={() => setSegment(option.key)}
+                    onPress={() => {
+                      setSegment(option.key);
+                      // D149: leaving or entering the segment resets the
+                      // expansion state -- the tab always opens collapsed.
+                      setExpandedHistory(new Set());
+                    }}
                     // The 32pt visual is the ratified dimension; the slop is
                     // what carries the target to the 44pt floor without
                     // moving anything on screen.

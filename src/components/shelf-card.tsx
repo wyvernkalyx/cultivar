@@ -81,6 +81,12 @@ export type ShelfCardProps = {
   onAttach?: (coa: ShelfCoa) => void;
   // Present only off the shelf, where it is the archive marker.
   retirement?: CardRetirement;
+  // D149: the History collapse, both props present only on the History
+  // surface (the prop-omission scoping Log and retire use). `collapsed`
+  // is the resting state; `onToggleCollapse` flips it. Active cards never
+  // receive either and render exactly as before.
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 };
 
 // A `date` column arrives as 'YYYY-MM-DD'. `new Date('YYYY-MM-DD')` parses at
@@ -187,6 +193,8 @@ export function ShelfCard({
   onRetire,
   onAttach,
   retirement,
+  collapsed,
+  onToggleCollapse,
 }: ShelfCardProps) {
   // Reported AND non-zero: a zero total has no share to divide, so there is
   // no fingerprint to draw and the ND line carries the truth instead.
@@ -194,6 +202,37 @@ export function ShelfCard({
     coa.total_terpenes !== null && coa.total_terpenes > 0 && topTerpenes.length > 0;
   const meta = coa.type === null ? cardDateLine(coa) : `${coa.type} · ${cardDateLine(coa)}`;
   const latest = sessions.length === 0 ? null : sessions[sessions.length - 1];
+
+  // D149: the collapsed History form. One compact block -- strain, brand,
+  // disclosure chevron -- and one press target that EXPANDS rather than
+  // opens the detail: the fast-scroll resting state. minHeight carries the
+  // D145 44pt floor on the card's single control.
+  if (collapsed === true) {
+    return (
+      <Pressable
+        onPress={onToggleCollapse}
+        accessibilityRole="button"
+        accessibilityLabel={`${coa.strain?.trim() ? coa.strain.trim() : 'Strain not reported'}, ${
+          coa.brand ?? 'Brand not reported'
+        }`}
+        accessibilityState={{ expanded: false }}
+        style={styles.collapsedCard}>
+        <View style={styles.collapsedText}>
+          <Text
+            style={coa.strain?.trim() ? styles.strain : styles.strainAbsent}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}>
+            {coa.strain?.trim() ? coa.strain : 'Strain not reported'}
+          </Text>
+          <Text style={coa.brand === null ? styles.brandAbsent : styles.brand} numberOfLines={1}>
+            {coa.brand ?? 'Brand not reported'}
+          </Text>
+        </View>
+        <Text style={styles.chevron}>{'\u203a'}</Text>
+      </Pressable>
+    );
+  }
 
   return (
     <Pressable onPress={onOpen} accessibilityRole="button">
@@ -209,6 +248,20 @@ export function ShelfCard({
             {coa.strain?.trim() ? coa.strain : 'Strain not reported'}
           </Text>
           <View style={styles.strainRowActions}>
+            {/* D149: the collapse control on an expanded History card.
+                Nested inside the card's Pressable exactly as the overflow
+                is, so collapsing does not also open the detail. Renders
+                only where the toggle exists -- the History surface. */}
+            {onToggleCollapse !== undefined && (
+              <Pressable
+                hitSlop={12}
+                onPress={onToggleCollapse}
+                accessibilityRole="button"
+                accessibilityLabel="Collapse this card"
+                accessibilityState={{ expanded: true }}>
+                <Text style={styles.chevron}>{'\u2304'}</Text>
+              </Pressable>
+            )}
             {/* The overflow (D114). Top-right, diagonally opposite the Log
                 button, so the card's one loud control keeps its own corner
                 and this one crowds nothing. Nested inside the card's
@@ -363,6 +416,28 @@ const styles = StyleSheet.create({
     borderRadius: Dash.radius.card,
     padding: 16,
     gap: 8,
+  },
+  // D149: the collapsed History block. minHeight 44 is the D145 floor on
+  // the card's one press target; strain and brand keep their existing
+  // type roles, so the collapsed row is the full card's own first lines.
+  collapsedCard: {
+    backgroundColor: Dash.surface,
+    borderRadius: Dash.radius.card,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  collapsedText: {
+    flex: 1,
+    gap: 2,
+  },
+  chevron: {
+    color: Dash.textMuted,
+    fontSize: 18,
+    lineHeight: 20,
   },
   strainRow: {
     flexDirection: 'row',
