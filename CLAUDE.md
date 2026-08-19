@@ -117,13 +117,24 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   sha256sum`. autocrlf filtering is checkout-side, so worktree hashes stop
   reproducing after any fresh checkout on this machine. A worktree sha256
   is valid only for first-placement verification, never for re-verifying
-  committed state.
+  committed state. Worktree endings are heterogeneous -- all-CRLF,
+  all-LF, and mixed files coexist at HEAD -- and sed in the implementer
+  shell silently strips CR on read: edits preserve each line's own
+  terminator, and od settles endings questions, never a text-mode read
+  (2026-08-18).
 - **Ratified bytes are verified by blob hash before push authorization.**
   For architect-authored content, the architect hashes the ratified text
   and compares it against `git show <sha>:<path> | sha256sum` from the
   operator's paste. A match is the only evidence that the commit ships
   the bytes that were ratified; the check caught its first real
   divergence, tested bytes against shipped bytes, on 2026-08-05.
+- **Push authorization is ref-scoped, and push instructions name the
+  expected movement.** git push moves the branch, not a commit:
+  authorization names the exact old..new refs, and the push runs only
+  when local HEAD equals the authorized commit -- never bundled
+  alongside pending build work. One ungated Tier 2 commit reached
+  origin inside an authorized docs push (2026-08-19); the gate passed
+  after the fact, benign by luck not design.
 - **ASCII commit messages** via stdin heredoc:
   ```bash
   git commit -F - <<'EOF'
@@ -146,6 +157,11 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   never actually written is itself vacuous. Range-scoped ASCII gates
   pair a same-file whole-count control only when the file carries
   non-ASCII -- state which case holds (2026-08-12).
+  A control's printed value is read before "the control fired" is
+  written -- a control that fails to fire is a finding, never a
+  formality. Shell matters: /bin/sh does not expand $'...', making
+  byte-range grep gates silently vacuous (refired 2026-08-19,
+  architect shell); the tr form is the only ratified ASCII-gate form.
 - **Exactly one co-author trailer:** `Claude <noreply@anthropic.com>`. No
   model-specific trailer — models change, and the handbook must not need an edit
   per release.
@@ -285,6 +301,32 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
 - **Package presence is probed by directory, never `require.resolve`.**
   exports maps false-negative on packages that are present
   (2026-08-12).
+- **Structural claims about third-party behavior enter a spec only
+  after the installed source is read.** Vendored docs and memory both
+  describe versions other than the one installed; node_modules (or the
+  equivalent) is the artifact (2026-08-13).
+- **Post-change criteria are executed against a constructed
+  post-change tree before the prompt ships.** Expected values are
+  observed values: the architect builds the edited tree, runs every
+  criterion against it, and excerpts the results -- a session running
+  this fully shipped zero implementer-side criterion corrections
+  (2026-08-18).
+- **No grep gate anchors on a bare site-list line.** A list of sites
+  or names recurs wherever the list is discussed; the gate targets the
+  construct at the gated site (2026-08-13).
+- **Byte-exact artifacts travel as files, never as prompt prose.** An
+  artifact that must arrive byte-exact -- a replacement file, a patch,
+  a ratified body -- is handed to the operator as a FILE (outputs
+  channel), with wc -l and sha256 pins produced from the same artifact
+  in the SAME shell operation, and gated on arrival before any use.
+  Prose is for instructions; bytes are for files. The architect can
+  generate plausible bytes from memory without noticing, and did,
+  three times (2026-08-19).
+- **One slice, one carrier.** A build prompt is a single
+  self-contained delivery, never a sequence of pastes (2026-08-19).
+- **Every hunk header is reconciled against its own body before a
+  diff ships or applies.** Brace-only lines at hunk boundaries are the
+  documented casualty class (2026-08-19).
 
 ---
 
@@ -316,6 +358,10 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
 - **`npx expo lint` runs before any UI bytes ship -- alongside `tsc`
   and the suite, in the build prompt's verification block.** One
   lint-gate failure shipped when the gate was skipped (2026-08-10).
+  The standing baseline is 1 error, 0 warnings, exit 1 (the template
+  react-hooks/set-state-in-effect item in
+  src/hooks/use-color-scheme.web.ts): a lint run that exits 0 is a
+  change, not a pass -- predict the exit code (2026-08-19).
 - **Dead-space defects get their geometry pinned -- scrolls-with-content
   vs fixed-on-screen -- before any hypothesis is written**
   (2026-08-12).
@@ -329,7 +375,7 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
    SDK 56, so on-device testing uses an **EAS development build**, not Expo Go.
    Tests = **Jest + `ts-jest`** (`testEnvironment: 'node'`) and **`deno test`** for
    Edge Function code (e.g. `supabase/functions/ingest-coa/__tests__/ingestCoa.test.ts`).
-   161 tests / 3 suites as of 2026-08-10. Jest roots cover the parser tree AND
+   170 tests / 4 suites as of 2026-08-19. Jest roots cover the parser tree AND
    src/lib/insights (pure TS only, no RN/Expo imports; discovery canary guards the
    wiring). A test anywhere else under src/ is still silently never run: `npm test`
    still prints an all-green summary and exits 0, which is a green gate over tests
