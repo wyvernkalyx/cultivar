@@ -1,12 +1,11 @@
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { PreferenceSummaryProps } from '@/components/preference-summary';
 import { ShelfList } from '@/components/shelf-list';
 import { ThemedText } from '@/components/themed-text';
-import { WebBadge } from '@/components/web-badge';
 import { Dash, MaxContentWidth, Space, Spacing, Type } from '@/constants/theme';
 import { exportProfile } from '@/lib/export';
 import { resetProfile } from '@/lib/profile-reset';
@@ -287,7 +286,6 @@ export default function HomeScreen() {
         </View>
         <ShelfList key={shelfVersion} onSummary={handleSummary} filterQuery={searchQuery} />
 
-        {Platform.OS === 'web' && <WebBadge />}
       </SafeAreaView>
 
       {/* The gear's surface (D107.1): the signed-in email and Sign out, the

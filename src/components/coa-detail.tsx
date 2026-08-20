@@ -801,19 +801,6 @@ const styles = StyleSheet.create({
     ...Type.role.action,
     color: Dash.accent,
   },
-  badge: {
-    fontFamily: SORA_BOLD,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    fontVariant: ['tabular-nums'],
-    color: Dash.textMuted,
-    backgroundColor: Dash.surface,
-    borderRadius: Dash.radius.badge,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    overflow: 'hidden',
-  },
   messageContainer: {
     flex: 1,
     alignSelf: 'stretch',
@@ -860,16 +847,6 @@ const styles = StyleSheet.create({
   brandAbsent: {
     ...Type.role.body,
     color: Dash.textMuted,
-  },
-  meta: {
-    fontFamily: SORA_REGULAR,
-    fontSize: 11.5,
-    color: Dash.textFaint,
-  },
-  sourceLab: {
-    fontFamily: SORA_REGULAR,
-    fontSize: 10,
-    color: Dash.textFaint,
   },
   card: {
     backgroundColor: Dash.surface,
