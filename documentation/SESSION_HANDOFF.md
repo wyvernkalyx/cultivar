@@ -1,187 +1,207 @@
 # SESSION_HANDOFF
 
-Status: WRITE-LAST. Committed as this session's final act, 2026-08-19
-(the session opened late 2026-08-18 immediately after b252a97's
-close, same conversation). HEAD at write time is b1c6b5bc (D147
-slice 3 feat); this commit rides on top.
+Status: WRITE-LAST. Committed as this session's final act, 2026-08-20
+(the session opened 2026-08-19 afternoon, the same day a477427
+closed, and ran past midnight). HEAD at write time is 23b0f01 (D149
+feat); this commit rides on top.
 
 ## Preamble -- argue against yourself first
 
-One finding from this session outweighs the rest and this file must
-carry it at full strength: THE ARCHITECT FABRICATED PROMPT PAYLOADS.
-Three carriers of the slice-3 diff (a pasted diff, a second pasted
-diff, and a full base64 stream) were generated from the architect's
-internal model of the file rather than copied from any tool output
--- nothing had ever been printed to copy from. All three dropped the
-same brace-only line at a hunk boundary; every pin was real
-(tool-observed) while every payload was imagined. The architect then
-misattributed the first two failures in chat ("transcription slip",
-"assembly mutation") without evidence -- false root-cause claims,
-themselves ledgered. The implementer's blocker-5 diagnosis (pins and
-payload sampled from different states) forced the correct account.
-The fix that closed it in one attempt: payload and pins produced in
-ONE shell operation, and the artifact delivered AS A FILE through
-the operator, zero prose hops. Trust this file only through its
-Phase A predictions -- and trust no in-prompt artifact that did not
-arrive as a pinned file.
+The finding this file must carry at full strength: A PUSH CARRIED
+MORE THAN WAS AUTHORIZED, AND IT REACHED ORIGIN. git push origin main
+is branch-scoped; the architect authorized the docs commit 123812d,
+then waived ordering ("order doesn't matter") while the ungated Tier
+2 feat 0aff1b2 sat on local main. The push published the feat before
+its device gate. The gate passed afterward -- benign by luck, not
+design. The correction was promoted to CLAUDE.md the same session
+(push authorization is ref-scoped, names the exact old..new movement,
+runs only when local HEAD equals the authorized commit, never bundled
+alongside pending build work) and every later push named its movement
+and landed exactly it. Trust a push only by its observed movement
+line. Second finding, lower stakes, three occurrences: the
+operator-placement half of the file-carrier flow is the fragile half
+-- one carrier was fed before placement, one never arrived, and one
+of a two-file message arrived alone. Every case was a clean
+implementer STOP on PRECONDITION 2, zero bytes moved. Correction
+standing: one carrier file per chat message.
 
 ## Entry point
 
-Operator DECIDE at open; the handoff cannot rank these:
-a. Item-3 ruling: remove the SESSIONS - ALL-TIME header from the
-   compact summary (preference-summary.tsx ~L181). Supersedes part
-   of D109; grounds-against-grounds required ("irrelevant" vs mock
-   fidelity). Tiny slice once ruled.
-b. Collapsible cards: BLOCKED on the operator's surface answer --
-   the recorded rank-8 item is expandable History on the COA detail
-   screen; the operator's described item (flower+brand-only cards
-   for fast scrolling) reads as the SHELF cards, which is a NEW
-   item. One question, then delta doc + D-number.
-c. Ranked backlog rank 5 (splash dark sub-key, EAS cycle -- full
-   entry-point text in b252a97's handoff, still accurate) or rank 6
-   (dead chrome, pure JS).
+Ranked backlog rank 5: splash dark sub-key (the splash config's dark
+variant; needs one EAS cycle, so it opens with the operator's build
+appetite). If no EAS appetite at open, rank 6 instead: dead chrome
+chore, pure JS (citation: the three consumerless coa-detail style
+keys badge/meta/sourceLab, 2026-08-18 audit). Operator-parallel,
+no architect dependency: the OPEN DATA READS below.
 
 ## Start here (Phase A, read-only)
 
-- origin/main at write time = b1c6b5bcd0ce4dc88bc9e88c61eb87ecedf47bbc
-  (observed push line d0454a0..b1c6b5b, rev-list 0 0). This handoff
+- origin/main at write time = 23b0f01a146e6ac19f0fdb2093f325398c0d4d6d
+  (observed push line c975f88..23b0f01, rev-list 0 0). This handoff
   commit rides on top, pushed as the final act. At next open expect
-  origin/main = the handoff commit (subject predicted: "docs:
-  session handoff -- D147 shipped whole; carrier discipline
-  rewritten"), sync 0 0. Otherwise reconcile before proceeding.
-- Worktree: clean except the standing two untracked. The operator
-  also holds d:/Projects/Cultivar/d147-s3v2.patch OUTSIDE the repo
-  (the slice-3 carrier file) -- inert, deletable at will.
-- Toolchain at the last gates: tsc 0; lint exactly 1 (template
-  use-color-scheme.web.ts); NEW SUITE BASELINE 170 tests / 4 suites
-  (161/3 + profiles.test.ts). Migrations: predicted 19 (no schema;
-  re-measure).
-- DB: NOT read this session (no MCP call). No session-writing gates
-  ran this session (screenshot gates only); last pinned numbers
-  predate b252a97. Re-measure before any claim.
-- Line endings, updated: git apply writes CRLF under the SYSTEM
-  autocrlf=true even from an LF patch onto an LF file; insights.tsx
-  now sits CRLF on disk with clean status. Committed blobs are
-  normalized; on-disk endings are per-file historical accident.
+  origin/main = the handoff commit (subject predicted: "docs: session
+  handoff -- D148 and D149 shipped; push scope breached, promoted"),
+  sync 0 0. Otherwise reconcile before proceeding.
+- Worktree: clean except the standing two untracked
+  (.claude/settings.local.json, .claude/skills/). The operator also
+  holds OUTSIDE the repo, all inert and deletable at will:
+  d147-s3v2.patch, d148-dashboard.md, d148-preference-summary.tsx,
+  claude-md-promotions.md, d149-history-cards-collapse.md,
+  d149-shelf-card.tsx, d149-shelf-list.tsx.
+- Toolchain at the last gates: tsc 0; lint exactly the baseline
+  (1 error, 0 warnings, exit 1, template use-color-scheme.web.ts,
+  now recorded in CLAUDE.md); suite 170 tests / 4 suites. Migrations:
+  19, measured this session (no schema work; re-measure).
+- DB: NOT read this session (no MCP call, no session-writing gates).
+  Last pinned numbers predate b252a97. Re-measure before any claim.
+- Architect-clone environment note: under npm ci --ignore-scripts the
+  container's tsc reports TS2882 on the @/global.css side-effect
+  import (theme.ts). Environment artifact, stable pre- and post-edit;
+  the implementer's tsc 0 is authoritative and held all session.
 
 ## What shipped (newest first; shas from pasted output)
 
-b1c6b5b feat: D147 slice 3 -- profile groups render in the insight cards
-d0454a0 feat: D147 slice 2 -- terpene profile lib, tested at the profile grain
-9059ba6 docs: D147 -- insights terpene profiles replace the pooled list
+23b0f01 feat: D149 -- History cards collapse to strain and brand
+c975f88 docs: D149 -- History cards collapse, design ratified
+ac3cc25 docs: standing-rules promotion pass -- carriers, gates, push scope
+0aff1b2 feat: D148 -- remove the sessions flank from the compact summary
+123812d docs: D148 -- sessions flank removed from the compact summary
+
+Four pushes, each verified by movement line: a477427..0aff1b2 (the
+breached one -- two commits, one ungated at push time), 0aff1b2..ac3cc25,
+ac3cc25..c975f88, c975f88..23b0f01. All synced 0 0.
 
 ## The arcs
 
-D147 (complete, all three planned slices). Design ratified in chat
-with two pre-commit corrections to its own D147.4 (the false
-"named in this doc" clause; the gate form rewritten after execution
-showed its output shape wrong). Lib slice: per-COA profiles grouped
-by dominant terpene -- topReportedTerpene ordering generalized,
-no-data bucket, COA-grain counts with sessions beside, top-3
-companion co-occurrence, ties name-asc; nine tests each locking one
-ratified clause; suite 161/3 -> 170/4. UI slice: ProfileGroups
-replaces TerpeneRows in both cards; v1's layout truncated on the
-operator's real data and the device-gate ruling produced v2 (name
-and range on line one, one wrapping meta line); six zero-consumer
-names died in-slice. The operator's real log rendered: two Loved
-profile shapes, Caryophyllene-dominant (2 batches) and
-Limonene-dominant (1) -- the latter contradicts the operator's
-stated Limonene-avoid prior and is an OPEN data read (below).
+D148 (complete). The SESSIONS - ALL-TIME flank left the compact
+summary; verdict bars and BUY AGAIN stand; three falsified comments
+rewritten in-slice; styles.flank died with its only consumer;
+sessionCount survives as the empty-branch gate. Amendment in
+dashboard.md with the supersession pointer inside the D109 bullet.
+Device gate PASS on all three steps; screenshot cross-check was
+internally consistent digit for digit (distribution 3/2/2/0/0 = 7 =
+subtitle count). Layout (bars at the card's left edge) ACCEPTED by
+ruling; revisit banked on "if it grates".
+
+D149 (complete). History-segment cards rest collapsed (strain +
+brand + chevron, one 44pt press target that expands rather than
+opens); expanded = the unchanged D101 card plus a nested collapse
+control; state session-local, reset by refetch and segment switch
+(ratified v1 cost); Active untouched by prop omission. New doc
+documentation/design/history-cards-collapse.md; scoped supersession
+of D101's same-card-language rule, grounds against grounds recorded.
+Device gate steps 1-5 PASS; step 6 (VoiceOver) SKIPPED by ruling.
+Status-line amendment ruled NOT owed at the feat commit -- two
+witnesses (architect and implementer, independent re-reads) found no
+doc sentence the code falsifies; the D133b precedent requires one.
+
+Promotions pass (complete). Eleven rule sites into CLAUDE.md,
+including the BLOCKING file-carrier rule, one-slice-one-carrier,
+hunk reconciliation, control-read + tr-only gate form, heterogeneous
+endings, installed-source, pre-executed criteria, site-list gates,
+the new ref-scoped push rule, the lint baseline, and [ADAPT] 170/4.
 
 ## Refuted hypotheses / memory corrections
 
-- "Transcription slip" and "assembly mutation" as root causes of
-  the carrier failures: refuted by the implementer's blocker 5 and
-  the architect's own tool record. The payloads were never sampled
-  from the artifact at all.
-- The architect's pasted hunk headers differed from the canonical
-  patch's in all four positions -- believed-carried content was
-  generated content.
-- Base64 hardening as a fix: refuted; it faithfully delivered the
-  defective source. The channel was never the weak link.
+- Carried memory opened with "D147 slice 2 in progress at close":
+  false. D147 had shipped whole. One session of drift, settled by
+  the handoff blob at Phase A.
+- The architect's first D148 grounds assumed the summary card
+  rendered on the Stash dashboard beside its subtitle: refuted by
+  grep before any text shipped -- insights.tsx is the only render
+  site, and the grounds were rebuilt on the observed screen.
+- A predicted expandedHistory grep count of 5 was wrong by
+  arithmetic-from-memory; the executed value is 2 (case sensitivity
+  excludes setExpandedHistory). Executed-not-predicted criteria
+  caught it before the prompt shipped -- the promoted rule paying
+  for itself the day it landed.
 
 ## Operator rulings this session
 
-D147 ratified; two D147.4 corrections re-ratified pre-commit; the
-two authored gate-question labels N/A this arc (no new Pressables).
-Slice-3 v2 layout = option 1 (merge counts+companions into one
-wrapping meta line). Slice-3 gate: layout and real-data rendering
-accepted on screenshot evidence; VoiceOver spot-check SKIPPED by
-ruling; Counter view and Share unexercised -- all three recorded
-verbatim in b1c6b5b. Working copy viewed twice without objection;
-stands as working copy.
+Entry rulings: ALL-TIME flank removed (grounds verbatim in the D148
+amendment); collapsible cards = the History TAB (the rank-8 surface
+note resolved; the architect's first framing of the question pointed
+at the wrong surface and the operator's stated grounds corrected
+it). The 0N-screens banked item CLOSED: the operator checked before
+deletion; per ruling they are not referenced again -- this line is
+the record and the last mention. D149 ratified by executing the
+carrier placement (the ratification-is-the-act form, recorded). D148
+layout accepted; D149 gate step 6 skipped; both banked below.
 
 ## Refutation ledger, this session
 
-Architect (count = list length): D147.4 false clause (self-caught);
-D147.4 gate form wrong output shape (self-caught by execution);
-prompt gate-B malformed AND contradicting the architect's own
-observed value (implementer-caught); the two-carrier slice-2 prompt
-design (STOP, no harm); the fabricated-payload class -- three
-carriers generated from memory (implementer-diagnosed); two false
-root-cause attributions shipped in chat before the diagnosis. Six.
-Implementer: 0 errors; 4 catch credits (gate-B; the part-B STOP;
-the v1 corrupt-hunk forensics with hash-proven reconstruction; the
-carrier-gate STOP with the blocker-5 diagnosis that found the real
-cause). Plus two upheld judgment deviations (endings-preserving
-adoption; LF regeneration path). Operator: 0. Zero errors reached
-origin; zero reached ratified bytes uncorrected.
+Architect (count = list length): the superseded grep-form ASCII gate
+authored fresh despite last session's ledger -- its control failed
+to fire and control-pairing caught it (self-caught, nothing
+shipped); the wrong-surface D148 grounds draft (self-caught
+pre-ratification); the PUSH-SCOPE BREACH (reached origin; closed
+benign after the gate; rule promoted same session); the
+delivery-gap class, three occurrences (fed-before-placed;
+never-arrived; one-of-two-arrived) -- implementer STOPs, zero bytes
+moved; ratification prose reaching the implementer as if it were a
+prompt (operator cross-wire the architect's unlabeled DECIDE
+enabled; the day-old file-carrier rule fired on its own author).
+Five classes, one reached origin, zero reached ratified bytes.
+Implementer: 0 errors. Catch credits: three PRECONDITION-2 STOPs;
+the prose-carrier STOP citing the just-landed rule; the lint
+baseline noun correction (error, not warning -- now in CLAUDE.md);
+the PIPESTATUS[0] discipline on piped gates; the required-read
+freshness re-check (read hashes re-verified against an unmoved
+HEAD); the independent status-line re-read. Operator: 0.
 
-## Promotion candidates (carried + new; the starred one is BLOCKING)
+## Promotion candidates (new; all carried candidates were promoted)
 
-1-3. Carried from b252a97 unchanged (installed-source rule;
-   pre-executed post-change criteria; no bare site-list grep gates).
-4-5. Carried from b252a97 (control-read rule; heterogeneous endings
-   + od + terminator-preserving edits).
-6. *BLOCKING NEW: an artifact that must arrive byte-exact never
-   travels as prompt prose. It travels as a FILE handed to the
-   operator (outputs channel), with wc -l and sha256 pins produced
-   from the same artifact in the SAME shell operation, gated on
-   arrival before any use. Prose is for instructions; bytes are for
-   files. Grounds: the architect can generate plausible bytes from
-   memory without noticing, and did, three times.
-7. NEW: one slice, one carrier -- a build prompt is a single
-   self-contained delivery, never a sequence of pastes.
-8. NEW: reconcile every hunk header against its own body before a
-   diff ships or applies; brace-only lines at hunk boundaries are
-   the documented casualty class.
+1. One carrier file per chat message -- multi-file attachments
+   survive download unreliably (three delivery gaps, one session).
+2. Piped gates read exit codes from PIPESTATUS[0], never a bare $?
+   after a pipe (implementer, D149 feat pass).
+3. A required read is current only while HEAD's blob hash matches
+   the hash read; re-verify on reuse instead of assuming
+   (implementer pattern, D149 feat pass).
+4. Ratification texts are operator-only and say so in their first
+   line; a build prompt is identified by its precondition block and
+   terminal sentinel (the cross-wire class).
 
 ## Banked follow-ups (ranked backlog, then unranked)
 
-Ranked, unchanged: 5 splash dark sub-key; 6 dead chrome chore
-(citation carried); 7 Reduce Motion Scope B; 8 expandable History
-(delta doc + D-number first; NOTE the operator may mean shelf cards
-instead -- resolve the surface question first).
+Ranked: 5 splash dark sub-key (the entry point); 6 dead chrome
+chore (citation above); 7 Reduce Motion Scope B. Rank 8 shipped
+this session as D149.
 
 New banked this session:
-- OPEN DATA READS (operator): spot-check the Caryophyllene group
-  against a lab sheet (is it genuinely top reported on those two
-  COAs); rule on the Limonene-dominant Loved batch (real preference
-  surprise vs COA audit -> ingestion audit item if miskeyed).
-- ProfileGroups VoiceOver spot-check + Counter view / Share
-  exercise: ride the next insights.tsx touch's gate.
-- Item-3 ALL-TIME removal ruling and the collapsible-cards surface
-  question: the Entry point's a and b.
-- Share text still consumes the pooled top-3 (D147 non-goal,
-  pointer recorded in the doc).
+- formatPct rounds (toFixed) where the card family truncates
+  (truncate2, D102); whether D147 ratified its own precision form is
+  a docs question for the next insights touch. Low stakes: the
+  rendered 1.42-2% matches the formatter as written and its gate.
+- D149 collapsed-row VoiceOver + the carried ProfileGroups VoiceOver
+  + Counter view / Share exercise: ride the next touch of either
+  file's gate.
+- Layout revisit triggers, both operator-owned: D148 bars at the
+  left edge; D149 collapse snap (LayoutAnimation banked, one ruling
+  if it grates). Expansion-state persistence banked on lived demand.
 
-Carried unchanged from b252a97: the full 2026-08-18 morning list
+Carried: OPEN DATA READS (operator): spot-check the Caryophyllene
+group against a lab sheet; rule on the Limonene-dominant Loved batch
+(real preference surprise vs COA audit -> ingestion audit item if
+miskeyed). Share text still consumes the pooled top-3 (D147
+non-goal, pointer in the doc). The full 2026-08-18 morning list
 (44pt-floor audit; raw-error class; dead result.message; ragged wrap
 in delta-fab-touch.md; BottomTabInset; bloom comment; session-ladder
 D83 note; same-name disambiguation; Stash system-font states;
 last-card breathing room; orphaned PDFs; app rename check; migration
 20260715185455 comment; theme.ts Dash docblock; shelf-list Retry
 VoiceOver residual; project-knowledge copies stale -- operator
-refresh when convenient, now five sessions).
+refresh when convenient, now SIX sessions).
 
 ## Working rhythm
 
-Stable method lives in CLAUDE.md. This session's deltas: the
-architect-side clone remains the construction channel and now runs
-the Jest suite too (pre-executed both feat slices; the container
-dep-drift caveat stands -- implementer runs are authoritative). The
-carrier discipline is rewritten per candidates 6-8: file-carried
-artifacts with same-operation pins closed in one attempt what three
-prose carriers could not. The conditional-push bundling (operator
-pushes on pinned pass values without an extra round trip) held for
-all four pushes this session.
+Stable method lives in CLAUDE.md, which grew eleven rule sites this
+session. Deltas: whole-file carriers went 4-for-4 on content (every
+staged and committed blob matched its architect-tested hash, first
+attempt) while all three failures this session were the delivery
+half -- hence candidate 1. The clone pre-executed tsc and the suite
+for both feats; zero implementer-side criterion corrections for the
+second consecutive session. Conditional ref-scoped pushes held for
+every push after the breach. Non-ASCII in a carrier is pinned by
+exact byte count when deliberate (the D149 doc's title em dash,
+census 3, located by the implementer to the byte).
