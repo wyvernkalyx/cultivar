@@ -143,20 +143,33 @@ function Total({ label, value }: { label: string; value: number | null }) {
 // width proportional to its share of the COA's total terpenes. The track's
 // own background IS the remainder — no filler view, so the unaccounted share
 // is visibly unclaimed rather than attributed to anything.
-function Fingerprint({ total, terpenes }: { total: number; terpenes: CardTerpene[] }) {
+// D150: total may be null -- a lab that reports individual terpenes without
+// a total. Shares cannot be drawn without a divisor, so the track is
+// omitted and the legend (reported name + value) stands alone; the values
+// are facts, the bar would be an estimate. The shelf card never passes
+// null (its own guard runs first); the Insights product list does.
+export function Fingerprint({
+  total,
+  terpenes,
+}: {
+  total: number | null;
+  terpenes: CardTerpene[];
+}) {
   return (
     <View style={styles.fingerprint}>
-      <View style={styles.track}>
-        {terpenes.map((terpene) => (
-          <View
-            key={terpene.name}
-            style={{
-              width: `${Math.min(100, (terpene.pct / total) * 100)}%`,
-              backgroundColor: terpeneHue(terpene.name),
-            }}
-          />
-        ))}
-      </View>
+      {total !== null && total > 0 && (
+        <View style={styles.track}>
+          {terpenes.map((terpene) => (
+            <View
+              key={terpene.name}
+              style={{
+                width: `${Math.min(100, (terpene.pct / total) * 100)}%`,
+                backgroundColor: terpeneHue(terpene.name),
+              }}
+            />
+          ))}
+        </View>
+      )}
       <View style={styles.legendRow}>
         {terpenes.map((terpene) => (
           <View key={terpene.name} style={styles.legendItem}>
@@ -196,10 +209,14 @@ export function ShelfCard({
   collapsed,
   onToggleCollapse,
 }: ShelfCardProps) {
-  // Reported AND non-zero: a zero total has no share to divide, so there is
-  // no fingerprint to draw and the ND line carries the truth instead.
-  const hasFingerprint =
-    coa.total_terpenes !== null && coa.total_terpenes > 0 && topTerpenes.length > 0;
+  // D150 gate finding 2026-08-21: a lab can report individual terpenes and
+  // no total (a manual COA did). Reported rows draw the legend; a reported,
+  // non-zero total draws the track above it; zero reported rows is the only
+  // case the ND line describes. Previously rows-without-total was labeled
+  // "not reported" -- false copy.
+  const hasReportedTerpenes = topTerpenes.length > 0;
+  const fingerprintTotal =
+    coa.total_terpenes !== null && coa.total_terpenes > 0 ? coa.total_terpenes : null;
   const meta = coa.type === null ? cardDateLine(coa) : `${coa.type} · ${cardDateLine(coa)}`;
   const latest = sessions.length === 0 ? null : sessions[sessions.length - 1];
 
@@ -332,8 +349,8 @@ export function ShelfCard({
 
         {/* ND is information, never a blank (D98/D99): a COA whose lab did
             not report terpenes says so in the fingerprint's place. */}
-        {hasFingerprint ? (
-          <Fingerprint total={coa.total_terpenes as number} terpenes={topTerpenes} />
+        {hasReportedTerpenes ? (
+          <Fingerprint total={fingerprintTotal} terpenes={topTerpenes} />
         ) : (
           <Text style={styles.ndTerpenes}>Terpenes not reported by lab.</Text>
         )}

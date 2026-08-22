@@ -6,7 +6,7 @@ import { RUNGS } from '../lexicon';
  * total-terpenes range, and the share text composer).
  *
  * Personal-empirical discipline, restated where it is most at risk: every
- * number here is a description of reported lab values on batches THIS user
+ * number here is a description of reported lab values on products THIS user
  * rated, never an effect claim. ND / not-reported is null and joins no
  * range (the D98 binding, verbatim from summary.ts): a range never
  * manufactures a zero lower bound, and an analyte nobody reported yields
@@ -70,9 +70,24 @@ export type TerpeneProfiles = {
   noDataCoaCount: number;
   noDataSessionCount: number;
 };
+export type ProfileProductTerpene = { name: string; pct: number };
+/** D150: one product (COA) in a verdict set, rendered as its own fingerprint.
+ *  topTerpenes follows the shelf card's rule (card-data.ts
+ *  groupTopTerpenesByCoa): null pct is excluded outright, top 3 by pct, name
+ *  tiebreak. An empty list with a null or zero total is the no-data case,
+ *  rendered as such -- never an empty track. */
+export type ProfileProduct = {
+  coaId: string;
+  strain: string | null;
+  brand: string | null;
+  totalTerpenes: number | null;
+  topTerpenes: ProfileProductTerpene[];
+};
 export type ChemistryProfile = {
   coaCount: number;
   sessionCount: number;
+  /** D150: the set's products, strain asc (absent last), brand asc, id asc. */
+  products: ProfileProduct[];
   /** Every name with >= 1 reported value in the set; max pct desc, name asc.
    *  Retained for the share text (D147 non-goal); the cards render profiles. */
   terpenes: TerpeneRange[];
@@ -251,6 +266,40 @@ function terpeneProfiles(
   };
 }
 
+// D150: per-product top-3 reported terpenes, the card-data convention
+// restated here rather than imported: this tree is the Jest-covered pure
+// library and card-data.ts sits outside it. Null pct never ranks; a product
+// with no reported rows gets an empty list, which the screen states as
+// "No reported terpene data" -- absence rendered as absence.
+function profileProducts(coas: InsightCoa[], terpenes: InsightTerpene[]): ProfileProduct[] {
+  const byCoa = new Map<string, ProfileProductTerpene[]>();
+  for (const row of terpenes) {
+    if (row.pct === null) continue;
+    const entry = { name: row.name, pct: row.pct };
+    const existing = byCoa.get(row.coa_id);
+    if (existing === undefined) byCoa.set(row.coa_id, [entry]);
+    else existing.push(entry);
+  }
+  return coas
+    .map((coa) => ({
+      coaId: coa.id,
+      strain: coa.strain,
+      brand: coa.brand,
+      totalTerpenes: coa.total_terpenes,
+      topTerpenes: (byCoa.get(coa.id) ?? [])
+        .sort((a, b) => (b.pct !== a.pct ? b.pct - a.pct : a.name.localeCompare(b.name)))
+        .slice(0, 3),
+    }))
+    .sort((a, b) => {
+      if (a.strain === null && b.strain !== null) return 1;
+      if (a.strain !== null && b.strain === null) return -1;
+      const byStrain = (a.strain ?? '').localeCompare(b.strain ?? '');
+      if (byStrain !== 0) return byStrain;
+      const byBrand = (a.brand ?? '').localeCompare(b.brand ?? '');
+      return byBrand !== 0 ? byBrand : a.coaId.localeCompare(b.coaId);
+    });
+}
+
 function buildProfile(
   words: Set<string>,
   sessions: InsightSession[],
@@ -269,6 +318,7 @@ function buildProfile(
   return {
     coaCount: setCoas.length,
     sessionCount: matching.length,
+    products: profileProducts(setCoas, terpenes),
     terpenes: terpeneRanges(terpenes, coaIds),
     profiles: terpeneProfiles(terpenes, coaIds, sessionsByCoa),
     thc: analyteRange(setCoas.map((coa) => coa.total_thc)),

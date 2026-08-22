@@ -15,11 +15,17 @@ operator named, and gives every terpene name a plain-language meaning
 where it is read. No schema change; everything derives from rows the
 screens already load.
 
-## Copy rule, ratified 2026-08-21: "product", never "batch"
+## Copy rule, ratified 2026-08-21: "product", never "batch" or "strain"
 
 "Batch" is the lab's word for its unit of testing; the operator
 reports it has no meaning to a buyer. User-facing copy says "product"
-and identifies one by strain + brand as the card does. The metadata
+for one tested item, and identifies one by strain + brand as the card
+does. "Strain" survives only as the name of the datum -- the "Strain"
+field label and the "Strain not reported" fallback -- ratified
+2026-08-21; as a count or a pronoun for the item ("13 strains", "which
+strain?") it is displaced. Gate lesson, same date: the first criterion
+gated only the word that prompted the rule; the rule's other violator
+shipped past it. A copy-rule gate enumerates every displaced term. The metadata
 field label "Batch" on the COA editor (the lab's own lot identifier)
 is NOT renamed: that field holds the lab's batch string, and renaming
 its label would mislabel the datum. Source identifiers (`batch`
@@ -33,9 +39,14 @@ reported"), brand when present, then the card's `Fingerprint` --
 track + legend of top-3 reported terpenes with values -- fed by the
 same per-COA rule the shelf uses (`groupTopTerpenesByCoa`,
 `src/lib/card-data.ts`: null pct excluded, top 3 by pct, name
-tiebreak). A product with no reported terpene data or a null/zero
-total renders its identifier and the line "No reported terpene data",
-never an empty track.
+tiebreak). Three cases, amended at the 2026-08-21 device gate (a manual
+COA with nine reported terpenes and no total was labeled "no reported
+terpene data" -- false copy): reported rows with a non-zero total draw
+track + legend; reported rows without a total draw the legend alone
+(shares need a lab total; the app never sums one); zero reported rows
+render the identifier and "No reported terpene data", never an empty
+track. The same three cases now govern the shelf card, where the
+collapsed form originated. Operator ruling: no bar without a lab total.
 
 Removed from both cards: the `ProfileGroups` dominant/range/meta
 rendering and the `FactLine` THC/CBD row. The explainer sentence

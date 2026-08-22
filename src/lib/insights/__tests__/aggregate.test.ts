@@ -226,6 +226,63 @@ describe('share text', () => {
   });
 });
 
+describe('D150 profile products', () => {
+  const coas = [
+    coa('b', { strain: 'Zeta', brand: 'Brand B', total_terpenes: 2.0 }),
+    coa('a', { strain: 'Alpha', brand: null, total_terpenes: 1.5 }),
+    coa('n', { strain: 'NoData', brand: null, total_terpenes: null }),
+    coa('z', { strain: null, brand: 'Nameless', total_terpenes: 0.9 }),
+    coa('x', { strain: 'Outside', total_terpenes: 9 }),
+  ];
+  const sessions = [s('a', 'Loved'), s('b', 'Loved'), s('n', 'Loved'), s('z', 'Loved'), s('x', 'Liked')];
+  const terpenes = [
+    t('a', 'Limonene', 0.55),
+    t('a', 'Caryophyllene', 0.32),
+    t('a', 'Myrcene', 0.29),
+    t('a', 'Linalool', 0.1),
+    t('a', 'Humulene', null),
+    t('b', 'Myrcene', 0.4),
+    t('b', 'Pinene', 0.4),
+    t('n', 'Limonene', null),
+    t('x', 'Limonene', 5),
+  ];
+  const out = buildInsights(sessions, coas, terpenes);
+
+  it('lists each product in the set once, strain asc with absent strain last', () => {
+    expect(out.target.products.map((p) => p.coaId)).toEqual(['a', 'n', 'b', 'z']);
+  });
+  it('carries strain, brand, and total terpenes untouched', () => {
+    expect(out.target.products[2]).toMatchObject({
+      strain: 'Zeta',
+      brand: 'Brand B',
+      totalTerpenes: 2.0,
+    });
+  });
+  it('top terpenes are the reported top 3 by pct, null rows excluded', () => {
+    expect(out.target.products[0].topTerpenes).toEqual([
+      { name: 'Limonene', pct: 0.55 },
+      { name: 'Caryophyllene', pct: 0.32 },
+      { name: 'Myrcene', pct: 0.29 },
+    ]);
+  });
+  it('ties break on name asc', () => {
+    expect(out.target.products[2].topTerpenes.map((x) => x.name)).toEqual(['Myrcene', 'Pinene']);
+  });
+  it('a product with only null rows has an empty list and its null total -- no invention', () => {
+    expect(out.target.products[1]).toEqual({
+      coaId: 'n',
+      strain: 'NoData',
+      brand: null,
+      totalTerpenes: null,
+      topTerpenes: [],
+    });
+  });
+  it('products outside the verdict set never appear', () => {
+    expect(out.target.products.some((p) => p.coaId === 'x')).toBe(false);
+    expect(out.avoid.products).toEqual([]);
+  });
+});
+
 describe('empty log', () => {
   const out = buildInsights([], [], []);
   it('yields zero counts, null ranges, empty lists -- no invention', () => {
@@ -234,6 +291,7 @@ describe('empty log', () => {
     const emptyProfile = {
       coaCount: 0,
       sessionCount: 0,
+      products: [],
       terpenes: [],
       // D147: an empty set has empty profile groups and zero buckets --
       // the no-invention property now asserted at the profile grain too.

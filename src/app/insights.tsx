@@ -14,7 +14,8 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PreferenceSummary } from '@/components/preference-summary';
-import { BottomTabInset, Dash, MaxContentWidth, Space, Type, terpeneHue } from '@/constants/theme';
+import { Fingerprint } from '@/components/shelf-card';
+import { BottomTabInset, Dash, MaxContentWidth, Space, Type } from '@/constants/theme';
 import {
   buildShareText,
   formatPct,
@@ -35,7 +36,7 @@ import { subscribeDataChanged } from '@/lib/refresh';
 // on-screen line about it, so none renders.
 //
 // Personal-empirical discipline (D142, restated where most at risk): every
-// number is a reported lab value on batches this user rated. No copy on
+// number is a reported lab value on products this user rated. No copy on
 // this screen may claim or imply a compound causes an effect.
 
 const RANGE_ABSENT = 'ND';
@@ -44,63 +45,45 @@ function rangeText(range: AnalyteRange | null): string {
   return formatRangePct(range) ?? RANGE_ABSENT;
 }
 
-// D147: profile groups replace the pooled per-name list. Each row is a
-// batch shape this user actually rated, grouped by dominant terpene; every
-// line is a count or reported range from the log. Companion counts are
-// co-occurrence in the log, stated as such -- no synergy or effect claim
-// (D147.1). The no-data bucket is counted, never merged, never invented.
-function ProfileGroups({ profile }: { profile: ChemistryProfile }) {
-  const { groups, noDataCoaCount, noDataSessionCount } = profile.profiles;
+// D150: one fingerprint per product. Each entry is a product this user
+// actually rated -- strain, brand, and the shelf card's own track + legend
+// over that product's top-3 reported terpenes. Nothing is pooled across
+// products: a blended bar would show a profile no lab measured. Three
+// cases, each stated as what it is (device-gate finding 2026-08-21, a
+// manual COA with nine reported terpenes and no total): reported rows and
+// a total draw the track; reported rows without a total show the legend
+// alone (Fingerprint omits the track when total is null); zero reported
+// rows say so in words, never as an empty track.
+function ProfileProducts({ profile }: { profile: ChemistryProfile }) {
   return (
-    <View style={styles.terpeneRows}>
-      {groups.map((group) => (
-        <View key={group.dominant} style={styles.profileGroup}>
-          <View style={styles.terpeneRow}>
-            <View style={[styles.terpeneDot, { backgroundColor: terpeneHue(group.dominant) }]} />
-            <Text style={styles.profileDominant} numberOfLines={1} ellipsizeMode="tail">
-              {group.dominant}
+    <View style={styles.productList}>
+      {profile.products.map((product) => {
+        const hasReported = product.topTerpenes.length > 0;
+        return (
+          <View key={product.coaId} style={styles.product}>
+            <Text style={styles.productStrain} numberOfLines={1} ellipsizeMode="tail">
+              {product.strain?.trim() || 'Strain not reported'}
             </Text>
-            <Text style={styles.terpeneRange}>
-              {rangeText({ ...group.dominantPct, ndCount: 0 })}
-            </Text>
+            {product.brand?.trim() ? (
+              <Text style={styles.productBrand} numberOfLines={1} ellipsizeMode="tail">
+                {product.brand.trim()}
+              </Text>
+            ) : null}
+            {hasReported ? (
+              <Fingerprint
+                total={
+                  product.totalTerpenes !== null && product.totalTerpenes > 0
+                    ? product.totalTerpenes
+                    : null
+                }
+                terpenes={product.topTerpenes}
+              />
+            ) : (
+              <Text style={styles.productNoData}>No reported terpene data</Text>
+            )}
           </View>
-          {/* Counts and companions share one wrapping line so neither fights
-              the name for width (device-gate ruling, 2026-08-18). */}
-          <Text style={styles.profileMeta} numberOfLines={2} ellipsizeMode="tail">
-            {group.coaCount === 1 ? '1 batch' : `${group.coaCount} batches`}
-            {' · '}
-            {group.sessionCount === 1 ? '1 session' : `${group.sessionCount} sessions`}
-            {group.companions.length > 0
-              ? ` · with ${group.companions
-                  .map((companion) => `${companion.name} (${companion.coaCount})`)
-                  .join(' · ')}`
-              : ''}
-          </Text>
-        </View>
-      ))}
-      {noDataCoaCount > 0 && (
-        <Text style={styles.profileNoData}>
-          {noDataCoaCount === 1 ? '1 batch' : `${noDataCoaCount} batches`} with no reported
-          terpene data
-          {' · '}
-          {noDataSessionCount === 1 ? '1 session' : `${noDataSessionCount} sessions`}
-        </Text>
-      )}
-    </View>
-  );
-}
-
-function FactLine({ profile }: { profile: ChemistryProfile }) {
-  return (
-    <View style={styles.factLine}>
-      <Text style={styles.factItem}>
-        <Text style={styles.factLabel}>THC </Text>
-        {rangeText(profile.thc)}
-      </Text>
-      <Text style={styles.factItem}>
-        <Text style={styles.factLabel}>CBD </Text>
-        {rangeText(profile.cbd)}
-      </Text>
+        );
+      })}
     </View>
   );
 }
@@ -230,7 +213,7 @@ export default function InsightsScreen() {
               {`Based on ${insights.sessionCount} logged ${
                 insights.sessionCount === 1 ? 'session' : 'sessions'
               } across ${insights.strainCount} ${
-                insights.strainCount === 1 ? 'strain' : 'strains'
+                insights.strainCount === 1 ? 'product' : 'products'
               }.`}
             </Text>
           )}
@@ -249,17 +232,16 @@ export default function InsightsScreen() {
               <View style={[styles.card, styles.cardTarget]}>
                 <Text style={styles.cardTitle}>Target profile</Text>
                 <Text style={styles.cardSub}>
-                  Based on strains you rated Loved · lab concentrations only
+                  Based on products you rated Loved · lab concentrations only
                 </Text>
                 {insights.target.coaCount === 0 ? (
                   <Text style={styles.absent}>No Loved sessions yet.</Text>
                 ) : (
                   <>
-                    <ProfileGroups profile={insights.target} />
-                    <FactLine profile={insights.target} />
+                    <ProfileProducts profile={insights.target} />
                     <Text style={styles.explainer}>
-                      Ranges are the reported values of batches you rated Loved. No effect
-                      claims — just what was in them.
+                      What the lab found in each product you rated Loved. No effect claims
+                      — just what was in them.
                     </Text>
                   </>
                 )}
@@ -308,11 +290,10 @@ export default function InsightsScreen() {
                   <Text style={styles.absent}>No Disliked or Hated sessions yet.</Text>
                 ) : (
                   <>
-                    <ProfileGroups profile={insights.avoid} />
-                    <FactLine profile={insights.avoid} />
+                    <ProfileProducts profile={insights.avoid} />
                     <Text style={styles.explainer}>
-                      Reported values of batches you rated Disliked or Hated. Same facts,
-                      other direction — worth a pause when a menu matches.
+                      What the lab found in each product you rated Disliked or Hated. Same
+                      facts, other direction — worth a pause when a menu matches.
                     </Text>
                   </>
                 )}
@@ -481,60 +462,27 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: Dash.textMuted,
   },
-  terpeneRows: {
-    gap: Space.chip,
+  productList: {
+    gap: Space.row,
   },
-  terpeneRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Space.chip,
-  },
-  terpeneDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  profileGroup: {
+  product: {
     gap: 2,
   },
-  profileDominant: {
-    flex: 1,
-    fontFamily: Type.family.semibold,
-    fontSize: 12,
-    color: Dash.text,
-  },
-  // Indent past the dot (8) + row gap so the meta line hangs under the name.
-  profileMeta: {
-    fontFamily: Type.family.regular,
-    fontSize: 11,
-    color: Dash.textMuted,
-    paddingLeft: 16,
-  },
-  profileNoData: {
-    fontFamily: Type.family.regular,
-    fontSize: 11,
-    color: Dash.textFaint,
-  },
-  terpeneRange: {
-    fontFamily: Type.family.medium,
-    fontSize: 11.5,
-    color: Dash.textBody,
-    minWidth: 66,
-    textAlign: 'right',
-    fontVariant: ['tabular-nums'],
-  },
-  factLine: {
-    flexDirection: 'row',
-    gap: Space.section,
-  },
-  factItem: {
+  productStrain: {
     fontFamily: Type.family.semibold,
     fontSize: 12.5,
     color: Dash.text,
-    fontVariant: ['tabular-nums'],
   },
-  factLabel: {
+  productBrand: {
+    fontFamily: Type.family.regular,
+    fontSize: 11,
     color: Dash.textMuted,
+  },
+  productNoData: {
+    fontFamily: Type.family.regular,
+    fontSize: 11,
+    color: Dash.textFaint,
+    marginTop: 4,
   },
   buyHeader: {
     flexDirection: 'row',
