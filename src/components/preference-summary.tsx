@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Dash, Type, terpeneHue } from '@/constants/theme';
+import { Dash, Type } from '@/constants/theme';
 import type { EffectCount } from '@/lib/card-data';
 import { RUNGS } from '@/lib/lexicon';
 
@@ -17,50 +17,16 @@ const SERIF_ITALIC = Type.family.serifItalic;
 // second string table -- D62's rule, unchanged by D99's display supersession.
 export type RungWord = (typeof RUNGS)[number]['word'];
 
-// A reported-values range plus the count of Loved COAs the lab did not report
-// the analyte for. The D98 binding: ndCount is annotated ALONGSIDE the range,
-// never folded into it as a zero lower bound.
-export type AnalyteRange = { min: number; max: number; ndCount: number };
-
-export type LovedConcentrations = {
-  // Top 3 by concentration, already ranked; null pct rows are excluded
-  // upstream, so every entry here is a reported value.
-  terpenes: { name: string; pct: number }[];
-  thc: AnalyteRange | null;
-  cbd: AnalyteRange | null;
-  lovedSessionCount: number;
-};
-
 export type PreferenceSummaryProps = {
   // All-time, session grain, including off-shelf history (D98).
   sessionCount: number;
   distribution: Record<RungWord, number>;
   buyAgainCount: number;
-  loved: LovedConcentrations;
   // Session-derived, frequency-ranked (D133): the user's own recorded tags,
   // never a chemistry inference. Empty means no tagged sessions in scope,
   // and the line does not render -- never a placeholder.
   topEffects: EffectCount[];
 };
-
-// Two decimals, truncated (D102: truncation never rounds into a false
-// precision claim). Done on the fixed-notation string rather than by
-// multiply-and-trunc, because `Math.trunc(8.29 * 100) / 100` is 8.28 -- the
-// float product lands just below the integer and the artifact reads as a
-// different lab value.
-function truncate2(value: number): string {
-  const fixed = value.toFixed(10);
-  return fixed.slice(0, fixed.indexOf('.') + 3);
-}
-
-// A range whose ends coincide is one value, not a range of width zero.
-function formatRange(range: AnalyteRange): string {
-  const span =
-    range.min === range.max
-      ? `${truncate2(range.min)}%`
-      : `${truncate2(range.min)}% – ${truncate2(range.max)}%`;
-  return range.ndCount > 0 ? `${span} · ${range.ndCount} ND` : span;
-}
 
 // Mini bars (D109): the distribution shares the header row with the two
 // totals, so the track is a third of its slice-1 height. barTrack reads the
@@ -93,51 +59,11 @@ function VerdictBar({ word, count, max }: { word: RungWord; count: number; max: 
   );
 }
 
-// The Loved-sessions module: lab concentrations only, and labeled as such.
-// Never an effect claim, never a population-level assertion -- this reports
-// what the labs measured in the COAs behind this user's own Loved verdicts.
-function LovedModule({ loved }: { loved: LovedConcentrations }) {
-  if (loved.lovedSessionCount === 0) {
-    return (
-      <View style={styles.section}>
-        <Text style={styles.label}>In Loved sessions · lab concentrations only</Text>
-        <Text style={styles.muted}>No Loved sessions yet.</Text>
-      </View>
-    );
-  }
-  return (
-    <View style={styles.section}>
-      <Text style={styles.label}>In Loved sessions · lab concentrations only</Text>
-      {loved.terpenes.length > 0 && (
-        <View style={styles.chipRow}>
-          {loved.terpenes.map((terpene) => (
-            <View key={terpene.name} style={styles.chip}>
-              <View style={[styles.chipDot, { backgroundColor: terpeneHue(terpene.name) }]} />
-              <Text style={styles.chipText}>{terpene.name}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-      {/* D109 collapses the two stacked analytes onto one line. The values
-          are untouched: ND is first-class: a null range is every Loved COA's
-          lab not reporting the analyte, and it renders the literal "ND" on
-          the same grounds the shelf card's totals do -- never 0, never
-          blank; and formatRange still annotates ndCount ALONGSIDE the
-          reported range, never as a zero lower bound (D98's binding, which
-          D109.1 restates against the mock's "ND-0.08%" defect). */}
-      <View style={styles.analyteRow}>
-        <View style={styles.analyte}>
-          <Text style={styles.analyteLabel}>THC</Text>
-          <Text style={styles.analyteValue}>{loved.thc === null ? 'ND' : formatRange(loved.thc)}</Text>
-        </View>
-        <View style={styles.analyte}>
-          <Text style={styles.analyteLabel}>CBD</Text>
-          <Text style={styles.analyteValue}>{loved.cbd === null ? 'ND' : formatRange(loved.cbd)}</Text>
-        </View>
-      </View>
-    </View>
-  );
-}
+// D151 (2026-08-21): the Loved-sessions module -- terpene-name chips and
+// the THC/CBD range line -- is gone. Operator ruling: redundant with the
+// Target profile card directly above it on Insights, and reductive (names
+// without values). The per-product fingerprints (D150) carry that reading
+// now. Its types, helpers, and styles left with it.
 
 /**
  * The dashboard's preference summary (D98). Presentational: props in, nothing
@@ -148,7 +74,6 @@ export function PreferenceSummary({
   sessionCount,
   distribution,
   buyAgainCount,
-  loved,
   topEffects,
 }: PreferenceSummaryProps) {
   // Zero sessions renders the frame, not fake content (D98): no bars, no
@@ -203,7 +128,6 @@ export function PreferenceSummary({
           {`Often ${topEffects.map((effect) => effect.name).join(' \u00b7 ')}`}
         </Text>
       )}
-      <LovedModule loved={loved} />
     </View>
   );
 }
@@ -276,62 +200,5 @@ const styles = StyleSheet.create({
   },
   dimmed: {
     opacity: 0.15,
-  },
-  section: {
-    gap: 8,
-    backgroundColor: Dash.surface2,
-    borderRadius: Dash.radius.row,
-    padding: 12,
-  },
-  muted: {
-    ...Type.role.body,
-    color: Dash.textMuted,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: Dash.bg,
-  },
-  chipDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  chipText: {
-    ...Type.role.body,
-    color: Dash.textBody,
-  },
-  analyteRow: {
-    flexDirection: 'row',
-    // Wraps rather than truncates: a two-ended range with an ND annotation
-    // on both analytes is longer than one narrow line, and a clipped lab
-    // value is a misreported one.
-    flexWrap: 'wrap',
-    alignItems: 'baseline',
-    columnGap: 14,
-    rowGap: 4,
-  },
-  analyte: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 5,
-  },
-  analyteLabel: {
-    ...Type.role.label,
-    color: Dash.textFaint,
-  },
-  analyteValue: {
-    ...Type.role.value,
-    fontVariant: ['tabular-nums'],
-    color: Dash.text,
   },
 });

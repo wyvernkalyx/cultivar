@@ -36,7 +36,7 @@ export async function loadInsightsScreen(): Promise<InsightsScreenResult> {
     ok: true,
     data: {
       insights: buildInsights(sessions, coas, terpenes),
-      summary: buildSummary(sessions, coas, terpenes),
+      summary: buildSummary(sessions, coas),
     },
   };
 }

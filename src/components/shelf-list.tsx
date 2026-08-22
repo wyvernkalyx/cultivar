@@ -228,7 +228,7 @@ export function ShelfList({ onSummary, filterQuery }: ShelfListProps) {
         const allCoas = allCoasResult.data as SummaryCoa[];
         // Built for the header's subtitle count alone since slice 4a --
         // the card itself renders on Insights (D142).
-        onSummary?.(buildSummary(sessions, allCoas, terpenes));
+        onSummary?.(buildSummary(sessions, allCoas));
         setSessionsByCoa(groupSessionsByCoa(sessions));
         setEffectsByCoa(groupTopEffectsByCoa(sessions));
         setTerpenesByCoa(groupTopTerpenesByCoa(terpenes));
