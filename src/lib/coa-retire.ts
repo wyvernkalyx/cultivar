@@ -109,7 +109,7 @@ export function promptRetire(coa: RetireTarget, onDone: () => void): void {
     if (!result.ok) {
       Alert.alert(
         'Could not retire',
-        'Nothing was recorded — the strain is still in your stash as it was. Check your connection and try again.'
+        'Nothing was recorded — the product is still in your stash as it was. Check your connection and try again.'
       );
       onDone();
       return;

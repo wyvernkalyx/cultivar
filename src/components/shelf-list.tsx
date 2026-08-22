@@ -504,7 +504,7 @@ export function ShelfList({ onSummary, filterQuery }: ShelfListProps) {
                 am I looking at", not "how many exist". */}
             <View style={styles.sortRow}>
               <Text style={styles.strainCount}>
-                {`${displayRows.length} ${displayRows.length === 1 ? 'strain' : 'strains'}`}
+                {`${displayRows.length} ${displayRows.length === 1 ? 'product' : 'products'}`}
               </Text>
               <Pressable
                 onPress={openSortMenu}

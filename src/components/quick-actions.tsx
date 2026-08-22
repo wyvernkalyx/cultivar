@@ -121,7 +121,7 @@ export function QuickActions({ visible, onClose }: { visible: boolean; onClose: 
             accessibilityRole="button"
             accessibilityLabel="Log a session">
             <Text style={styles.actionTitle}>Log a session</Text>
-            <Text style={styles.actionSub}>Pick a strain, then rate it</Text>
+            <Text style={styles.actionSub}>Pick a product, then rate it</Text>
           </Pressable>
           <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Cancel">
             <Text style={styles.cancel}>Cancel</Text>
@@ -164,7 +164,7 @@ export function QuickActions({ visible, onClose }: { visible: boolean; onClose: 
               <Text style={styles.pickerClose}>Close</Text>
             </Pressable>
           </View>
-          <Text style={styles.pickerSub}>Which strain?</Text>
+          <Text style={styles.pickerSub}>Which product?</Text>
           {pickerError !== null && <Text style={styles.pickerMessage}>{pickerError}</Text>}
           {pickerError === null && pickerRows === null && (
             <Text style={styles.pickerMessage}>Loading…</Text>
