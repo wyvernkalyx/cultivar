@@ -284,7 +284,7 @@ export default function InsightsScreen() {
               <View style={[styles.card, styles.cardAvoid]}>
                 <Text style={styles.cardTitle}>Profiles to avoid</Text>
                 <Text style={styles.cardSub}>
-                  Compounds frequent in your Disliked and Hated sessions
+                  Based on products you rated Disliked or Hated · lab concentrations only
                 </Text>
                 {insights.avoid.coaCount === 0 ? (
                   <Text style={styles.absent}>No Disliked or Hated sessions yet.</Text>

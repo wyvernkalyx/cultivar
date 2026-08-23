@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { TerpeneGlossarySheet } from '@/components/terpene-glossary-sheet';
 import { Dash, Type, terpeneHue, verdictHue } from '@/constants/theme';
 
 // Font families registered app-wide in the root layout (D83 Decision 1),
@@ -148,6 +150,10 @@ function Total({ label, value }: { label: string; value: number | null }) {
 // omitted and the legend (reported name + value) stands alone; the values
 // are facts, the bar would be an estimate. The shelf card never passes
 // null (its own guard runs first); the Insights product list does.
+// D152: each legend item is a press that opens the glossary sheet for that
+// name. The press is nested inside the card's own Pressable on the shelf
+// (the D149 precedent); the inner target wins the touch. hitSlop lifts a
+// 10pt line to the 44pt floor.
 export function Fingerprint({
   total,
   terpenes,
@@ -155,6 +161,7 @@ export function Fingerprint({
   total: number | null;
   terpenes: CardTerpene[];
 }) {
+  const [openTerpene, setOpenTerpene] = useState<string | null>(null);
   return (
     <View style={styles.fingerprint}>
       {total !== null && total > 0 && (
@@ -172,7 +179,13 @@ export function Fingerprint({
       )}
       <View style={styles.legendRow}>
         {terpenes.map((terpene) => (
-          <View key={terpene.name} style={styles.legendItem}>
+          <Pressable
+            key={terpene.name}
+            style={styles.legendItem}
+            onPress={() => setOpenTerpene(terpene.name)}
+            hitSlop={{ top: 12, bottom: 12, left: 4, right: 4 }}
+            accessibilityRole="button"
+            accessibilityLabel={`${terpene.name}, what is it`}>
             <View style={[styles.legendDot, { backgroundColor: terpeneHue(terpene.name) }]} />
             {/* D131: the reported value beside the name, truncated to two
                 decimals (D102 -- truncate, never round), fainter tabular
@@ -182,9 +195,10 @@ export function Fingerprint({
               {`${terpene.name} `}
               <Text style={styles.legendPct}>{`${truncate2(terpene.pct)}%`}</Text>
             </Text>
-          </View>
+          </Pressable>
         ))}
       </View>
+      <TerpeneGlossarySheet name={openTerpene} onClose={() => setOpenTerpene(null)} />
     </View>
   );
 }

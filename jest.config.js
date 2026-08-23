@@ -19,7 +19,13 @@
  */
 module.exports = {
   testEnvironment: 'node',
-  roots: ['<rootDir>/supabase/functions/_shared/coa', '<rootDir>/src/lib/insights'],
+  roots: [
+    '<rootDir>/supabase/functions/_shared/coa',
+    '<rootDir>/src/lib/insights',
+    // D152: the terpene glossary is pure data; its banned-language test
+    // lives beside it on the same no-RN-imports terms.
+    '<rootDir>/src/constants',
+  ],
   testMatch: ['**/__tests__/**/*.test.ts'],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.ts$': '$1',
