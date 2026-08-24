@@ -32,11 +32,17 @@ loop exists. What follows is completion, not construction.
 - [x] At-dispensary shortlist: RULED 2026-08-24 -- v1.1. Out of v1;
       the non-goals line stands (no at-dispensary build work in
       v1). "MVP done" no longer waits on this hole.
-- [ ] Apple account: confirm whether the developer account is
-      individual or organization. Cannabis-adjacent apps should
-      ship from a legal entity; if individual, entity formation +
-      D-U-N-S + re-enrollment is the longest lead item in this
-      whole document -- start the clock early.
+- [x] Apple account: CONFIRMED Individual 2026-08-24 (Membership
+      page, operator-observed). RULED same day: v1 ships from the
+      Individual account -- pressure-test the product before
+      sinking money into an entity (pre-revenue, lived-demand).
+      Named cost, accepted: the operator's legal name is the
+      public seller name for v1. Entity formation + D-U-N-S +
+      Apple conversion are banked as ONE arc; trigger: revenue, a
+      monetization ruling, or sustained real-user scale, whichever
+      comes first. Conversion preserves Team ID, apps, and
+      certificates (support docs read 2026-08-24) -- deferral
+      costs a publishing pause later, not a restart.
 - [ ] Stopwatch test: log one real session, timed. The MVP's #1
       risk has a 15-second bar and has never been measured. One
       evening, no code.
