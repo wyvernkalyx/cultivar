@@ -5,7 +5,8 @@ the animation-constraint section amended by the Reanimated excision chore;
 slice 2 (motion) shipped with this commit's amendments; bloom
 placement superseded by the 2026-08-04 amendment (post-close
 transient; see "Screen mapping"). Item 1's wrap rule scoped to the survey
-by the 2026-08-12 card amendment.
+by the 2026-08-12 card amendment. Layer 1 palette superseded as shipped
+colors by the 2026-08-24 amendment (design-overhaul Dash).
 
 ## Scope and inputs
 
@@ -42,6 +43,14 @@ ratified direction:
 - Background `#090d0a`; surface `#131b15`; surface-hi `#1b241d`;
   text `#e9f1ea`; subtext `#7f8f84`; accent `oklch(0.82 0.13 152)`;
   error border `oklch(0.66 0.13 33)`; error dot `oklch(0.72 0.14 45)`.
+
+  Amendment (2026-08-24): the shipped app renders the design-overhaul
+  Dash palette (documentation/design/design-overhaul.md, D137-D143;
+  src/constants/theme.ts), background `#0B0F0C`, surface `#131A15`,
+  text `#F2F5F1`, with the subtext role split into three Dash text
+  tokens. The values above remain D83's ratified record and the
+  source for the oklch re-derivations; as shipped surface colors they
+  are superseded.
 - Tier ramp (best -> worst): `oklch(0.78 0.13 150)`,
   `oklch(0.80 0.11 128)`, `oklch(0.82 0.10 96)`, `oklch(0.74 0.12 56)`,
   `oklch(0.66 0.13 33)`. NOTE: React Native does not parse `oklch()`;
