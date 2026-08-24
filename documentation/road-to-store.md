@@ -49,11 +49,17 @@ loop exists. What follows is completion, not construction.
 
 ## Phase 1 -- name adoption (one small slice)
 
-- [ ] Display-name sweep: app.json name "cultivar" -> "Kalyx"; any
-      in-app wordmark; splash if it carries the word. Bundle ID
-      stays.
-- [ ] kalyxjournal.com live with a placeholder page (the privacy
-      policy needs this home in Phase 4 anyway).
+- [x] Display-name sweep: DONE 2026-08-24 (3ae15f2). app.json name,
+      camera-permission copy, three wordmark sites, five copy
+      strings; splash and icon are wordless (verified), so no asset
+      work. OWED: Kalyx under the icon and the permission-dialog
+      copy, observed at the next EAS dev build (native-bound;
+      staged-gate ruling 2026-08-24).
+- [x] kalyxjournal.com live: DONE 2026-08-24. Static placeholder
+      deployed via Cloudflare Drop, claimed into the account as
+      Worker drop-90c9fba9-ffa; https render operator-observed
+      same day. The page carries the 21+ footer and the
+      no-effect-claims line.
 
 ## Phase 2 -- compliance build (the real remaining engineering)
 
