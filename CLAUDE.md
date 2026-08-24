@@ -327,6 +327,24 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
 - **Every hunk header is reconciled against its own body before a
   diff ships or applies.** Brace-only lines at hunk boundaries are the
   documented casualty class (2026-08-19).
+- **A copy-rule gate enumerates EVERY term the rule displaces, never
+  only the term that prompted the rule.** A gate that enumerated only
+  the prompting term let a displaced neighbor reach the device;
+  operator-caught (2026-08-23 session; promoted 2026-08-24).
+- **Carriers are named exactly as their destination basename; no
+  rename-on-save instructions to the operator.** A -v2 carrier with a
+  rename instruction stranded the amended doc outside the repo,
+  caught only at the hash gate (2026-08-23 session; promoted
+  2026-08-24).
+- **Implementer command form is set-then-prove: `cd <repo> && pwd &&
+  <cmd>`; pwd must print the repo path or STOP.** The per-turn cwd
+  reset to the parent is real (two sessions' evidence); the "stripped
+  cd" account was refuted (2026-08-23 session; promoted 2026-08-24).
+- **Implementer-side unzip into the repo tree is not a ratified
+  step.** The permission classifier denied it non-deterministically
+  (ran 4x on D150/D151, denied on D152). Operator places carriers;
+  the implementer verifies hashes -- matching the role split
+  (2026-08-23 session; promoted 2026-08-24).
 
 ---
 
@@ -365,6 +383,11 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
 - **Dead-space defects get their geometry pinned -- scrolls-with-content
   vs fixed-on-screen -- before any hypothesis is written**
   (2026-08-12).
+- **A gate-release string is sealed text.** The architect changes it
+  only by amending the sealed condition, never by sending a variant
+  to the operator. A control gate (like the banned-language
+  injection) is part of the gate: it must bite, and its restore must
+  hash back to the pin (2026-08-23 session; promoted 2026-08-24).
 
 ---
 
