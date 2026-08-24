@@ -1,10 +1,11 @@
 # Road to the App Store -- ordered steps to completion
 
-Status: drafted 2026-08-24, awaiting operator ratification. Amended
-by the commit that changes its truth. Companion to
-Cultivar_MVP_and_Roadmap.md (the what) -- this doc is the in-what-
-order. One phase at a time; each session opens with the next unchecked
-box, architect holds state, operator rules.
+Status: drafted 2026-08-24; ratified by the operator 2026-08-24
+(recorded in SESSION_HANDOFF.md). Amended by the commit that changes
+its truth. Companion to Cultivar_MVP_and_Roadmap.md (the what) --
+this doc is the in-what-order. One phase at a time; each session
+opens with the next unchecked box, architect holds state, operator
+rules.
 
 ## Already done (the part that argues against "lost cause")
 
@@ -28,9 +29,9 @@ loop exists. What follows is completion, not construction.
       2026-08-24 shows four live KALYX marks, none in class 9 or
       42. Banked for the Phase 4 attorney pass: C-spelling
       phonetic twins (Calyx) were outside the search string.
-- [ ] At-dispensary shortlist: rule it into v1.1 (recommended) or
-      keep it a v1 MUST. Ruling this closes the largest open hole
-      in "MVP done" either way.
+- [x] At-dispensary shortlist: RULED 2026-08-24 -- v1.1. Out of v1;
+      the non-goals line stands (no at-dispensary build work in
+      v1). "MVP done" no longer waits on this hole.
 - [ ] Apple account: confirm whether the developer account is
       individual or organization. Cannabis-adjacent apps should
       ship from a legal entity; if individual, entity formation +
