@@ -141,7 +141,7 @@ export default function QrImportBrowser({
             Camera access is off
           </ThemedText>
           <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
-            {'Turn the camera on for Cultivar in Settings to scan a package QR, or go back and add the COA from a file.'}
+            {'Turn the camera on for Kalyx in Settings to scan a package QR, or go back and add the COA from a file.'}
           </ThemedText>
           {cancelButton}
         </View>

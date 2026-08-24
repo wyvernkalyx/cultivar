@@ -206,7 +206,7 @@ export default function InsightsScreen() {
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          <Text style={styles.wordmark}>CULTIVAR</Text>
+          <Text style={styles.wordmark}>KALYX</Text>
           <Text style={styles.title}>Insights</Text>
           {insights !== null && insights.sessionCount > 0 && (
             <Text style={styles.subtitle}>
@@ -315,7 +315,7 @@ export default function InsightsScreen() {
         onRequestClose={() => setCounterOpen(false)}>
         <View style={[styles.counterRoot, { paddingTop: insets.top }]}>
           <View style={styles.counterHeader}>
-            <Text style={styles.counterWordmark}>CULTIVAR</Text>
+            <Text style={styles.counterWordmark}>KALYX</Text>
             <Pressable
               onPress={() => setCounterOpen(false)}
               hitSlop={8}

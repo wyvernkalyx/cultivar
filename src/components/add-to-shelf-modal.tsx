@@ -184,7 +184,7 @@ export default function AddToShelfModal({
     // D116 restricts the client fetch to https in code. The WebView may
     // traverse http on the way there; only this download is gated.
     if (!/^https:\/\//i.test(url)) {
-      fail('This page is not served over https, so Cultivar will not download it.');
+      fail('This page is not served over https, so Kalyx will not download it.');
       return;
     }
 
@@ -613,7 +613,7 @@ function ReviewOrGuard({
           {"Couldn't read this COA"}
         </ThemedText>
         <ThemedText style={styles.centered}>
-          {"Cultivar doesn't support this lab's reports yet."}
+          {"Kalyx doesn't support this lab's reports yet."}
         </ThemedText>
         {onManual !== undefined && (
           <Pressable

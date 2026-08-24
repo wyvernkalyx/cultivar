@@ -51,7 +51,7 @@ export const TERPENE_AROMA_FALLBACK = 'No description yet.';
 
 // The one footer line, shown under every entry and the fallback alike.
 export const TERPENE_GLOSSARY_FOOTER =
-  'A lab-reported aroma compound. Cultivar reports what was in the product, not what it does.';
+  'A lab-reported aroma compound. Kalyx reports what was in the product, not what it does.';
 
 export function terpeneAroma(name: string): string {
   return GLOSSARY[name.trim().toLowerCase()]?.aroma ?? TERPENE_AROMA_FALLBACK;

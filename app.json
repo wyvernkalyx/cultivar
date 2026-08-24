@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "cultivar",
+    "name": "Kalyx",
     "slug": "cultivar",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -38,7 +38,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Cultivar uses the camera to scan the QR code on your product's package.",
+          "cameraPermission": "Kalyx uses the camera to scan the QR code on your product's package.",
           "microphonePermission": false,
           "recordAudioAndroid": false
         }

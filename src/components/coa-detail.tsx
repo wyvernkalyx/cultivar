@@ -408,7 +408,7 @@ export function CoaDetail({
     const steer = coa.on_shelf_count > 0 ? ' To take it off your shelf, use Retire.' : '';
     Alert.alert(
       'This COA has history',
-      `${coaIdentity('This COA')} has logged history, and Cultivar keeps history — it can't be deleted.${steer}`,
+      `${coaIdentity('This COA')} has logged history, and Kalyx keeps history — it can't be deleted.${steer}`,
       [{ text: 'OK' }]
     );
   };

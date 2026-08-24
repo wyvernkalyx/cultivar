@@ -198,7 +198,7 @@ export default function HomeScreen() {
             quick-actions selector); the header keeps the gear for D107.1's
             account surface. Slice 4 owns the reference's full header. */}
         <View style={styles.header}>
-          <Text style={styles.wordmark}>CULTIVAR</Text>
+          <Text style={styles.wordmark}>KALYX</Text>
           <View style={styles.headerActions}>
             <Pressable
               onPress={() => {
