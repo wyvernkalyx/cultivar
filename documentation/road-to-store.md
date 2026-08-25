@@ -73,8 +73,13 @@ loop exists. What follows is completion, not construction.
 
 ## Phase 2 -- compliance build (the real remaining engineering)
 
-- [ ] 21+ age gate + jurisdiction attestation at onboarding
-      (design doc first; MVP MUST and store requirement).
+- [ ] 21+ age gate at onboarding. AMENDED 2026-08-25 (D158,
+      operator-caught): jurisdiction attestation dropped -- the
+      1.4.3 jurisdiction conditions attach to selling apps, and
+      nothing citable covers a non-selling journal; the store hook
+      is the minors clause. Design doc: age-gate.md. Schema
+      shipped, applied, and gated at 083ba97; the UI slice is what
+      this box now waits on.
 - [ ] Consent flow + terms screen before any cohort enrollment
       (MVP section 11, active; lawyer reviews the text, not the
       code).

@@ -2,7 +2,8 @@
 
 Status: drafted 2026-08-25; rulings 1a/2a/3b and D154-D157 ratified by
 the operator 2026-08-25 (chat). Amended by the commit that changes its
-truth. Roadmap Phase 2, box 1. MVP MUST and store requirement.
+truth. Roadmap Phase 2, box 1. MVP MUST; the citable store hook is
+the 1.4.3 minors clause. Amended 2026-08-25 (D158: age-only).
 
 ## What this is
 
@@ -88,3 +89,30 @@ No DOB or age verification service. No geolocation, IP checks, or
 jurisdiction lists. No consent/terms UI (the table accommodates it;
 the slice does not build it). No re-attestation prompts for existing
 rows. No Android-specific work.
+
+## Amendment (2026-08-25) -- D158: the gate is age-only
+
+The jurisdiction statement is dropped, operator-caught. Pressure-tested
+against the live App Store guideline and the closest shipped comp
+(Jointly, an age-21 gate and nothing else): the 1.4.3 jurisdiction and
+geo conditions attach to apps that facilitate sale; nothing citable
+requires a jurisdiction attestation from a non-selling journal. The
+"store requirement" phrasing in this doc's status line and in the
+roadmap box was over-broad for that half -- amended in the same commit
+as this section. If counsel wants jurisdiction language, the lawyer
+pass (Phase 2, box 2) adds it, and D155 absorbs it as a new kind or a
+statement_version bump, zero migration -- the shipped migration's
+header comment naming 'age21_jurisdiction' stands as historical record
+(migrations are never edited).
+
+Consequences: the UI slice writes kind 'age21'; D154, D156, and D157
+mechanics are unchanged; the copy below is the ratified
+statement_version 1 app-string set, and ratified app strings are never
+edited by the implementer.
+
+- Heading: Before you start
+- Statement: I am 21 years of age or older.
+- Confirm: I confirm
+- Decline: I'm under 21
+- Ineligible screen: Kalyx is for adults 21 and over. If that
+  changes, we'll be here.
