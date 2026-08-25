@@ -43,9 +43,19 @@ loop exists. What follows is completion, not construction.
       comes first. Conversion preserves Team ID, apps, and
       certificates (support docs read 2026-08-24) -- deferral
       costs a publishing pause later, not a restart.
-- [ ] Stopwatch test: log one real session, timed. The MVP's #1
-      risk has a 15-second bar and has never been measured. One
-      evening, no code.
+- [x] Stopwatch test: CLOSED 2026-08-25 by operator ruling,
+      without a stopwatch reading -- none exists and none is
+      recorded. Operator's words: "I literally couldn't time it
+      because the stopwatch would be slower than our app."
+      Perceived duration near-instant, an order of magnitude under
+      the 15-second bar even allowing for perception error. The
+      clause that closes the box is the bar's second one, "done
+      repeatedly without dread," observed in the database: 44
+      session chains, 71 entries, 2026-07-27 through 2026-08-25
+      (deleted = false, architect MCP read, 2026-08-25), a
+      sustained daily habit including a same-day log. Validation
+      question 1 of Cultivar_MVP_and_Roadmap.md section 12 is
+      answered: logging friction does not threaten the loop.
 
 ## Phase 1 -- name adoption (one small slice)
 
