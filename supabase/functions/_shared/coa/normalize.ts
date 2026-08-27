@@ -89,6 +89,23 @@ const TERPENE_CANON: Record<string, string> = {
   TRANSBFARNESENE: 'Farnesene',
   TRANSBOCIMENE: 'Ocimene',
   BORNEOL: 'Borneol',
+  // Smithers CTS vocabulary (2026-08-25): keys keep digits, so 3-Carene
+  // cannot reach CARENE without its own key. Isomer keys follow the map's
+  // own precedents: caryophyllene and ocimene isomers collapse to the
+  // shared canonical (BCARYOPHYLLENE, TRANSBOCIMENE above); nerolidol
+  // isomers stay distinct (CISNEROLIDOL / TRANSNEROLIDOL above).
+  '3CARENE': 'Carene',
+  TRANSCARYOPHYLLENE: 'Caryophyllene',
+  CISOCIMENE: 'Ocimene',
+  GAMMATERPINEOL: 'Terpineol',
+  PULEGONE: 'Pulegone',
+  ISOBORNEOL: 'Isoborneol',
+  CAMPHOR: 'Camphor',
+  CEDRENE: 'Cedrene',
+  CEDROL: 'Cedrol',
+  FENCHONE: 'Fenchone',
+  GERANYLACETATE: 'Geranyl Acetate',
+  NEROL: 'Nerol',
 };
 
 /** Collapse a terpene name to its canonical lookup key. */
