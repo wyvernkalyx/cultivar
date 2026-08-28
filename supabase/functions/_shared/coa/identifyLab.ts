@@ -17,6 +17,10 @@ export function identifyLab(text: string): SourceLab {
   // The Smithers wordmark renders as an image; the text anchor is the
   // signing entity "Smithers CTS New York LLC", present on every page.
   if (/Smithers\s+CTS/i.test(text)) return 'smithers';
+  // D162: the wordmark renders as an image; the text anchor is the signing
+  // entity plus the per-page sampling footnote -- observed 16 hits on each
+  // of three real documents, 0 on all ten prior-lab fixtures.
+  if (/Keystone\s+State\s+Testing/i.test(text)) return 'keystone';
   // D128: the anchor is the literal lab name, exact case; 24 hits on the
   // fixture, 0 on every other lab's fixture (cross-fixture negative case).
   if (text.includes('ACT Laboratories')) return 'act';

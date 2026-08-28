@@ -3,6 +3,7 @@ import { identifyLab } from './identifyLab.ts';
 import { parseKaycha } from './parseKaycha.ts';
 import { parseDrsConfident } from './parseDrsConfident.ts';
 import { parseSmithers } from './parseSmithers.ts';
+import { parseKeystone } from './parseKeystone.ts';
 import { parseGreenAnalytics } from './parseGreenAnalytics.ts';
 import { parseAct } from './parseAct.ts';
 import { parseCtnd } from './parseCtnd.ts';
@@ -19,6 +20,8 @@ export function parseCoa(text: string): CoaResult {
   switch (sourceLab) {
     case 'smithers':
       return parseSmithers(text);
+    case 'keystone':
+      return parseKeystone(text);
     case 'kaycha':
       return parseKaycha(text);
     case 'drs-confident':
