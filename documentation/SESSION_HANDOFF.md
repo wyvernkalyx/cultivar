@@ -1,122 +1,108 @@
-# Session Handoff -- 2026-08-27
+# Session Handoff
 
-Read after CLAUDE.md and handoff-specs.md, end to end. HEAD at close:
-the commit carrying this file, riding on 9cbbe178 (feat: smithers
-parser). If origin/main is neither, work continued past this handoff
--- reconcile from the repo before proceeding.
+Written 2026-08-29, at the close of the 2026-08-28/29 session (crossed
+midnight once). Repo is authoritative over every claim here; Phase A
+verifies before any work begins.
 
-## What this session shipped (all pushed)
+## State at close
 
-93be543d docs: stopwatch box closed -- Phase 0 COMPLETE (operator
-ruling; 44 chains/71 entries observed as the "repeatedly" evidence).
-dae5a521 docs: age-gate design (D154-D157). 083ba974 feat:
-user_attestations migration -- applied and MCP-gated same night
-(paired probe: ins=1 vis=1 upd=0 del=0, both named checks fire,
-non-owner RLS-42501, rollback verified). 305740b9 docs: D158 age-only
-amendment, operator-caught against live 1.4.3 text. 3b02ffda docs:
-restock design (D159-D160, copy frozen). 56870a81 docs: smithers
-parser design (D161). 4795922c data: + 9cbbe178 feat: smithers parser
--- 13/13 Deno, 179/5 Jest, device-gated on a LIVE import (QR scanned
-off the monitor; production row b163a487: strain verbatim title, 37
-terpene rows, 9 non-null, dominant Limonene, <LOQ stayed null).
+HEAD at close: the commit carrying this file, riding on 731a457a
+(docs: D163 spike closed). Sync was 0 0 after every push; five pushes
+this session, all ref-scoped, all two-channel where Tier 2.
 
-## Entry point: the Keystone package (evidence-complete, unpackaged)
+Shipped end-to-end:
+- D162 Keystone parser, full package cycle: docs 83ad8f43, data
+  43d14037 (three fixtures), feat cdedfc42. Deployed (operator,
+  API-upload path, Docker warning benign), device-gated on the phone
+  (six per-step verdicts), MCP read-back exact including pdf_sha256
+  byte-identity with the fixture pin. Both "not compatible" Nanticoke
+  labs now parse. Suite: 20 Deno (scoped), 179/5 Jest, tsc clean.
+- D163 web-importer spike, opened AND closed same day: doc cd7b9dd5,
+  findings amendment 731a457a. Exit criterion MET (All Gas 7g Glass
+  Jar imported from the PC through a desktop browser, row 42707425,
+  read back exact). All five unknowns closed; see the doc's Findings.
+  Spike branch spike/d163-web-importer at 9c520f8 is LOCAL-ONLY
+  evidence on the operator's machine -- never merged, never pushed.
+- SECURITY: the client env var held a SECRET (sb_secret) API key;
+  the spike's web guard exposed it on first sign-in. Contained (never
+  in repo history -- observed by full-history grep), remediated
+  2026-08-29: publishable key swapped in, app proven under it with
+  zero code changes, secret key revoked, stale dist/ deleted.
 
-parseKeystone.ts exists as an operator-held carrier (below), developed
-and greened architect-side against NINE real documents: flower,
-prerolls, blunts, infused to 47.83% THC, one all-ND terpene panel.
-Zero failures. Session opens with ratification of four design calls,
-then the Smithers package cycle verbatim (doc -> carriers -> data: +
-feat: -> device gate -> push):
- 1. CAS-table disambiguation: terpene rows fuse value with CAS
-    ("0.2199123-35-3" has two valid regex splits); each analyte's CAS
-    constant is the deterministic splitter and the panel doc.
- 2. Positional terpene-total anchor: no label survives extraction;
-    the icon-strip value is taken by template position (CBD mg/g
-    before, moisture after). Survived its hardest case: All_Gas
-    prints "0.000 %" -- a PRINTED zero, stored as 0 total with all
-    analytes null. Fragilest thing in the parser; say so in the doc.
- 3. Strain = printed product title verbatim (D161a inherited).
- 4. Keystone's footnote governs date labels: their "Date Sampled" is
-    collected-from-client (-> sampledDate); "Date Released" ->
-    testedDate.
-Executed pins for the tests (Acapulco Gold DP121815): thc 20.98, cbd
-0.05767, terp 0.42, strain "Acapulco Gold 1/4 Oz Pouch", batch
-DP121815, sampled 2025-04-28, tested 2025-05-06, 13 cannabinoids (7
-detected), 20-panel terpenes (2 detected), dominant Myrcene 0.2199,
-7 safety Pass. All_Gas AG081009PR: thc 24.25, terp total 0, terp_nn
-0. Coconut Cream CM1218161GPRD: thc 47.83, terp 1.22, terp_nn 4.
-Proposed fixtures: those three (flower / all-ND / infused). Carrier
-pin: parseKeystone.ts sha256
-6ba560f9a8b3cf2a2de8e2200859847da9df088ed702e0cfc0d8cb27b85b9423
-(operator holds the file; delivered in the closing chat turn of
-2026-08-27). Dispatch edits are
-three additive one-liners re-derivable from the Smithers diff shape.
+## Falsifiable predictions for next Phase A
 
-## Ruled queue after Keystone
+1. origin/main = this handoff commit; parent 731a457a5c726e11f3...
+2. Migrations by name-form: 20. No restock migration present.
+3. Jest: 179 tests / 5 suites via npm test. Deno: 20 tests via
+   cd supabase/functions && deno test --allow-read ingest-coa/
+   (this exact form; deno task test does not exist -- settled).
+4. Fixture pdf count: 13.
+5. coas rows: 19 at close (Blue Raspberry newest-4, Acapulco Gold
+   1d624fdb, Sherbadelic, All Gas 7g 42707425 newest). Operator use
+   adds rows; predict >= 19, Acapulco sha 6ad9610e counted once.
+6. Fuel Pump f2503fc3 on_shelf_count: 0. Oldest open wound, still.
+7. D ceiling: D163.
+8. .env key class: grep -o 'EXPO_PUBLIC_SUPABASE_ANON_KEY=sb_[a-z]*'
+   prints ...=sb_publishable. If it ever prints sb_secret again,
+   stop everything.
+9. Operator worktree: two .claude/ untracked lines; branch main;
+   spike/d163-web-importer exists locally at 9c520f8.
+10. CLAUDE.md sha256 36ca6a841cc3... until its queued touch lands.
 
-1. Web-importer spike (operator demand, twice expressed, promoted):
-   Expo-web serving ONLY the import flow. Design doc first; native-
-   module unknowns are the spike's subject. 2. Restock (D159-D160):
-   slice 1 carrier was NEVER PLACED -- the migration file
+## Ruled queue
+
+1. Restock (D159-D160). Slice 1 carrier was never placed; migration
    20260825000001_coa_restocks_d159.sql (pin ba5625bf347dc45249807f
-   ca1041041d448543cd624ac0b720620146c265d8a8, 76 lines) must be
-   re-delivered from the ratified text in restock.md's commit thread
-   or re-authored to the pin. Fuel Pump (f2503fc3) is STILL count 0
-   and unloggable -- oldest open wound. 3. Age-gate UI slice (D154-
-   D158; copy frozen in age-gate.md amendment).
+   ca1041041d448543cd624ac0b720620146c265d8a8, 76 lines) re-delivered
+   from the ratified text in restock.md's commit thread. NEW INPUT
+   from D163: the D88 duplicate dialog is a hard hang on web
+   (Alert.alert is a no-op there) and restock must rebuild that exact
+   dialog for its third outcome. DECIDE at design time: fold the
+   web-capable dialog into the restock arc, or keep separate arcs.
+2. Age-gate UI slice (D154-D158, copy ratified, migration applied).
+3. Web-importer implementation arc (new D-number) if promoted; the
+   spike doc's Findings is its evidence base.
+Banked: road-to-store gains a "client key is publishable-class" gate;
+CLAUDE.md [ADAPT] refresh (test counts now 179/5 Jest + 20 Deno; the
+cwd-reset bullet is REFUTED, see ledger); sign-in latency on web if
+it recurs (one data point, cause not established).
 
-## Findings ledger (delivered, actionable)
+## Findings ledger, this session
 
-- ARCHITECT ERRORS, ledgered with refutations: (a) drafted a mixed
-  data:/code commit; implementer refused citing the handbook rule +
-  four unanimous precedents; two-commit split ratified the fix. (b)
-  Two hand-recalled prose counts ("eight Smithers tests" -> 7; "four
-  animal-face tests" -> 3) -- the no-hand-count rule applies to prose.
-- Prompt-template fixes now standing: dirty control precedes the
-  FIRST tr gate; carrier prompts state placement as a request whose
-  verdict porcelain carries; bare directory counts dropped from
-  placement evidence (hash is the gate); multi-file placements get
-  one DO line per carrier with destination adjacent.
-- Tooling banked (implementer suggestion): a `deno task test` in
-  supabase/functions/deno.json pinning `deno test --allow-read
-  ingest-coa/` -- a bare root run sweeps a Jest file
-  (_shared/coa/__tests__/parseCoa.test.ts) into Deno type-checking,
-  102 spurious errors.
-- CLAUDE.md [ADAPT] item 1 stale by three independent observations:
-  170/4 recorded, 179/5 observed. Fold into next handbook touch,
-  with the two owed age-gate.md line items (D155 CHECK constraints
-  not in the column list; line 22 "store requirement" phrase).
-- OPERATOR TASK STILL OWED: Supabase dashboard -> Auth -> Emails:
-  sender "cultivar" -> Kalyx. Reported, never confirmed done. The
-  rename has non-repo config surfaces; a checklist is owed (dashboard
-  now, App Store Connect at submission).
-- Intel: NY moved post-4/1/2026 lab results to Metrc QR serving; the
-  nanticoke.co page is an archive. The operator's new Fuel Pump
-  package QR is the first Metrc specimen -- next scan tells us what
-  Metrc serves. Caramel_Cream_Cherry_Diesel.pdf is a SCAN (zero text
-  layer): first raster specimen; OCR ingestion banked as its own arc.
-  Open question: pdf_sha256 of URL-fetched vs archive-downloaded
-  bytes (answerable from row b163a487; not yet read).
-- Deploy state: ingest-coa deployed WITH the Smithers arm, evidenced
-  by effect (a parse only new code produces), not by pasted output.
-  Keystone feat will need a re-deploy before its device gate.
+Architect errors reaching artifacts: 5. (1) gate-4 "above the blank"
+-- an unobserved layout decoration in a prompt; implementer corrected.
+(2) alpha-Pinene asserted as "Pinene" -- guessed canonical name,
+self-caught by the executed mirror before shipping. (3)(4) two false
+premises in the D163 doc (File API bytes-read; Alert "twice, for
+error surfacing") -- structural claims written from imports without
+reading use sites; refuted implementer-side, ledgered in the doc's
+Corrections. (5) garbled switch-refusal clause in the closing prompt
+(self-contradicting prose, unreachable but malformed).
+Architect self-caught, twice: stale clone at dry-run time (origin had
+moved). STANDING RULE ADOPTED: the architect fetches origin
+immediately before every dry run, not once per session.
+Implementer errors: 0. Implementer catches, credited: the parent
+directory's stub CLAUDE.md is a live confusion vector (injected
+context shows d:\Projects\Cultivar\CLAUDE.md, not the handbook);
+set-then-prove caught its own carried-cwd slip; cwd persistence
+across tool calls confirmed twice -- the prior "per-turn cwd reset"
+account is REFUTED and the handbook bullet should be corrected on
+its next touch; two doc premises refuted from installed source before
+any browser ran; unprompted CR byte-census before staging; declined
+an unneeded .env read on the day .env was the incident.
 
-## Predictions, falsifiable, for next session's Phase A
+## Capability notes (architect container, this session)
 
-origin/main = this handoff's commit, parent 9cbbe178. Migrations by
-name-form: 20. Jest 179/5; Deno scoped to ingest-coa/: 13/13. coas
-rows: 16, newest b163a487 (Blue Raspberry). Fuel Pump f2503fc3
-on_shelf_count still 0. Worktree: two .claude/ untracked lines only;
-no restock migration present. D ceiling: D161. kalyxjournal.com still
-serves the placeholder (browser check). The operator-held
-parseKeystone.ts re-hashes to the pin printed at delivery.
+Clones the public repo; installs deno from GitHub releases; npm:
+specifiers resolve (registry allowed) so the FULL ingestCoa pipeline
+runs architect-side against fixtures, including unpdf extraction;
+jsr.io unreachable, so deno-test-file execution stays implementer-
+side (values pre-executed via plain-assert mirrors instead); Jest
+runs via npm ci + npm test; shell is /bin/sh (no brace expansion);
+Supabase MCP reads work as before. Fetch-before-dry-run is now
+standing (see ledger).
 
-## Capability notes
+## Entry point next session
 
-Architect container: clones the repo read-write locally (read-only to
-origin), runs the full Deno parser pipeline (deno from GitHub
-releases), CANNOT reach jsr.io (test suite runs are the implementer's)
-nor nanticoke.co (documents travel by operator upload). Supabase MCP
-reads privileged; last-statement-only; probes as DO blocks whose
-raised exception carries observations and forces rollback.
+Phase A against this file, then restock design ratification -- the
+fold-or-separate dialog DECIDE is the first ruling to seek.
