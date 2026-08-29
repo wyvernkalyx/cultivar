@@ -86,6 +86,78 @@ Serving any route beyond the import flow. Changing native behavior.
 Legal-entity or hosting decisions (kalyxjournal.com stays a
 placeholder).
 
-## Findings
+## Findings (amended 2026-08-29, spike closed)
 
-UNFILLED. Amended by the spike's closing commit.
+EXIT CRITERION MET. All Gas 7g Glass Jar (AG1126I2Q) imported from the
+operator's PC through a desktop browser, saved as row 42707425-cbc5-
+4e3f-b712-48c18bedcbab, MCP read-back exact: keystone, thc 30.76, terp
+1.71, 20 terpene rows (6 detected, zero fabricated zeros), dominant
+Limonene, CBDV null, stored pdf sha256 byte-identical to the source
+document's pin. And under the publishable key -- see the headline.
+
+HEADLINE, found by unknown 4: the client env var
+EXPO_PUBLIC_SUPABASE_ANON_KEY held a SECRET (sb_secret) key. Every
+request the native app ever made carried it; the native runtime has no
+guard, so nothing ever said a word. supabase-js's browser guard
+("Forbidden use of secret API key in browser") fired on the spike's
+first sign-in attempt -- the web build is the only environment that
+would ever have checked. Containment, observed: only .env.example is
+tracked, zero commits in all history touch any real .env, full-history
+grep for sb_secret printed no matches -- the key never entered the
+public repo. Exposure was phone dev bundles, local dist/, Metro caches.
+Remediated 2026-08-29: key swapped to publishable, app proven working
+under it (the exit-criterion import), secret key revoked, stale dist/
+deleted. Banked for road-to-store: a "client key is publishable-class"
+gate. The app survived the swap with zero code changes -- no path was
+leaning on the RLS bypass.
+
+Unknowns, all five closed:
+1. CLOSED, premise refuted (see Corrections). The shipped picker path
+   already reads bytes via fetch(uri).arrayBuffer(); File/Paths appear
+   only in the QR path, a non-goal. expo-file-system's web module is a
+   warn-only stub; expo-document-picker's web asset is a blob: URI
+   fetch reads natively. No edit was needed.
+2. CLOSED, source plus browser. react-native-web's Alert is an empty
+   static method -- a guaranteed no-op, not a suspicion. Empirically:
+   the deliberate non-PDF import rendered "status: 400 / Invalid PDF
+   structure." as on-screen text with the screen alive (errors never
+   went through Alert; the doc's worry inverted). The real casualty,
+   predicted from source and then observed: importing an
+   already-stored COA leaves phase at 'confirming' with the D88
+   duplicate dialog unable to appear -- Add to stash permanently
+   disabled, no dialog, hard hang, nothing written (verified over
+   MCP: row counts unchanged). Secondary: coa-editor's delete-row
+   confirmation is a dead button on web. Fix belongs to a follow-up
+   arc; the D88 dialog is the same surface the restock arc (D159-160)
+   must rebuild, so one arc plausibly serves both.
+3. CLOSED. react-native-webview's presence is tolerated: no browser
+   field, web resolves a platform-less stub that renders a View/Text
+   ("React Native WebView does not support this platform."). Export
+   exits 0 on the untouched tip; no native symbols in the bundle.
+4. CLOSED with one open observation. Email-OTP sign-in works on web
+   end to end. First attempt was blocked by the headline finding.
+   Sign-in latency was long ("Sending..." for an extended period
+   before the code flow completed); cause not established, one data
+   point, recorded and left open.
+5. CLOSED. There is no route-level entry to redirect -- the root
+   layout renders components directly -- so the gate is a component-
+   level Platform.OS fork rendering an import-only surface. Spike
+   commit 9c520f8 on spike/d163-web-importer, evidence only, never
+   merged (ruling c). AppTabs is bypassed, which also avoids
+   useSafeAreaInsets with no provider mounted.
+
+Corrections, ledgered (architect errors, refuted by implementer
+observation before any browser ran):
+- "add-to-shelf-modal.tsx reads the picked PDF's bytes through the new
+  File API" -- FALSE. The bytes-read is fetch(uri).arrayBuffer() in
+  ingest-coa.ts and coa-pdf-storage.ts; File/Paths live only in the QR
+  path. The doc's proposed fallback was already the shipped code.
+- "Used twice in add-to-shelf-modal.tsx for error surfacing" -- FALSE
+  twice over: once in that file, and it is the D88 duplicate
+  confirmation, not error surfacing; the second Alert is coa-editor's
+  D37 delete confirmation. Errors render as on-screen text and always
+  did.
+
+Follow-up arcs banked, not started: web-capable dialog replacing
+Alert.alert (shared surface with restock D159-160); publishable-key
+gate on the road-to-store checklist; sign-in latency if it recurs.
