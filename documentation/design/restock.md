@@ -2,7 +2,9 @@
 
 Status: drafted 2026-08-25; model and sequencing operator-ratified
 2026-08-25 (chat: same-row restock; arc jumps the age-gate UI slice).
-Amended by the commit that changes its truth.
+Slice 1 shipped 2026-08-30 (96677f3e, migration applied, MCP-gated).
+D160.1-D160.3 ratified 2026-08-30. Amended by the commit that changes
+its truth.
 
 Lived demand, same day: Fuel Pump (Nanticoke), retired in the morning
 ("Smoked it all"), re-bought in the evening. The D88 prompt offered
@@ -70,6 +72,51 @@ the user's action in the moment ("I bought another package"), never
 the system's state ("I already have this" described a state, and the
 right choice was invisible at the moment of need).
 
+## D160.1 -- The web-capable dialog is a separate arc
+
+D163 found that react-native-web's Alert is an empty static method, so
+the D88 prompt cannot appear on web at all. Ruled 2026-08-30: restock
+adds its fourth outcome to the existing Alert.alert; a web-capable
+replacement is its own arc, opened only if the web importer is
+promoted. Grounds: Alert.alert is the codebase's one confirmation
+pattern (twelve call sites across seven files), so replacing it is a
+cross-cutting refactor, not a feature commit; the iOS Alert forwards
+every button with no cap (read from the installed react-native
+source); and Fuel Pump is blocked on the phone, not on web.
+
+Recorded, not acted on: the Android Alert keeps the first three
+buttons and silently drops the rest (`buttons.slice(0, 3)` in the
+installed source). The fourth outcome is iOS-only until the separate
+arc lands. Android stays a non-goal; this line exists so the fourth
+button is never read as cross-platform.
+
+## D160.2 -- The card entry point is the overflow; the tap acts
+
+The expanded History card gains the same top-right overflow the Active
+card carries, with one entry, the card action label, and Cancel. Same
+corner, same grammar, and the prop-omission scoping D114 established:
+the shelf passes a restock handler only on rows with on_shelf_count 0,
+exactly as it passes the retire handler only on rows above 0.
+
+The tap acts immediately -- one RPC call, then the success line as the
+only dialog. Nothing destructive happens, Retire reverses it, and the
+ratified copy carries no confirm text. The detail surface does the
+same from a row in Retire's slot and treatment, shown at count 0 where
+Retire is hidden.
+
+One client module, the D113/D114 form: the RPC keeps exactly one call
+site, and the identity echo lives once, shared by both surfaces.
+
+## D160.3 -- The prompt closes on a terminal phase, not an alert
+
+The fourth D88 outcome ends in a new terminal phase rendered exactly as
+'incremented' is: the success line as heading, then Pick another.
+Nothing is inserted and nothing is uploaded, so the saved arm's copy
+would lie, and a second Alert stacked on the prompt's own would be the
+one pattern this modal already avoids. The button is first in the
+array, because when every match is off-shelf the re-buy is the likely
+answer; the three existing arms keep their order behind it.
+
 ## Copy (operator-owned; ratify or swap by line)
 
 - Prompt outcome label: I bought another package
@@ -86,10 +133,12 @@ right choice was invisible at the moment of need).
    DELETE on coa_restocks match 0; restock an already-shelved row,
    observe count stays 1 (cap fires); non-owner arm as tonight.
 2. UI (Tier 2, device-gated on the live dead end): retired Fuel Pump
-   card -> back-in-stash action -> Log returns -> one real session
-   saves against f2503fc3 (MCP read-back); re-scan the same QR ->
-   fourth outcome present -> choosing it is a no-op restock (cap) ->
-   prompt closes on the success line.
+   card -> overflow -> back-in-stash action -> success line -> row is
+   Active -> Log returns -> one real session saves against f2503fc3
+   (MCP read-back); re-scan the same QR -> fourth outcome present and
+   first -> choosing it is a no-op restock (cap) -> terminal phase
+   shows the success line. Detail surface exercised on a second
+   retired row.
 
 ## Non-goals
 
