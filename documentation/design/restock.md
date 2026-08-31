@@ -3,8 +3,9 @@
 Status: drafted 2026-08-25; model and sequencing operator-ratified
 2026-08-25 (chat: same-row restock; arc jumps the age-gate UI slice).
 Slice 1 shipped 2026-08-30 (96677f3e, migration applied, MCP-gated).
-D160.1-D160.3 ratified 2026-08-30. Amended by the commit that changes
-its truth.
+D160.1-D160.3 ratified 2026-08-30. D160.4 ratified 2026-08-30 after
+the device gate: the detail-surface row is withdrawn. Amended by the
+commit that changes its truth.
 
 Lived demand, same day: Fuel Pump (Nanticoke), retired in the morning
 ("Smoked it all"), re-bought in the evening. The D88 prompt offered
@@ -100,12 +101,27 @@ exactly as it passes the retire handler only on rows above 0.
 
 The tap acts immediately -- one RPC call, then the success line as the
 only dialog. Nothing destructive happens, Retire reverses it, and the
-ratified copy carries no confirm text. The detail surface does the
-same from a row in Retire's slot and treatment, shown at count 0 where
-Retire is hidden.
+ratified copy carries no confirm text.
 
 One client module, the D113/D114 form: the RPC keeps exactly one call
 site, and the identity echo lives once, shared by both surfaces.
+
+## D160.4 -- No restock row on the detail sheet
+
+Ruled at the device gate, on the first render: the D160.2 draft also
+put a Back-in-my-stash row in Retire's slot on the retired detail
+sheet, and the operator rejected it on sight. It would have been the
+only bottom-of-sheet action in the app that writes on a single tap
+with no confirmation -- Retire in the same slot is confirmed by its
+own reason question, and the no-confirm ruling above was made for the
+overflow, where two deliberate taps precede the act. A long scrolling
+sheet plus a one-tap writer is a mistap, not an affordance.
+
+So restock has exactly two entry points: the History card's overflow
+and the fourth D88 outcome. A retired detail sheet shows nothing in
+Retire's slot; the card's overflow is one Close away. The shared
+client module is unchanged -- the detail surface simply never calls
+it.
 
 ## D160.3 -- The prompt closes on a terminal phase, not an alert
 
@@ -134,11 +150,14 @@ answer; the three existing arms keep their order behind it.
    observe count stays 1 (cap fires); non-owner arm as tonight.
 2. UI (Tier 2, device-gated on the live dead end): retired Fuel Pump
    card -> overflow -> back-in-stash action -> success line -> row is
-   Active -> Log returns -> one real session saves against f2503fc3
-   (MCP read-back); re-scan the same QR -> fourth outcome present and
-   first -> choosing it is a no-op restock (cap) -> terminal phase
-   shows the success line. Detail surface exercised on a second
-   retired row.
+   Active -> Log returns -> real sessions save against f2503fc3
+   (MCP read-back); on-shelf re-scan shows three buttons (control);
+   retire -> re-scan -> fourth outcome present and first -> choosing
+   it restocks the same row (coas count unmoved) -> terminal phase
+   shows the success line. Gate run 2026-08-30; the detail-surface
+   draft failed review at first render and became D160.4. The cap
+   no-op is unreachable from the UI by construction and stays
+   MCP-gated.
 
 ## Non-goals
 

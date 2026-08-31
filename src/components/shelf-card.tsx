@@ -77,6 +77,10 @@ export type ShelfCardProps = {
   // the mechanism -- an archive row is count 0 anyway, but a surface that
   // never wants the control should not be relying on its data to hide it.
   onRetire?: (coa: ShelfCoa) => void;
+  // D160.2: the way back from History. Same prop-omission scoping, mirrored:
+  // the shelf passes this only on rows at count 0 and never passes retire on
+  // the same row, so the overflow carries exactly one of the two.
+  onRestock?: (coa: ShelfCoa) => void;
   // D135: attach a lab document to a manually entered row. Rendered in the
   // overflow only when the handler is supplied AND the row's provenance is
   // manual -- a parsed row has its document already.
@@ -218,6 +222,7 @@ export function ShelfCard({
   onOpen,
   onLog,
   onRetire,
+  onRestock,
   onAttach,
   retirement,
   collapsed,
@@ -299,7 +304,8 @@ export function ShelfCard({
                 Pressable exactly as Log and the chip are: RN grants the
                 responder to the innermost view that wants it, so opening the
                 menu does not also open the detail. */}
-            {onRetire !== undefined && coa.on_shelf_count > 0 && (
+            {((onRetire !== undefined && coa.on_shelf_count > 0) ||
+              (onRestock !== undefined && coa.on_shelf_count === 0)) && (
               <Pressable
                 hitSlop={12}
                 onPress={() =>
@@ -314,7 +320,15 @@ export function ShelfCard({
                       ...(onAttach !== undefined && coa.source_lab === 'manual'
                         ? [{ text: 'Attach COA document', onPress: () => onAttach(coa) }]
                         : []),
-                      { text: 'Retire', onPress: () => onRetire(coa) },
+                      // Exactly one of the two renders: retire above zero,
+                      // restock at zero (D160.2). The count checks are
+                      // defense in depth; the props are the mechanism.
+                      ...(onRetire !== undefined && coa.on_shelf_count > 0
+                        ? [{ text: 'Retire', onPress: () => onRetire(coa) }]
+                        : []),
+                      ...(onRestock !== undefined && coa.on_shelf_count === 0
+                        ? [{ text: 'Back in my stash', onPress: () => onRestock(coa) }]
+                        : []),
                       { text: 'Cancel', style: 'cancel' as const },
                     ]
                   )

@@ -39,6 +39,7 @@ import {
 import { RUNGS } from '@/lib/lexicon';
 import { subscribeDataChanged } from '@/lib/refresh';
 import { buildSummary, type SummaryCoa } from '@/lib/summary';
+import { restockAndAnnounce } from '@/lib/coa-restock';
 import { promptRetire } from '@/lib/coa-retire';
 import { supabase } from '@/lib/supabase';
 
@@ -421,6 +422,10 @@ export function ShelfList({ onSummary, filterQuery }: ShelfListProps) {
             // a retirement changes the count, and a card that reached zero
             // has to stop being rendered here.
             onRetire={item.on_shelf_count > 0 ? (coa) => promptRetire(coa, load) : undefined}
+            // D160.2: the way back, History rows only -- the mirror of the
+            // retire omission. Refetch is load(): the count moves to 1 and
+            // the row has to leave this segment for Active.
+            onRestock={item.on_shelf_count === 0 ? (coa) => restockAndAnnounce(coa, load) : undefined}
             // D135: attach reached from the same overflow retire lives in.
             // The card itself gates on source_lab === 'manual'.
             onAttach={item.on_shelf_count > 0 ? (coa) => setAttachTarget(coa) : undefined}

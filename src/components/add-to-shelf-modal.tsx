@@ -15,6 +15,7 @@ import {
   type DuplicateMatch,
 } from '@/lib/coa-dedupe';
 import { uploadCoaPdf, type UploadStage } from '@/lib/coa-pdf-storage';
+import { restockCoa } from '@/lib/coa-restock';
 import { MANUAL_CANNABINOID_NAMES, MANUAL_TERPENE_NAMES } from '@/lib/manual-coa';
 import { ingestCoaPdf, type IngestResult } from '@/lib/ingest-coa';
 import { supabase } from '@/lib/supabase';
@@ -31,7 +32,11 @@ type Phase =
   | 'done'
   | 'confirming'
   | 'saved'
-  | 'incremented';
+  | 'incremented'
+  // D160.3: the fourth D88 outcome's own terminal, beside 'incremented' for
+  // the same reason it exists -- nothing inserted, nothing uploaded, so the
+  // saved arm's copy would lie. Carries the name the success line echoes.
+  | 'restocked';
 
 // Retention failure is reported, never recovered from (slice 4). The stage is
 // in the copy on purpose: the gate is the device, where this notice is the
@@ -90,6 +95,9 @@ export default function AddToShelfModal({
   // exists) and by the guard affordance (a picked file exists and pickedUri /
   // pdfSha256 stay live, so retention and the dedup hash ride as usual).
   const [manualEntry, setManualEntry] = useState(false);
+  // D160.3: the strain the restocked terminal names. Set with the phase,
+  // cleared by reset.
+  const [restockedStrain, setRestockedStrain] = useState<string | null>(null);
 
   // The component stays mounted while the Modal is hidden, so state would
   // survive a close; resetting here (not in an effect) keeps reopen-at-idle
@@ -110,6 +118,7 @@ export default function AddToShelfModal({
     setPdfSha256(null);
     setRetentionNotice(null);
     setManualEntry(false);
+    setRestockedStrain(null);
   };
 
   const pickAnother = reset;
@@ -265,7 +274,16 @@ export default function AddToShelfModal({
       rows.length === 1
         ? 'This document matches a COA already in your stash.'
         : `This document matches ${rows.length} COAs in your stash; the strongest match is shown.`;
+    // Outcome 4 (D160): only when EVERY match is off-shelf. If any match is
+    // still shelved the lot is present and outcome 1 is the true answer.
+    // First in the array: when everything matched is retired, the re-buy is
+    // the likely answer. iOS renders every button; Android keeps the first
+    // three (D160.1, recorded, non-goal).
+    const everyMatchRetired = rows.every((r) => r.on_shelf_count === 0);
     Alert.alert('Already in your stash?', `${identity}\n\n${summary}`, [
+      ...(everyMatchRetired
+        ? [{ text: 'I bought another package', onPress: () => void restock(target) }]
+        : []),
       // Outcome 1 since D139: possession is binary, so a repeat document is
       // acknowledged, never counted -- no new row, no upload, no write.
       { text: 'I already have this', onPress: () => acknowledge() },
@@ -285,6 +303,23 @@ export default function AddToShelfModal({
    */
   const acknowledge = () => {
     setPhase('incremented');
+  };
+
+  /**
+   * D160 outcome 4: the same row returns. One RPC, no insert, no upload --
+   * the scanned bytes already live on the target row. A failure is
+   * surfaced on the editor exactly as an insert failure is, and the phase
+   * returns to 'done' so the user can choose again.
+   */
+  const restock = async (target: DuplicateMatch) => {
+    const result = await restockCoa(target.id);
+    if (!result.ok) {
+      setConfirmError(result.message);
+      setPhase('done');
+      return;
+    }
+    setRestockedStrain(target.strain?.trim() ? target.strain.trim() : null);
+    setPhase('restocked');
   };
 
   /**
@@ -355,7 +390,21 @@ export default function AddToShelfModal({
             {attaching ? 'Attach COA document' : 'Add to stash'}
           </ThemedText>
 
-          {phase === 'incremented' ? (
+          {phase === 'restocked' ? (
+            <>
+              <ScrollView style={styles.resultScroll}>
+                <ThemedText type="smallBold" style={styles.centered}>
+                  {`${restockedStrain ?? 'This COA'} is back in your stash.`}
+                </ThemedText>
+              </ScrollView>
+              <Pressable
+                onPress={pickAnother}
+                accessibilityRole="button"
+                style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+                <ThemedText type="smallBold">Pick another</ThemedText>
+              </Pressable>
+            </>
+          ) : phase === 'incremented' ? (
             <>
               <ScrollView style={styles.resultScroll}>
                 <ThemedText type="smallBold" style={styles.centered}>
