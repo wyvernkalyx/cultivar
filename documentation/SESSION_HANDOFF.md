@@ -1,108 +1,116 @@
 # Session Handoff
 
-Written 2026-08-29, at the close of the 2026-08-28/29 session (crossed
+Written 2026-08-30/31, at the close of the restock session (crossed
 midnight once). Repo is authoritative over every claim here; Phase A
 verifies before any work begins.
 
 ## State at close
 
-HEAD at close: the commit carrying this file, riding on 731a457a
-(docs: D163 spike closed). Sync was 0 0 after every push; five pushes
-this session, all ref-scoped, all two-channel where Tier 2.
+HEAD at close: the commit carrying this file, riding on 8817e837
+(feat: restock UI). Sync was 0 0 after every push; three pushes this
+session, all ref-scoped, Tier 2 two-channel.
 
-Shipped end-to-end:
-- D162 Keystone parser, full package cycle: docs 83ad8f43, data
-  43d14037 (three fixtures), feat cdedfc42. Deployed (operator,
-  API-upload path, Docker warning benign), device-gated on the phone
-  (six per-step verdicts), MCP read-back exact including pdf_sha256
-  byte-identity with the fixture pin. Both "not compatible" Nanticoke
-  labs now parse. Suite: 20 Deno (scoped), 179/5 Jest, tsc clean.
-- D163 web-importer spike, opened AND closed same day: doc cd7b9dd5,
-  findings amendment 731a457a. Exit criterion MET (All Gas 7g Glass
-  Jar imported from the PC through a desktop browser, row 42707425,
-  read back exact). All five unknowns closed; see the doc's Findings.
-  Spike branch spike/d163-web-importer at 9c520f8 is LOCAL-ONLY
-  evidence on the operator's machine -- never merged, never pushed.
-- SECURITY: the client env var held a SECRET (sb_secret) API key;
-  the spike's web guard exposed it on first sign-in. Contained (never
-  in repo history -- observed by full-history grep), remediated
-  2026-08-29: publishable key swapped in, app proven under it with
-  zero code changes, secret key revoked, stale dist/ deleted.
+Shipped end-to-end -- the restock arc, D159-D160.4, complete:
+- Schema 96677f3e: coa_restocks + restock_coa RPC, migration
+  20260825000001 (re-authored; the ba5625bf carrier was unrecoverable
+  and its pin retired). Applied, MCP-gated: prosecdef f, two policies,
+  paired probes rolled back, non-owner 42501, cap held at 1.
+- Docs 1ec20528: D160.1 (web dialog is a separate arc; Android drops
+  buttons past three, recorded from installed source), D160.2
+  (overflow entry, tap acts), D160.3 (terminal phase, button first).
+- UI 8817e837: one client module (coa-restock.ts, retire form), card
+  overflow entry mirrored on the retire prop-omission scoping, fourth
+  D88 outcome gated on every-match-off-shelf, restocked terminal
+  phase. D160.4 ruled AT the device gate: the detail-sheet row failed
+  operator review at first render (one-tap writer, scrolling sheet,
+  no confirm) and was withdrawn; coa-detail.tsx shipped untouched,
+  proven by blob id at HEAD = parent. v1 was gated on-device, v2 is
+  v1 minus that surface plus the docs, one commit.
+- Device gate, evidence not verdicts: 5 restock events in the table
+  (Fuel Pump x2 -- card and fourth-button; Sherbadelic x2; White Choc
+  Chip x1 on the v2 build), coas count NEVER moved off 19, control
+  screenshot (three buttons on-shelf), detail first-render screenshot
+  (which produced D160.4). Cap no-op is UI-unreachable by
+  construction; it stays MCP-gated. Modal-terminal screenshot waived
+  by operator (layout clones the shipped acknowledge arm).
 
-## Falsifiable predictions for next Phase A
+Also this session, unplanned:
+- Phone sign-in was dead: "Unregistered API key" -- the publishable
+  key on disk had died with the 08-29 rotation. The prior handoff's
+  "app proven working under it" was true of the WEB surface only; I
+  carried it wider than its evidence. Fresh publishable key from the
+  dashboard, curl /auth/v1/settings as the acceptance gate, phone
+  signs in. The curl-with-sourced-.env form is the standing key probe.
+- Operator data note: Sherbadelic and White Choc Chip were left
+  on-shelf by gate testing; operator was asked to retire what he does
+  not hold. Unverified at close -- first MCP read next session says.
 
-1. origin/main = this handoff commit; parent 731a457a5c726e11f3...
-2. Migrations by name-form: 20. No restock migration present.
-3. Jest: 179 tests / 5 suites via npm test. Deno: 20 tests via
-   cd supabase/functions && deno test --allow-read ingest-coa/
-   (this exact form; deno task test does not exist -- settled).
-4. Fixture pdf count: 13.
-5. coas rows: 19 at close (Blue Raspberry newest-4, Acapulco Gold
-   1d624fdb, Sherbadelic, All Gas 7g 42707425 newest). Operator use
-   adds rows; predict >= 19, Acapulco sha 6ad9610e counted once.
-6. Fuel Pump f2503fc3 on_shelf_count: 0. Oldest open wound, still.
-7. D ceiling: D163.
-8. .env key class: grep -o 'EXPO_PUBLIC_SUPABASE_ANON_KEY=sb_[a-z]*'
-   prints ...=sb_publishable. If it ever prints sb_secret again,
-   stop everything.
-9. Operator worktree: two .claude/ untracked lines; branch main;
-   spike/d163-web-importer exists locally at 9c520f8.
-10. CLAUDE.md sha256 36ca6a841cc3... until its queued touch lands.
+## Standing forms adopted (bank for the CLAUDE.md touch)
+- CR census: od -An -tx1 -v <f> | tr -s ' ' '\n' | grep -c '^0d'
+  (the od -c | grep '\r' form is vacuous through the implementer's
+  tool shell -- counts the letter r).
+- Files git itself creates or edits arrive CRLF under the operator's
+  autocrlf; worktree sha256 pins are valid ONLY for files the operator
+  places directly. Everything else pins as a blob id
+  (git hash-object --path / ls-files -s / ls-tree -r) or LF-normalized.
+- ls-tree gates use -r with explicit file paths; without -r a
+  directory collapses to one tree line and the gate goes vacuous.
+- Status expectations are SETS, not sequences.
+- "See Cultivar deltas" in the required header resolves to
+  handoff-specs section 3; list handoff-specs in the read list.
 
-## Ruled queue
+## Error ledger
+Architect: 8 named. Contained before any artifact: fabricated column
+name (product_name), uuid prefix as uuid, fabricated 48 hex chars of a
+doc hash (self-caught on re-read -- the no-fabrication class, worth
+the name). Reaching prompts: vacuous CR criterion; worktree-sha pin
+for a git-created file; self-contradictory precondition (expected set
+omitted the carrier the next block required); false worktree-LF
+assumption (fallback held in-prompt); non-recursive ls-tree gate.
+Implementer: 0 errors, 5 credited catches, including the wrong-path
+carrier STOP (documentation/ vs documentation/design/) and the
+read-only-diagnose-then-report pattern, now ratified narrowly: on a
+mismatch, diagnosis may continue only through read-only steps, the
+mismatch reported first, never a write.
+Operator collapsed verdicts ("everything worked") were twice unpacked
+by MCP read-backs that showed half the gate unrun; the read-back is
+the arbiter, keep it.
 
-1. Restock (D159-D160). Slice 1 carrier was never placed; migration
-   20260825000001_coa_restocks_d159.sql (pin ba5625bf347dc45249807f
-   ca1041041d448543cd624ac0b720620146c265d8a8, 76 lines) re-delivered
-   from the ratified text in restock.md's commit thread. NEW INPUT
-   from D163: the D88 duplicate dialog is a hard hang on web
-   (Alert.alert is a no-op there) and restock must rebuild that exact
-   dialog for its third outcome. DECIDE at design time: fold the
-   web-capable dialog into the restock arc, or keep separate arcs.
-2. Age-gate UI slice (D154-D158, copy ratified, migration applied).
-3. Web-importer implementation arc (new D-number) if promoted; the
-   spike doc's Findings is its evidence base.
-Banked: road-to-store gains a "client key is publishable-class" gate;
-CLAUDE.md [ADAPT] refresh (test counts now 179/5 Jest + 20 Deno; the
-cwd-reset bullet is REFUTED, see ledger); sign-in latency on web if
-it recurs (one data point, cause not established).
+## Queue (ruled order)
+1. CLAUDE.md corrections commit (Tier 1, now fat): stale [ADAPT] test
+   counts (179/5, 20 Deno), the refuted cwd-reset bullet AND the same
+   claim in handoff-specs 4.3 grounds, plus every standing form above.
+2. Web-importer promotion DECIDE (spike doc findings are in the repo;
+   D160.1 made the web dialog arc contingent on this ruling).
+3. Age-gate UI slice (copy locked, statement_version 1).
+4. NEW, banked from operator: search/filter reach into the History
+   segment -- check filterQuery scoping in shelf-list.tsx first, it
+   may already cover it.
+5. Wordmark token canonicalization (three-site divergence, pending).
 
-## Findings ledger, this session
+## Falsifiable predictions for Phase A
+1. origin/main is the commit carrying this file; its parent is
+   8817e837a85ec21b1f5fcb53843faf3a4cd3183c, parent's parent
+   1ec2052878e7a8848ee69b8fe5635547396639e3.
+2. Migrations dir: 21 name-form files; 20260825000001 present, blob
+   004b13a7... at HEAD.
+3. Jest 179/5 exit 0; lint 1 error exit 1 (use-color-scheme.web.ts).
+4. coa_restocks has >= 5 rows; coas count is 19; Fuel Pump
+   (f2503fc3) on_shelf_count 1 with >= 10 sessions.
+5. Sherbadelic (8aaf506c) and White Choc Chip (95c56b6f) counts are 0
+   if the operator did the truth-check retire, else 1 -- whichever is
+   observed, record it, no defending.
+6. restock.md is 169 lines, 4 D160.x headings, blob 15b48af1 at HEAD.
+7. coa-detail.tsx blob at HEAD is f9c0dfd34ed3e542bfba60130f48ac12f9f9a28d.
+8. grep -c restock src/components/coa-detail.tsx returns 0, exit 1.
+9. The operator's .env key probe (curl /auth/v1/settings with sourced
+   .env) returns the external-providers JSON, not a 401.
 
-Architect errors reaching artifacts: 5. (1) gate-4 "above the blank"
--- an unobserved layout decoration in a prompt; implementer corrected.
-(2) alpha-Pinene asserted as "Pinene" -- guessed canonical name,
-self-caught by the executed mirror before shipping. (3)(4) two false
-premises in the D163 doc (File API bytes-read; Alert "twice, for
-error surfacing") -- structural claims written from imports without
-reading use sites; refuted implementer-side, ledgered in the doc's
-Corrections. (5) garbled switch-refusal clause in the closing prompt
-(self-contradicting prose, unreachable but malformed).
-Architect self-caught, twice: stale clone at dry-run time (origin had
-moved). STANDING RULE ADOPTED: the architect fetches origin
-immediately before every dry run, not once per session.
-Implementer errors: 0. Implementer catches, credited: the parent
-directory's stub CLAUDE.md is a live confusion vector (injected
-context shows d:\Projects\Cultivar\CLAUDE.md, not the handbook);
-set-then-prove caught its own carried-cwd slip; cwd persistence
-across tool calls confirmed twice -- the prior "per-turn cwd reset"
-account is REFUTED and the handbook bullet should be corrected on
-its next touch; two doc premises refuted from installed source before
-any browser ran; unprompted CR byte-census before staging; declined
-an unneeded .env read on the day .env was the incident.
-
-## Capability notes (architect container, this session)
-
-Clones the public repo; installs deno from GitHub releases; npm:
-specifiers resolve (registry allowed) so the FULL ingestCoa pipeline
-runs architect-side against fixtures, including unpdf extraction;
-jsr.io unreachable, so deno-test-file execution stays implementer-
-side (values pre-executed via plain-assert mirrors instead); Jest
-runs via npm ci + npm test; shell is /bin/sh (no brace expansion);
-Supabase MCP reads work as before. Fetch-before-dry-run is now
-standing (see ledger).
-
-## Entry point next session
-
-Phase A against this file, then restock design ratification -- the
-fold-or-separate dialog DECIDE is the first ruling to seek.
+## Capability notes (architect side, verified this session)
+The architect container clones the public repo, runs npm ci / Jest /
+tsc / expo lint (tsc shows a spurious TS2882 on @/global.css on clean
+HEAD there -- environmental, absent on the operator machine), applies
+and emits patches, and reaches the DB through Supabase MCP. Deno tests
+are NOT runnable there (jsr unreachable). The "no repo access" line in
+the project instructions is refuted by observation; the handoff, not
+that line, is the accurate account.
