@@ -121,7 +121,15 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
   all-LF, and mixed files coexist at HEAD -- and sed in the implementer
   shell silently strips CR on read: edits preserve each line's own
   terminator, and od settles endings questions, never a text-mode read
-  (2026-08-18).
+  (2026-08-18). Standing CR census:
+  `od -An -tx1 -v <f> | tr -s ' ' '\n' | grep -c '^0d'` -- the
+  `od -c`-piped-to-grep-backslash-r form is vacuous through the
+  implementer's tool shell, counting the letter r. Files git itself
+  creates or edits arrive CRLF under the operator's autocrlf: worktree
+  sha256 pins are valid ONLY for files the operator places directly;
+  everything else pins as a blob id (`git hash-object --path`,
+  `git ls-files -s`, `git ls-tree -r`) or LF-normalized
+  (2026-08-30/31).
 - **Ratified bytes are verified by blob hash before push authorization.**
   For architect-authored content, the architect hashes the ratified text
   and compares it against `git show <sha>:<path> | sha256sum` from the
@@ -183,7 +191,10 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
 ## Prompt conventions
 
 - Every future prompt **starts by reading `CLAUDE.md`** plus the relevant
-  `documentation/` files.
+  `documentation/` files. A required-header "see Cultivar deltas"
+  pointer resolves to `documentation/process/handoff-specs.md`
+  section 3: list handoff-specs in the read list so the pointer
+  resolves (2026-08-30/31).
 - Every prompt carries a **"No interactive prompts"** header — no `AskUserQuestion`,
   no popups; blockers are reported as plain numbered text and stop the run.
 - **Phase A precondition checks** wherever work depends on a prior commit: audit
@@ -224,6 +235,9 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
 - **Directory listings gate on name-form counts, never bare entry
   counts.** A bare entry count cannot detect a malformed name. Standing
   form for migrations: `ls supabase/migrations/ | grep -Ec '^[0-9]{14}_'`.
+  `git ls-tree` gates use `-r` with explicit file paths: without `-r`
+  a directory collapses to one tree line and the gate goes vacuous
+  (2026-08-30/31).
 - **Implementer claims are worktree-only.** The implementer reports the
   worktree and nothing beyond it -- no claims about origin, database, or
   device state, in either direction. Asserting the negative ("not yet
@@ -295,6 +309,8 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
 - **Commit-prompt preconditions pin the pre-commit state (HEAD +
   status) and stay discriminating:** a replayed commit prompt was
   refused cleanly by exactly those preconditions (2026-08-10).
+  Status expectations are SETS, not sequences: `git status --porcelain`
+  line order is never gated (2026-08-30/31).
 - **Skill-run prompts state the platform explicitly.** context.mjs
   cannot infer it without PRODUCT.md; omission silently scores against
   web heuristics (2026-08-12).
@@ -398,7 +414,7 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
    SDK 56, so on-device testing uses an **EAS development build**, not Expo Go.
    Tests = **Jest + `ts-jest`** (`testEnvironment: 'node'`) and **`deno test`** for
    Edge Function code (e.g. `supabase/functions/ingest-coa/__tests__/ingestCoa.test.ts`).
-   170 tests / 4 suites as of 2026-08-19. Jest roots cover the parser tree AND
+   179 tests / 5 suites as of 2026-09-01. Jest roots cover the parser tree AND
    src/lib/insights (pure TS only, no RN/Expo imports; discovery canary guards the
    wiring). A test anywhere else under src/ is still silently never run: `npm test`
    still prints an all-green summary and exits 0, which is a green gate over tests
@@ -411,6 +427,14 @@ prompt**. A commit is not "done" until it is confirmed present in `git log`.
    **Tests run as `npm test`, never `npx jest`** -- the npm script carries
    `--experimental-vm-modules`, which bare `npx jest` drops (observed: 48
    spurious failures against a 52-test suite).
+   **Deno tests run as `deno test --allow-read ingest-coa/` with cwd
+   `supabase/functions/`** -- 20 passed as of 2026-09-01 (deno 2.9.2).
+   Both parts are load-bearing: config discovery walks up from cwd, so
+   a repo-root run loads no deno.json import map and fails type-check
+   on `@supabase/server`; default-deny fs fails all 17 fixture-reading
+   tests NotCapable without `--allow-read`. Never sweep
+   `supabase/functions/` whole: `_shared/coa/__tests__/` is a Jest
+   suite, not a Deno target.
    **Always install Expo-managed deps with `npx expo install`** (not bare `npm install`).
    **The Supabase CLI is `npx supabase ...`** -- no standalone binary is
    installed; bare `supabase` is command-not-found (observed 2026-08-03,
