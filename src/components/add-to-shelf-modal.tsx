@@ -1,7 +1,7 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { File, Paths } from 'expo-file-system';
 import { useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { CoaEditor, type CoaParseResult } from '@/components/coa-editor';
 import QrImportBrowser from '@/components/qr-import-browser';
@@ -37,6 +37,18 @@ type Phase =
   // the same reason it exists -- nothing inserted, nothing uploaded, so the
   // saved arm's copy would lie. Carries the name the success line echoes.
   | 'restocked';
+
+// D164 ruling a-1: what the 'confirming' arm needs in order to render the
+// D88 outcomes in the sheet. Built by promptDuplicate from the same values
+// that used to be the dialog's arguments; every field is presentation or a
+// handler argument, never new logic.
+type DuplicatePrompt = {
+  identity: string;
+  summary: string;
+  everyMatchRetired: boolean;
+  target: DuplicateMatch;
+  payload: CoaParseResult;
+};
 
 // Retention failure is reported, never recovered from (slice 4). The stage is
 // in the copy on purpose: the gate is the device, where this notice is the
@@ -98,6 +110,9 @@ export default function AddToShelfModal({
   // D160.3: the strain the restocked terminal names. Set with the phase,
   // cleared by reset.
   const [restockedStrain, setRestockedStrain] = useState<string | null>(null);
+  // D164 ruling a-1: non-null exactly while the D88 outcomes are on screen.
+  // Armed by promptDuplicate, cleared by whichever outcome is chosen.
+  const [duplicate, setDuplicate] = useState<DuplicatePrompt | null>(null);
 
   // The component stays mounted while the Modal is hidden, so state would
   // survive a close; resetting here (not in an effect) keeps reopen-at-idle
@@ -119,6 +134,7 @@ export default function AddToShelfModal({
     setRetentionNotice(null);
     setManualEntry(false);
     setRestockedStrain(null);
+    setDuplicate(null);
   };
 
   const pickAnother = reset;
@@ -260,10 +276,12 @@ export default function AddToShelfModal({
   };
 
   /**
-   * The three-outcome prompt (D88). Alert.alert is the codebase's one
-   * confirmation pattern (coa-detail.tsx); the identity echo is D44/D45 reused
-   * -- name the row before saying what will happen to it, and never render a
-   * blank where a name should be.
+   * The three-outcome prompt (D88), armed rather than raised (D164 ruling
+   * a-1): the outcomes render in this modal's own sheet, the way its
+   * terminal arms already do, because the platform popup is a silent no-op
+   * in a browser and left the import hung at 'confirming' there. The
+   * identity echo is D44/D45 reused -- name the row before saying what will
+   * happen to it, and never render a blank where a name should be.
    */
   const promptDuplicate = (rows: DuplicateMatch[], payload: CoaParseResult) => {
     const target = pickDedupeTarget(rows);
@@ -276,24 +294,11 @@ export default function AddToShelfModal({
         : `This document matches ${rows.length} COAs in your stash; the strongest match is shown.`;
     // Outcome 4 (D160): only when EVERY match is off-shelf. If any match is
     // still shelved the lot is present and outcome 1 is the true answer.
-    // First in the array: when everything matched is retired, the re-buy is
-    // the likely answer. iOS renders every button; Android keeps the first
-    // three (D160.1, recorded, non-goal).
+    // First in the arm, as it was first in the array: when everything matched
+    // is retired, the re-buy is the likely answer. Rendering it in the sheet
+    // also lands it on Android for the first time (D164 ruling b).
     const everyMatchRetired = rows.every((r) => r.on_shelf_count === 0);
-    Alert.alert('Already in your stash?', `${identity}\n\n${summary}`, [
-      ...(everyMatchRetired
-        ? [{ text: 'I bought another package', onPress: () => void restock(target) }]
-        : []),
-      // Outcome 1 since D139: possession is binary, so a repeat document is
-      // acknowledged, never counted -- no new row, no upload, no write.
-      { text: 'I already have this', onPress: () => acknowledge() },
-      // Outcome 3: a lab correction is a different document about the same
-      // lot. New row; the prior row is left intact, and supersession is
-      // banked by D88 rather than improvised here.
-      { text: 'This is a corrected report', onPress: () => void save(payload) },
-      // Outcome 2: nothing was written, so discarding is a pure reset.
-      { text: 'I uploaded this by mistake', style: 'cancel', onPress: reset },
-    ]);
+    setDuplicate({ identity, summary, everyMatchRetired, target, payload });
   };
 
   /**
@@ -389,6 +394,65 @@ export default function AddToShelfModal({
           <ThemedText type="subtitle" style={styles.centered}>
             {attaching ? 'Attach COA document' : 'Add to stash'}
           </ThemedText>
+
+          {/* D164 ruling a-1: the D88 outcomes render here, in the sheet,
+              instead of through the platform popup. Above the editor so the
+              question is what the user sees; the editor stays mounted and
+              busy beneath it, exactly as it was while the popup was up. Order
+              and roles are the shipped array's (ruling d), and every button
+              calls the handler it called before -- clearing the arm first is
+              the dismissal the popup did for us. */}
+          {duplicate !== null && (
+            <View style={styles.duplicate}>
+              <ThemedText type="smallBold" style={styles.centered}>
+                Already in your stash?
+              </ThemedText>
+              <ThemedText type="small" style={styles.centered}>
+                {duplicate.identity}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary" style={styles.centered}>
+                {duplicate.summary}
+              </ThemedText>
+              {duplicate.everyMatchRetired && (
+                <Pressable
+                  onPress={() => {
+                    setDuplicate(null);
+                    void restock(duplicate.target);
+                  }}
+                  accessibilityRole="button"
+                  style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+                  <ThemedText type="smallBold">I bought another package</ThemedText>
+                </Pressable>
+              )}
+              <Pressable
+                onPress={() => {
+                  setDuplicate(null);
+                  acknowledge();
+                }}
+                accessibilityRole="button"
+                style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+                <ThemedText type="smallBold">I already have this</ThemedText>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setDuplicate(null);
+                  void save(duplicate.payload);
+                }}
+                accessibilityRole="button"
+                style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+                <ThemedText type="smallBold">This is a corrected report</ThemedText>
+              </Pressable>
+              {/* The cancel role: quiet, and wired to the same reset. */}
+              <Pressable
+                onPress={reset}
+                accessibilityRole="button"
+                style={[styles.button, { backgroundColor: theme.backgroundElement }]}>
+                <ThemedText type="smallBold" themeColor="textSecondary">
+                  I uploaded this by mistake
+                </ThemedText>
+              </Pressable>
+            </View>
+          )}
 
           {phase === 'restocked' ? (
             <>
@@ -718,6 +782,9 @@ const styles = StyleSheet.create({
     color: '#e5484d',
   },
   guard: {
+    gap: Spacing.three,
+  },
+  duplicate: {
     gap: Spacing.three,
   },
 });

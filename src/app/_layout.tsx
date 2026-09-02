@@ -15,6 +15,7 @@ import { useColorScheme } from 'react-native';
 import AppTabs from '@/components/app-tabs';
 import SignIn from '@/components/sign-in';
 import { ThemedView } from '@/components/themed-view';
+import { AppAlertHost } from '@/lib/app-alert';
 import { supabase } from '@/lib/supabase';
 
 SplashScreen.preventAutoHideAsync();
@@ -71,6 +72,10 @@ export default function RootLayout() {
       {status === 'loading' && <ThemedView style={{ flex: 1 }} />}
       {status === 'signedOut' && <SignIn />}
       {status === 'signedIn' && <AppTabs />}
+      {/* D164: the web-capable confirmation host, mounted once. Inside the
+          theme provider so it themes, and outside the fork above so a dialog
+          works signed in or out. Renders nothing until a web call arrives. */}
+      <AppAlertHost />
     </ThemeProvider>
   );
 }

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { appAlert } from '@/lib/app-alert';
 
 // Local mirror of the parser's output shape (observed on animal-face.pdf at
 // HEAD). Server types under supabase/ must not enter the Metro bundle, so the
@@ -279,7 +280,7 @@ function AnalyteRow({
   const confirmDelete = () =>
     // With no add-row, a mistaken delete is unrecoverable short of a full
     // repick, so the confirmation earns its friction (D37).
-    Alert.alert('Delete row', `Remove "${row.name}" from this COA?`, [
+    appAlert('Delete row', `Remove "${row.name}" from this COA?`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: onDelete },
     ]);
