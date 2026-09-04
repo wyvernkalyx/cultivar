@@ -1,12 +1,13 @@
 import { SymbolView } from 'expo-symbols';
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { PreferenceSummaryProps } from '@/components/preference-summary';
 import { ShelfList } from '@/components/shelf-list';
 import { ThemedText } from '@/components/themed-text';
 import { Dash, MaxContentWidth, Space, Spacing, Type } from '@/constants/theme';
+import { appAlert } from '@/lib/app-alert';
 import { exportProfile } from '@/lib/export';
 import { resetProfile } from '@/lib/profile-reset';
 import { supabase } from '@/lib/supabase';
@@ -70,7 +71,7 @@ export default function HomeScreen() {
       await exportProfile();
       return true;
     } catch {
-      Alert.alert(
+      appAlert(
         'Export failed',
         'The export did not finish and no file was shared. Nothing was changed. Try again.',
       );
@@ -112,13 +113,13 @@ export default function HomeScreen() {
     const result = await resetProfile();
     setResetting(false);
     if (!result.ok) {
-      Alert.alert(
+      appAlert(
         'Reset failed',
         'Nothing was changed — your sessions and stash are exactly as they were. Check your connection and try again.',
       );
       return;
     }
-    Alert.alert(
+    appAlert(
       `Profile reset — ${result.sessions_hidden} ${result.sessions_hidden === 1 ? 'session' : 'sessions'} hidden, ${result.packages_retired} ${result.packages_retired === 1 ? 'package' : 'packages'} retired.`,
       undefined,
       [
@@ -141,7 +142,7 @@ export default function HomeScreen() {
     setResetting(true);
     try {
       const counts = await readResetCounts();
-      Alert.alert(
+      appAlert(
         'Start from scratch?',
         `This hides your ${counts.sessions} logged ${counts.sessions === 1 ? 'session' : 'sessions'} and moves ${counts.packages} ${counts.packages === 1 ? 'item' : 'items'} to History. Buy-again answers are cleared. Your COAs stay, and nothing is deleted. You can export your data first.`,
         [
@@ -162,7 +163,7 @@ export default function HomeScreen() {
         ],
       );
     } catch {
-      Alert.alert(
+      appAlert(
         'Could not check your data',
         'Reset needs a quick count of your sessions and stash first, and that lookup did not go through. Nothing was changed. Check your connection and try again.',
       );

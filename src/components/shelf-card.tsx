@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { TerpeneGlossarySheet } from '@/components/terpene-glossary-sheet';
 import { Dash, Type, terpeneHue, verdictHue } from '@/constants/theme';
+import { appAlert } from '@/lib/app-alert';
 
 // Font families registered app-wide in the root layout (D83 Decision 1),
 // referenced by name; an unloaded family falls back to the system font rather
@@ -309,7 +310,7 @@ export function ShelfCard({
               <Pressable
                 hitSlop={12}
                 onPress={() =>
-                  Alert.alert(
+                  appAlert(
                     coa.strain?.trim() ? coa.strain.trim() : 'this COA',
                     undefined,
                     [

@@ -2,7 +2,6 @@ import * as Haptics from 'expo-haptics';
 import { uuid } from 'expo-modules-core';
 import { useEffect, useState } from 'react';
 import {
-  Alert,
   Animated,
   Easing,
   Modal,
@@ -17,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Dash, MaxContentWidth, Spacing, Type, verdictHue } from '@/constants/theme';
+import { appAlert } from '@/lib/app-alert';
 import {
   EFFECTS,
   type EffectGroup,
@@ -916,7 +916,7 @@ export function SessionLadder({
       onClose('cancelled');
       return;
     }
-    Alert.alert('Discard this session?', "It's already in your stash. Discard removes it.", [
+    appAlert('Discard this session?', "It's already in your stash. Discard removes it.", [
       // Cancel role first, destructive second — the ordering the app's other
       // destructive confirmations already use.
       { text: 'Keep', style: 'cancel' },

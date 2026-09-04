@@ -1,5 +1,4 @@
-import { Alert } from 'react-native';
-
+import { appAlert } from '@/lib/app-alert';
 import { setFavorite } from '@/lib/coa-favorite';
 import { supabase } from '@/lib/supabase';
 
@@ -80,7 +79,7 @@ export function promptRetire(coa: RetireTarget, onDone: () => void): void {
   const answerFavorite = async (value: boolean) => {
     const result = await setFavorite(coa.id, value);
     if (!result.ok) {
-      Alert.alert(
+      appAlert(
         'Could not save your answer',
         'The retirement itself was recorded, but your buy-again answer was not saved.'
       );
@@ -94,7 +93,7 @@ export function promptRetire(coa: RetireTarget, onDone: () => void): void {
   // own question deliberately lacks: skipping a question and clearing an
   // answer are different operations.
   const askAgain = () =>
-    Alert.alert('Would you buy it again?', undefined, [
+    appAlert('Would you buy it again?', undefined, [
       { text: 'Yes', onPress: () => void answerFavorite(true) },
       { text: 'No', onPress: () => void answerFavorite(false) },
       { text: 'Skip', style: 'cancel', onPress: onDone },
@@ -107,7 +106,7 @@ export function promptRetire(coa: RetireTarget, onDone: () => void): void {
   const record = async (reason: string) => {
     const result = await retireCoa(coa.id, reason);
     if (!result.ok) {
-      Alert.alert(
+      appAlert(
         'Could not retire',
         'Nothing was recorded — the product is still in your stash as it was. Check your connection and try again.'
       );
@@ -125,7 +124,7 @@ export function promptRetire(coa: RetireTarget, onDone: () => void): void {
   // One outcome line since D139: possession is binary, so there is no
   // remaining-count branch to word. Retirement is the move to History.
   const outcome = 'This moves it to your History.';
-  Alert.alert('Retire', `${identity}\n\n${outcome}`, [
+  appAlert('Retire', `${identity}\n\n${outcome}`, [
     { text: 'Smoked it all', onPress: () => void record('Smoked it all') },
     { text: 'Gave up on it', onPress: () => void record('Gave up on it') },
     // Nothing has been written at this point, so cancelling is a pure

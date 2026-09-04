@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View,
+import { Pressable, ScrollView, StyleSheet, Text, View,
   Modal,
   TextInput,
 } from 'react-native';
@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import CoaPdfViewer from '@/components/coa-pdf-viewer';
 import { SymbolView } from 'expo-symbols';
 import { Dash, Type, verdictHue } from '@/constants/theme';
+import { appAlert } from '@/lib/app-alert';
 import { removeCoaPdf } from '@/lib/coa-pdf-storage';
 import { promptRetire } from '@/lib/coa-retire';
 import { supabase } from '@/lib/supabase';
@@ -372,7 +373,7 @@ export function CoaDetail({
   // banked (design doc non-goal).
   const openGear = () => {
     if (coa === null) return;
-    Alert.alert(coa.strain?.trim() || 'This item', undefined, [
+    appAlert(coa.strain?.trim() || 'This item', undefined, [
       {
         text: 'Edit name / brand',
         onPress: () => {
@@ -406,7 +407,7 @@ export function CoaDetail({
   const notifyBlocked = () => {
     if (coa === null) return;
     const steer = coa.on_shelf_count > 0 ? ' To take it off your shelf, use Retire.' : '';
-    Alert.alert(
+    appAlert(
       'This COA has history',
       `${coaIdentity('This COA')} has logged history, and Kalyx keeps history — it can't be deleted.${steer}`,
       [{ text: 'OK' }]
@@ -432,7 +433,7 @@ export function CoaDetail({
       notifyBlocked();
       return;
     }
-    Alert.alert(
+    appAlert(
       'Delete from stash?',
       `This permanently deletes ${coaIdentity('this COA')}. It cannot be undone. Retire keeps history instead.`,
       [
@@ -453,7 +454,7 @@ export function CoaDetail({
                     notifyBlocked();
                     return;
                   }
-                  Alert.alert(
+                  appAlert(
                     'Could not delete',
                     'Something unexpected stopped the delete. The COA is still in your stash. If this keeps happening, try again after reopening the app.'
                   );
@@ -468,7 +469,7 @@ export function CoaDetail({
                 if (objectPath !== null) {
                   const removed = await removeCoaPdf(objectPath);
                   if (!removed.ok) {
-                    Alert.alert(
+                    appAlert(
                       'PDF not removed',
                       `This COA was deleted, but its stored PDF was not removed.\n\n${removed.message}`
                     );
@@ -494,7 +495,7 @@ export function CoaDetail({
       .then(({ error: renameError }) => {
         setRenameBusy(false);
         if (renameError) {
-          Alert.alert(
+          appAlert(
             'Could not save',
             'Your edits were not saved. They are still here — try Save again.'
           );

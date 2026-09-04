@@ -1,5 +1,4 @@
-import { Alert } from 'react-native';
-
+import { appAlert } from '@/lib/app-alert';
 import { supabase } from '@/lib/supabase';
 
 /**
@@ -61,7 +60,7 @@ export function restockAndAnnounce(coa: RestockTarget, onDone: () => void): void
   const strain = coa.strain?.trim() ? coa.strain.trim() : 'This COA';
   void restockCoa(coa.id).then((result) => {
     if (!result.ok) {
-      Alert.alert(
+      appAlert(
         'Could not restock',
         'Nothing was recorded — the product is still in your History as it was. Check your connection and try again.'
       );
@@ -71,6 +70,6 @@ export function restockAndAnnounce(coa: RestockTarget, onDone: () => void): void
     // Refetch before the line shows, not on dismissal: the surface should
     // already agree with the database while the user reads it.
     onDone();
-    Alert.alert(`${strain} is back in your stash.`);
+    appAlert(`${strain} is back in your stash.`);
   });
 }
